@@ -1,0 +1,23 @@
+.container {
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.paper {
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.contentStack {
+  width: 100%;
+}
+
+.header {
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .paper {
+    padding: 32px;
+  }
+}
