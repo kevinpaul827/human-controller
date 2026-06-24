@@ -1,26 +1,16 @@
-import os
 import sys
 
-from PySide6.QtCore import QUrl
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QApplication
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
+from main_window import MainWindow
 
-        self.setWindowTitle("Human Controller")
+def main():
+    app = QApplication(sys.argv)
 
-        frontend = QWebEngineView()
+    window = MainWindow()
+    window.show()
 
-        path = os.path.abspath("../frontend/index.html")
-        frontend.setUrl(QUrl.fromLocalFile(path))
+    sys.exit(app.exec())
 
-        self.setCentralWidget(frontend)
-
-app = QApplication(sys.argv)
-
-window = MainWindow()
-window.show()
-
-sys.exit(app.exec())
+if __name__ == "__main__":
+    main()
