@@ -1,0 +1,263 @@
+.container {
+  padding: 40px 24px;
+  height: 100%;
+  max-height: 100vh;
+  box-sizing: border-box;
+}
+
+.paper {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 32px;
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(24, 39, 75, 0.08);
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+}
+
+.title {
+  color: #1f2937;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: #3b6df6;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.progressTrack {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 132px));
+  gap: 10px;
+  margin-top: 14px;
+  max-width: 560px;
+}
+
+.progressSegment {
+  height: 5px;
+  border-radius: 999px;
+  background: #3b6df6;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr);
+  gap: 24px;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.dashboardPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.cameraPanel {
+  gap: 16px;
+  padding: 12px 14px 18px;
+  border: 3px solid #14a44d;
+  border-radius: 14px;
+  background: #1d232d;
+  color: #f9fafb;
+  overflow: hidden;
+}
+
+.cameraHeader {
+  flex-shrink: 0;
+}
+
+.cameraStatus {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.cameraFeed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: 24px;
+}
+
+.cameraFeedContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+}
+
+.cameraPlaceholder {
+  color: rgba(229, 231, 235, 0.4);
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.startButton {
+  min-width: 190px;
+  padding: 14px 24px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4073ff, #2d5ddd);
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.startButton:hover {
+  background: linear-gradient(135deg, #3669f5, #234fc5);
+  box-shadow: none;
+}
+
+.mappingPanel {
+  gap: 18px;
+  padding: 14px 18px 18px;
+  border: 1px solid #dbe3f0;
+  border-radius: 16px;
+  box-shadow: none;
+  overflow-y: auto;
+}
+
+.mappingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.scrollHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #94a3b8;
+}
+
+.mappingList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.mappingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.mappingInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+}
+
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: #eef4ff;
+  color: #3b6df6;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.confidenceText {
+  color: #22a559;
+  font-weight: 700;
+}
+
+.mappingFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.footerCopy {
+  color: #94a3b8;
+}
+
+.secondaryButton {
+  border-color: #d9e1ef;
+  border-radius: 10px;
+  padding: 10px 20px;
+  color: #334155;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.secondaryButton:hover {
+  border-color: #c4d0e4;
+  background: #f8fafc;
+}
+
+@media (max-width: 1199px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cameraPanel,
+  .mappingPanel {
+    min-height: auto;
+  }
+
+  .cameraFeed {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 767px) {
+  .container {
+    padding: 24px 16px;
+  }
+
+  .paper {
+    gap: 24px;
+    padding: 20px;
+  }
+
+  .subtitle {
+    font-size: 1.125rem;
+  }
+
+  .progressTrack {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .cameraFeed {
+    min-height: 300px;
+  }
+
+  .startButton {
+    width: 100%;
+  }
+}
