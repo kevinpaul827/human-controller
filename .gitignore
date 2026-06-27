@@ -5,6 +5,10 @@ dist/
 .env.*
 coverage/
 *.log
+.vscode/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 .venv/
 __pycache__/
 *.pyc
