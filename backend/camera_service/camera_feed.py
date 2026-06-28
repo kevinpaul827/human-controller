@@ -3,8 +3,11 @@ import time
 
 TARGET_FPS = 30
 FRAME_DELAY = 1.0 / TARGET_FPS
+DEF_CAMERA_INDEX = 0
+WAIT_TIME = 10
+QUIT_KEY = ord('q')
 
-feed = cv2.VideoCapture(0)
+feed = cv2.VideoCapture(DEF_CAMERA_INDEX)
 prev_frame_time = time.time()
 
 while feed.isOpened():
@@ -20,7 +23,7 @@ while feed.isOpened():
         
         cv2.imshow('Camera Feed', frame)
 
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    if cv2.waitKey(WAIT_TIME) & 0xFF == QUIT_KEY:
         break
 
 feed.release()
