@@ -1,8 +1,10 @@
 from pathlib import Path
-from PySide6.QtCore import QObject, QUrl, Signal, Slot
+from PySide6.QtCore import QUrl
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
+
+from session_bridge import SessionBridge
 
 FRONTEND_PATH = (
     Path(__file__).resolve().parent.parent
@@ -10,25 +12,6 @@ FRONTEND_PATH = (
     / "dist"
     / "index.html"
 )
-
-class SessionBridge(QObject):
-    sessionStatusChanged = Signal(dict)
-
-    def __init__(self):
-        super().__init__()
-        self.state = "idle"
-
-    def set_state(self, state):
-        self.state = state
-        self.sessionStatusChanged.emit({"state": self.state})
-
-    @Slot()
-    def startSession(self):
-        self.set_state("starting")
-    
-    @Slot()
-    def stopSession(self):
-        self.set_state("idle")
 
 class MainWindow(QMainWindow):
     def __init__(self):
