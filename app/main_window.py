@@ -4,7 +4,7 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
 
-from session_bridge import SessionBridge
+from .session_bridge import SessionBridge
 
 FRONTEND_PATH = (
     Path(__file__).resolve().parent.parent

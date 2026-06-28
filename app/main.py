@@ -2,7 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from main_window import MainWindow, FRONTEND_PATH
+from .main_window import MainWindow, FRONTEND_PATH
 
 def main():
     app = QApplication(sys.argv)
