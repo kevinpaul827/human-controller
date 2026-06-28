@@ -21,7 +21,6 @@ class SessionBridge(QObject):
     def set_state(self, state):
         self.state = state
         self.sessionStatusChanged.emit({"state": self.state})
-        print(self.state)
 
     @Slot()
     def startSession(self):
