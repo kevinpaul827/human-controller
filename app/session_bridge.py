@@ -1,4 +1,4 @@
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QCameraPermission, QCoreApplication, QObject, Qt, Signal, Slot
 from PySide6.QtMultimedia import QCamera, QMediaDevices
 
 class SessionBridge(QObject):
@@ -16,16 +16,24 @@ class SessionBridge(QObject):
     def emit_error(self, message):
         self.state = "error"
         self.sessionStatusChanged.emit({"state": self.state, "message": message})
+    
+    def check_camera_permissions(self):
+        app = QCoreApplication.instance()
+        permission = QCameraPermission()
 
-    def stop_camera(self):
-        if self.active_camera is None:
-            return
-        
-        self.active_camera.stop()
-        self.active_camera.deleteLater()
-        self.active_camera = None
+        status = app.checkPermission(permission)
 
-    def show_webcam_feed(self):
+        if status == Qt.PermissionStatus.Granted:
+            return True
+        elif status == Qt.PermissionStatus.Denied:
+            self.emit_error("Camera permission denied")
+            return False
+
+        # TODO: request camera
+
+        return False
+
+    def show_camera_feed(self):
         self.stop_camera()
     
         video_input = QMediaDevices.defaultVideoInput()
@@ -40,6 +48,14 @@ class SessionBridge(QObject):
         self.active_camera.start()
 
         # backend integration in later PR
+    
+    def stop_camera(self):
+        if self.active_camera is None:
+            return
+        
+        self.active_camera.stop()
+        self.active_camera.deleteLater()
+        self.active_camera = None
  
     def handle_active_changed(self, active):
         if active:
@@ -56,7 +72,9 @@ class SessionBridge(QObject):
             return
 
         self.set_state("starting")
-        self.show_webcam_feed()
+
+        if self.check_camera_permissions():
+            self.show_camera_feed()
 
     @Slot()
     def stopSession(self):        
