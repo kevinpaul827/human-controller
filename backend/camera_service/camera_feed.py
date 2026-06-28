@@ -7,24 +7,28 @@ DEF_CAMERA_INDEX = 0
 WAIT_TIME = 10
 QUIT_KEY = ord('q')
 
-feed = cv2.VideoCapture(DEF_CAMERA_INDEX)
-prev_frame_time = time.time()
+def main():
+    feed = cv2.VideoCapture(DEF_CAMERA_INDEX)
+    prev_frame_time = time.time()
 
-while feed.isOpened():
-    ret, frame = feed.read()
-    if not ret:
-        break
-    
-    current_time = time.time()
-    elapsed_time = current_time - prev_frame_time
+    while feed.isOpened():
+        ret, frame = feed.read()
+        if not ret:
+            break
 
-    if elapsed_time >= FRAME_DELAY:
-        prev_frame_time = current_time
-        
-        cv2.imshow('Camera Feed', frame)
+        current_time = time.time()
+        elapsed_time = current_time - prev_frame_time
 
-    if cv2.waitKey(WAIT_TIME) & 0xFF == QUIT_KEY:
-        break
+        if elapsed_time >= FRAME_DELAY:
+            prev_frame_time = current_time
+            cv2.imshow("Camera Feed", frame)
 
-feed.release()
-cv2.destroyAllWindows()
+        if cv2.waitKey(WAIT_TIME) & 0xFF == QUIT_KEY:
+            break
+
+    feed.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
