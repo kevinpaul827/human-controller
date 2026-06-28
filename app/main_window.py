@@ -14,13 +14,22 @@ FRONTEND_PATH = (
 class SessionBridge(QObject):
     sessionStatusChanged = Signal(dict)
 
+    def __init__(self):
+        super().__init__()
+        self.state = "idle"
+
+    def set_state(self, state):
+        self.state = state
+        self.sessionStatusChanged.emit({"state": self.state})
+        print(self.state)
+
     @Slot()
     def startSession(self):
-        self.sessionStatusChanged.emit({"state": "starting"})
+        self.set_state("starting")
     
     @Slot()
     def stopSession(self):
-        self.sessionStatusChanged.emit({"state": "idle"})
+        self.set_state("idle")
 
 class MainWindow(QMainWindow):
     def __init__(self):
