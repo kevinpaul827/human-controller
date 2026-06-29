@@ -10,6 +10,7 @@ def _install_pyside6_stub():
     qtcore_module = ModuleType("PySide6.QtCore")
     qtwebengine_module = ModuleType("PySide6.QtWebEngineWidgets")
     qtwidgets_module = ModuleType("PySide6.QtWidgets")
+    qtmultimedia_module = ModuleType("PySide6.QtMultimedia")
 
     qtcore_module.QUrl = type(
         "QUrl",
@@ -24,11 +25,14 @@ def _install_pyside6_stub():
         {"critical": staticmethod(lambda *args, **kwargs: None)},
     )
     qtwidgets_module.QMainWindow = type("QMainWindow", (), {})
+    qtmultimedia_module.QCamera = type("QCamera", (), {})
+    qtmultimedia_module.QMediaDevices = type("QMediaDevices", (), {})
 
     sys.modules.setdefault("PySide6", pyside6_module)
     sys.modules["PySide6.QtCore"] = qtcore_module
     sys.modules["PySide6.QtWebEngineWidgets"] = qtwebengine_module
     sys.modules["PySide6.QtWidgets"] = qtwidgets_module
+    sys.modules["PySide6.QtMultimedia"] = qtmultimedia_module
 
 
 try:
@@ -36,8 +40,8 @@ try:
 except ImportError:
     _install_pyside6_stub()
 
-import main
-import main_window
+from app import main
+from app import main_window
 
 
 class FrontendPathTests(unittest.TestCase):
@@ -53,9 +57,9 @@ class FrontendPathTests(unittest.TestCase):
 
 
 class MainEntryPointTests(unittest.TestCase):
-    @patch("main.QApplication")
-    @patch("main.QMessageBox.critical")
-    @patch("main.sys.exit")
+    @patch("app.main.QApplication")
+    @patch("app.main.QMessageBox.critical")
+    @patch("app.main.sys.exit")
     def test_main_exits_with_error_when_frontend_is_missing(
         self,
         exit_mock,
@@ -72,10 +76,10 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch("main.MainWindow")
-    @patch("main.QApplication")
-    @patch("main.QMessageBox.critical")
-    @patch("main.sys.exit")
+    @patch("app.main.MainWindow")
+    @patch("app.main.QApplication")
+    @patch("app.main.QMessageBox.critical")
+    @patch("app.main.sys.exit")
     def test_main_starts_window_when_frontend_exists(
         self,
         exit_mock,
