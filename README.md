@@ -13,6 +13,7 @@ This repository is split into three main areas:
 ├── app/
 │   ├── main.py
 │   ├── main_window.py
+|   ├── session_bridge.py
 │   ├── requirements.txt
 │   └── tests/
 ├── backend/
@@ -31,6 +32,41 @@ This repository is split into three main areas:
 │   └── frontend-check.yml
 └── Makefile
 ```
+
+## Running the Application
+
+Create a virtual environment and install the dependencies:
+
+### macOS / Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+```
+
+### Windows
+
+```bash
+python3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r app/requirements.txt
+```
+
+### Frontend Setup
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+### Launching the Application
+
+```bash
+python3 -m app.main
+```
+
 
 ## Checks
 
