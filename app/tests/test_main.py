@@ -36,8 +36,8 @@ try:
 except ImportError:
     _install_pyside6_stub()
 
-from app import main
-from app import main_window
+import main
+import main_window
 
 
 class FrontendPathTests(unittest.TestCase):
@@ -53,9 +53,9 @@ class FrontendPathTests(unittest.TestCase):
 
 
 class MainEntryPointTests(unittest.TestCase):
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch("main.QApplication")
+    @patch("main.QMessageBox.critical")
+    @patch("main.sys.exit")
     def test_main_exits_with_error_when_frontend_is_missing(
         self,
         exit_mock,
@@ -72,10 +72,10 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch("app.main.MainWindow")
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch("main.MainWindow")
+    @patch("main.QApplication")
+    @patch("main.QMessageBox.critical")
+    @patch("main.sys.exit")
     def test_main_starts_window_when_frontend_exists(
         self,
         exit_mock,
