@@ -61,6 +61,14 @@ const SessionCamera = () => {
     window.open(CAMERA_HELP_URL, "_blank", "noopener,noreferrer");
   };
 
+  const handleCloseError = async () => {
+    try {
+      await handleStopSession();
+    } finally {
+      setErrorEvent(null);
+    }
+  };
+
   const isStarting = sessionState === "starting";
   const isLive = sessionState === "live";
 
@@ -101,7 +109,7 @@ const SessionCamera = () => {
       <SessionCameraErrorModal
         open={errorEvent !== null}
         message={errorEvent?.message}
-        onCancel={() => setErrorEvent(null)}
+        onCancel={handleCloseError}
         onConfigure={handleConfigure}
       />
     </>
