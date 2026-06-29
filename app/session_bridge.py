@@ -1,5 +1,4 @@
 from PySide6.QtCore import QCameraPermission, QCoreApplication, QObject, Qt, Signal, Slot
-from PySide6.QtMultimedia import QCamera, QMediaDevices
 
 class SessionBridge(QObject):
     sessionStatusChanged = Signal(dict)
@@ -34,6 +33,8 @@ class SessionBridge(QObject):
         return False
 
     def show_camera_feed(self):
+        from PySide6.QtMultimedia import QCamera, QMediaDevices
+
         self.stop_camera()
     
         video_input = QMediaDevices.defaultVideoInput()
