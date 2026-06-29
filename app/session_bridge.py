@@ -28,7 +28,7 @@ class SessionBridge(QObject):
             self.emit_error("Camera permission denied")
             return False
 
-        # TODO: request camera
+        app.requestPermission(permission, self, self.handle_request_camera)
 
         return False
 
@@ -57,6 +57,14 @@ class SessionBridge(QObject):
         self.active_camera.stop()
         self.active_camera.deleteLater()
         self.active_camera = None
+    
+    def handle_request_camera(self, permission):
+        app = QCoreApplication.instance()
+
+        if app.checkPermission(permission) == Qt.PermissionStatus.Granted:
+            self.show_camera_feed()
+        else:
+            self.emit_error("Camera permission denied")
  
     def handle_active_changed(self, active):
         if active:
