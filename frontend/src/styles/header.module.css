@@ -3,22 +3,38 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 28px 40px;
+  padding: 20px 32px;
   background-color: #ffffff;
-  border-bottom: 1px solid #d8e0dc;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .title {
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #182033;
+  color: #111827;
 }
 
-.profile {
-  color: #7b8aa3;
+.profileSelector {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #374151;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.profileChevron {
+  font-size: 1.1rem !important;
+  color: #6b7280;
 }
 
 @media (max-width: 900px) {
   .header {
-    padding: 20px 24px;
+    padding: 16px 20px;
   }
 }
