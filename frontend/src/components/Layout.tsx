@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import Header from "./Header";
 import NavBar from "./NavBar";
 import styles from "../styles/layout.module.css";
 
@@ -9,7 +8,6 @@ const Layout = () => {
 
   return (
     <div className={styles.appShell}>
-      <Header />
       <div className={styles.bodyShell}>
         <NavBar
           isOpen={isNavOpen}
