@@ -85,6 +85,21 @@
   color: #ffffff;
 }
 
+.navButton[aria-current="page"]::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  flex-shrink: 0;
+}
+
+.navButton[aria-current="page"] :global(.MuiButton-startIcon) {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .sidebar {
     width: 180px;
