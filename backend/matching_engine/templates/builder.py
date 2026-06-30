@@ -1,5 +1,3 @@
-"""TemplateBuilder: turn calibration reps into a GestureTemplate."""
-
 from __future__ import annotations
 
 from typing import Dict, List, Optional
@@ -46,10 +44,9 @@ class TemplateBuilder:
     def build(
         self,
         reps: List[Rep],
+        name: str,
         mode: str = "state",
-        fps: int = 15,
-        gesture_id: Optional[str] = None,
-        name: Optional[str] = None,
+        fps: int = 30,
         active_joints: Optional[List[AngleKey]] = None,
     ) -> GestureTemplate:
         if mode != "state":
@@ -79,14 +76,13 @@ class TemplateBuilder:
         active = [j for j in active_joints if j in target_angles]
 
         return GestureTemplate(
+            name=name,
             type="state",
             active_joints=active,
             target_angles=target_angles,
             tolerance_deg=tolerance_deg,
             trajectory=[],
             fps=fps,
-            gesture_id=gesture_id,
-            name=name,
         )
 
     def _end_state(self, rep: Rep) -> AngleVector:
