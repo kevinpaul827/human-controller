@@ -48,7 +48,7 @@ def valid_values(values: Iterable[Optional[float]]) -> List[float]:
 def reduce_joints(
     frames: List[AngleVector], fn: Callable[[List[float]], float]
 ) -> AngleVector:
-    """Per-joint reduction over frames, ignoring masked (None) values."""
+    """Per-joint reduction"""
     out: AngleVector = {}
     for joint in AngleKey:
         vals = valid_values(frame.get(joint) for frame in frames)
@@ -56,10 +56,13 @@ def reduce_joints(
     return out
 
 
-def joint_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
+def joint_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> Optional[float]:
     ba = np.asarray(a, dtype=np.float64) - np.asarray(b, dtype=np.float64)
     bc = np.asarray(c, dtype=np.float64) - np.asarray(b, dtype=np.float64)
-    denom = np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-9
+    denom = np.linalg.norm(ba) * np.linalg.norm(bc)
+    # Coincident points -> angle undefined. Return None
+    if denom == 0.0:
+        return None
     cos = float(np.dot(ba, bc) / denom)
     return float(np.degrees(np.arccos(np.clip(cos, -1.0, 1.0))))
 
