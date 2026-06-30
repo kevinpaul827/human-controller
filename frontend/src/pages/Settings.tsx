@@ -12,9 +12,7 @@ const DEFAULTS = {
 };
 
 const Settings = () => {
-  const [matchThreshold, setMatchThreshold] = useState(
-    DEFAULTS.matchThreshold,
-  );
+  const [matchThreshold, setMatchThreshold] = useState(DEFAULTS.matchThreshold);
   const [holdDuration, setHoldDuration] = useState(DEFAULTS.holdDuration);
   const [cooldown, setCooldown] = useState(DEFAULTS.cooldown);
   const [smoothing, setSmoothing] = useState(DEFAULTS.smoothing);
