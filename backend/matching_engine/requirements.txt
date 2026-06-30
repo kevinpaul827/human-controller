@@ -1,0 +1,11 @@
+# Matching Engine v1 dependencies
+
+# Core runtime (matcher, feature extraction, templates, persistence)
+numpy>=1.26
+
+# Validation harness only (loading the KIMORE pickle + correlation metrics)
+pandas>=2.0
+scipy>=1.11
+
+# Tests
+pytest>=8.0
