@@ -1,0 +1,100 @@
+.page {
+  padding: 32px 40px 48px;
+  background-color: #f3f4f6;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.card {
+  max-width: 720px;
+  padding: 28px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.sectionTitle {
+  margin: 0 0 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sliderList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 720px;
+  margin-top: 24px;
+}
+
+.resetButton {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.resetButton:hover {
+  background-color: #f9fafb;
+}
+
+.saveButton {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  background-color: #3b6df6;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.saveButton:hover {
+  background-color: #2f5bd4;
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
