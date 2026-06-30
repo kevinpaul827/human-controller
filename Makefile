@@ -1,11 +1,18 @@
-.PHONY: ptest app-check backend-check
+# Use local .venv if present (dev devices), else fall back to python3
+PYTHON := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
+
+.PHONY: ptest app-check backend-check backend-test
 
 ptest:
-	python3 -m unittest discover -s app -p 'test_*.py'
+	$(PYTHON) -m unittest discover -s app -p 'test_*.py'
 
 app-check:
-	python3 -m compileall app
+	$(PYTHON) -m compileall app
 	$(MAKE) ptest
 
 backend-check:
-	python3 -m compileall backend
+	$(PYTHON) -m compileall backend
+	$(MAKE) backend-test
+
+backend-test:
+	$(PYTHON) -m pytest backend/matching_engine/tests
