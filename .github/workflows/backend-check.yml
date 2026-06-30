@@ -7,12 +7,14 @@ on:
       - ".github/workflows/backend-check.yml"
       - "Makefile"
   push:
+    branches:
+      - main
     paths:
       - "backend/**"
       - ".github/workflows/backend-check.yml"
       - "Makefile"
 
-# Cancel an in-progress run when a newer commit is pushed to the same branch/PR.
+# Cancel an in-progress run with newer commit 
 concurrency:
   group: backend-check-${{ github.ref }}
   cancel-in-progress: true
