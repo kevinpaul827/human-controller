@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "patientId": "demo-profile",
+  "patientName": "Demo Profile",
+  "notes": "",
+  "updatedAt": "2026-06-20T10:00:00+00:00",
+  "gameProfiles": [
+    {
+      "gameName": "Celeste — Rehab Mode",
+      "gestures": [
+        { "name": "Right Arm Raise", "key": "ArrowUp", "threshold": 0.75 },
+        { "name": "Squat", "key": "ArrowDown", "threshold": 0.75 }
+      ]
+    }
+  ]
+}

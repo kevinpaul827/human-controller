@@ -13,7 +13,9 @@ This repository is split into three main areas:
 ├── app/
 │   ├── main.py
 │   ├── main_window.py
-|   ├── session_bridge.py
+│   ├── session_bridge.py
+│   ├── profile_manager/
+│   ├── data/profiles/
 │   ├── requirements.txt
 │   └── tests/
 ├── backend/

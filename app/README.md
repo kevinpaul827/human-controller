@@ -6,6 +6,7 @@ This directory contains the Python files for creating the app of the project.
 
 - Python
 - PySide6
+- Pydantic (profile data validation)
 
 ## Structure
 
@@ -13,9 +14,34 @@ This directory contains the Python files for creating the app of the project.
 ├── app/
 │   ├── main.py
 │   ├── main_window.py
-|   ├── session_bridge.py
+│   ├── session_bridge.py
+│   ├── profile_demo.py
+│   ├── profile_manager/
+│   │   ├── manager.py
+│   │   ├── models.py
+│   │   └── exceptions.py
+│   ├── data/profiles/
 │   ├── requirements.txt
 │   └── tests/
+│       └── test_profile_manager.py
+```
+
+## Profile Manager
+
+Patient profiles are stored as versioned JSON files (`schemaVersion: 1`) under `app/data/profiles/`.
+
+Each profile contains one or more game profiles; each game profile maps gesture names to keyboard keys and thresholds.
+
+### Run tests
+
+```bash
+python -m unittest app.tests.test_profile_manager -v
+```
+
+### Run demo
+
+```bash
+python -m app.profile_demo
 ```
 
 ## Setup
