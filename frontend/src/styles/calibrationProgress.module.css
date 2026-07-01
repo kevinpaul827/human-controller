@@ -1,0 +1,16 @@
+.track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 132px));
+  gap: 10px;
+  max-width: 560px;
+}
+
+.segment {
+  height: 5px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+}
+
+.segmentActive {
+  background-color: #3b6df6;
+}

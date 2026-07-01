@@ -1,0 +1,119 @@
+.page {
+  padding: 32px 40px 48px;
+  background-color: #f3f4f6;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.stepLabel {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #3b6df6;
+}
+
+.card {
+  max-width: 720px;
+  padding: 28px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.prompt {
+  margin: 0 0 20px;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.keyRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.selectionFeedback {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3b6df6;
+}
+
+.advancedOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  font-size: 0.9rem;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.advancedOption input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b6df6;
+  cursor: pointer;
+}
+
+.navActions {
+  display: flex;
+  gap: 12px;
+}
+
+.backButton {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background-color: #f9fafb;
+}
+
+.nextButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: #3b6df6;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.nextButton:hover {
+  background-color: #2f5bd4;
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 20px 40px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+}
