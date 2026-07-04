@@ -21,9 +21,9 @@ frontend-build:
 	cd frontend && npm run build
 
 macos-app:
-	$(PYTHON) app/build_macos_app.py
+	$(PYTHON) scripts/build_macos_app.py
 
 macos-sync-frontend:
-	$(PYTHON) app/sync_frontend_to_macos_app.py
+	$(PYTHON) scripts/sync_frontend_to_macos_app.py
 
 macos-refresh-frontend: frontend-build macos-sync-frontend

@@ -2,6 +2,8 @@
 
 This directory contains the Python files for creating the app of the project.
 
+Repository build and packaging helpers live under `scripts/`, not in `app/`.
+
 ## Stack
 
 - Python
@@ -24,6 +26,9 @@ This directory contains the Python files for creating the app of the project.
 │   ├── requirements.txt
 │   └── tests/
 │       └── test_profile_manager.py
+├── scripts/
+│   ├── build_macos_app.py
+│   └── sync_frontend_to_macos_app.py
 ```
 
 ## Profile Manager
@@ -77,6 +82,8 @@ For macOS packaged-app development:
 ```bash
 make macos-app
 ```
+
+These Make targets call the helper scripts in `scripts/`.
 
 After the first packaged build:
 
