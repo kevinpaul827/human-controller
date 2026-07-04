@@ -42,7 +42,7 @@ const SessionCameraErrorModal = ({
     <DialogContent>
       <Typography sx={{ color: "#334155" }}>
         {message ??
-          "The desktop app reported a camera error while starting the session."}
+          "The desktop app reported a camera error while opening the session camera."}
       </Typography>
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
