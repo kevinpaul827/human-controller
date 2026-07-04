@@ -4,7 +4,7 @@ import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import SportsEsportsOutlinedIcon from "@mui/icons-material/SportsEsportsOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import { Box, Button, IconButton } from "@mui/material";
+import { Box, Button, IconButton, Tooltip } from "@mui/material";
 import type { ReactElement } from "react";
 import { NavLink } from "react-router-dom";
 import { NAV_ITEMS } from "../utils/constants";
@@ -40,18 +40,26 @@ const NavBar = ({ isOpen, onToggle }: NavBarProps) => (
     </Box>
     <Box className={styles.navActions}>
       {NAV_ITEMS.map((item) => (
-        <Button
+        <Tooltip
           key={item.path}
-          component={NavLink}
-          to={item.path}
-          className={`${styles.navButton} ${!isOpen ? styles.navButtonCollapsed : ""}`}
-          startIcon={navIcons[item.label]}
-          aria-label={item.label}
+          title={item.label}
+          placement="right"
+          disableHoverListener={isOpen}
+          disableFocusListener={isOpen}
+          disableTouchListener={isOpen}
         >
-          {isOpen ? (
-            <span className={styles.navLabel}>{item.label}</span>
-          ) : null}
-        </Button>
+          <Button
+            component={NavLink}
+            to={item.path}
+            className={`${styles.navButton} ${!isOpen ? styles.navButtonCollapsed : ""}`}
+            startIcon={navIcons[item.label]}
+            aria-label={item.label}
+          >
+            {isOpen ? (
+              <span className={styles.navLabel}>{item.label}</span>
+            ) : null}
+          </Button>
+        </Tooltip>
       ))}
     </Box>
   </aside>
