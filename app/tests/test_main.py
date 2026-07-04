@@ -6,17 +6,47 @@ from unittest.mock import MagicMock, patch
 
 
 def _install_pyside6_stub():
+    for module_name in list(sys.modules):
+        if module_name == "PySide6" or module_name.startswith("PySide6."):
+            sys.modules.pop(module_name, None)
+
     pyside6_module = ModuleType("PySide6")
     qtcore_module = ModuleType("PySide6.QtCore")
+    qtgui_module = ModuleType("PySide6.QtGui")
+    qtmultimedia_module = ModuleType("PySide6.QtMultimedia")
+    qtwebchannel_module = ModuleType("PySide6.QtWebChannel")
     qtwebengine_module = ModuleType("PySide6.QtWebEngineWidgets")
+    qtmultimediawidgets_module = ModuleType("PySide6.QtMultimediaWidgets")
     qtwidgets_module = ModuleType("PySide6.QtWidgets")
 
+    qtcore_module.Qt = type(
+        "Qt",
+        (),
+        {
+            "WidgetAttribute": type(
+                "WidgetAttribute",
+                (),
+                {"WA_TransparentForMouseEvents": object()},
+            )
+        },
+    )
     qtcore_module.QUrl = type(
         "QUrl",
         (),
         {"fromLocalFile": staticmethod(lambda path: path)},
     )
+    qtcore_module.QCameraPermission = type("QCameraPermission", (), {})
+    qtcore_module.QCoreApplication = type("QCoreApplication", (), {})
+    qtcore_module.QObject = type("QObject", (), {})
+    qtcore_module.Signal = lambda *args, **kwargs: MagicMock()
+    qtcore_module.Slot = lambda *args, **kwargs: (lambda func: func)
+    qtgui_module.QDesktopServices = type("QDesktopServices", (), {})
+    qtmultimedia_module.QCamera = type("QCamera", (), {})
+    qtmultimedia_module.QMediaCaptureSession = type("QMediaCaptureSession", (), {})
+    qtmultimedia_module.QMediaDevices = type("QMediaDevices", (), {})
+    qtwebchannel_module.QWebChannel = type("QWebChannel", (), {})
     qtwebengine_module.QWebEngineView = type("QWebEngineView", (), {})
+    qtmultimediawidgets_module.QVideoWidget = type("QVideoWidget", (), {})
     qtwidgets_module.QApplication = type("QApplication", (), {})
     qtwidgets_module.QMessageBox = type(
         "QMessageBox",
@@ -27,13 +57,23 @@ def _install_pyside6_stub():
 
     sys.modules.setdefault("PySide6", pyside6_module)
     sys.modules["PySide6.QtCore"] = qtcore_module
+    sys.modules["PySide6.QtGui"] = qtgui_module
+    sys.modules["PySide6.QtMultimedia"] = qtmultimedia_module
+    sys.modules["PySide6.QtWebChannel"] = qtwebchannel_module
     sys.modules["PySide6.QtWebEngineWidgets"] = qtwebengine_module
+    sys.modules["PySide6.QtMultimediaWidgets"] = qtmultimediawidgets_module
     sys.modules["PySide6.QtWidgets"] = qtwidgets_module
 
 
 try:
-    import PySide6  # noqa: F401
-except ImportError:
+    from PySide6.QtCore import Qt, QUrl  # noqa: F401
+    from PySide6.QtGui import QDesktopServices  # noqa: F401
+    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices  # noqa: F401
+    from PySide6.QtMultimediaWidgets import QVideoWidget  # noqa: F401
+    from PySide6.QtWebChannel import QWebChannel  # noqa: F401
+    from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
+    from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox  # noqa: F401
+except Exception:
     _install_pyside6_stub()
 
 from app import main

@@ -72,9 +72,9 @@ const GestureMapping = ({ onCalibrateNewGesture }: GestureMappingProps) => (
         Showing 8 of 12 · scroll for more
       </Typography>
       <Button
-      variant="outlined"
-      className={styles.secondaryButton}
-      onClick={onCalibrateNewGesture}
+        variant="outlined"
+        className={styles.secondaryButton}
+        onClick={onCalibrateNewGesture}
       >
         Calibrate New Gesture
       </Button>

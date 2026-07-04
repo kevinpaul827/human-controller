@@ -28,8 +28,7 @@ type QtSessionBridgeObject = {
 };
 
 const BRIDGE_NAME = "sessionBridge";
-const BRIDGE_ERROR =
-  "Qt WebChannel session bridge is unavailable.";
+const BRIDGE_ERROR = "Qt WebChannel session bridge is unavailable.";
 
 let bridgePromise: Promise<QtSessionBridgeObject> | null = null;
 
@@ -86,9 +85,7 @@ const sessionBridge: SessionBridge = {
     const bridge = await getSessionBridgeOrThrow();
 
     if (!bridge.openCameraSettings) {
-      throw new Error(
-        "Desktop camera settings are unavailable in this build.",
-      );
+      throw new Error("Desktop camera settings are unavailable in this build.");
     }
 
     await bridge.openCameraSettings();
