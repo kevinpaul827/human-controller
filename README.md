@@ -63,10 +63,58 @@ npm ci
 npm run build
 ```
 
+If you launch the macOS packaged app, use this faster workflow:
+
+```bash
+make macos-app
+```
+
+After the first packaged build:
+
+- Frontend-only changes:
+
+```bash
+make macos-refresh-frontend
+```
+
+- Python desktop app changes:
+
+```bash
+make macos-app
+```
+
+- Changes to both frontend and Python app:
+
+```bash
+make macos-app
+```
+
 ### Launching the Application
 
 ```bash
 python3 -m app.main
+```
+
+### macOS Camera Permission Fix
+
+If macOS denies camera access, launch the desktop app as a real `.app` bundle so it can provide `NSCameraUsageDescription`:
+
+```bash
+make macos-app
+open "dist/Human Controller.app"
+```
+
+If you only changed frontend files and already have a packaged app bundle, you can refresh just the bundled frontend assets instead of rebuilding the whole app:
+
+```bash
+make macos-refresh-frontend
+open "dist/Human Controller.app"
+```
+
+If you already denied access earlier, reset camera permission and relaunch:
+
+```bash
+tccutil reset Camera
 ```
 
 

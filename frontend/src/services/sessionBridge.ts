@@ -1,4 +1,8 @@
-import type { SessionBridge, SessionStatusEvent } from "../types/session";
+import type {
+  SessionBridge,
+  SessionPreviewBounds,
+  SessionStatusEvent,
+} from "../types/session";
 
 /**
  * Wrapper around the PySide6 Qt WebChannel session bridge.
@@ -11,12 +15,20 @@ type QtSignal<T> = {
 type QtSessionBridgeObject = {
   startSession: () => void | Promise<void>;
   stopSession: () => void | Promise<void>;
+  getSessionState?: () => SessionStatusEvent["state"];
+  updatePreviewBounds: (
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    devicePixelRatio: number,
+  ) => void | Promise<void>;
+  openCameraSettings?: () => void | Promise<void>;
   sessionStatusChanged?: QtSignal<SessionStatusEvent>;
 };
 
 const BRIDGE_NAME = "sessionBridge";
-const BRIDGE_ERROR =
-  "Qt WebChannel session bridge is unavailable. TODO: connect the PySide6 desktop bridge.";
+const BRIDGE_ERROR = "Qt WebChannel session bridge is unavailable.";
 
 let bridgePromise: Promise<QtSessionBridgeObject> | null = null;
 
@@ -58,6 +70,27 @@ const sessionBridge: SessionBridge = {
     await bridge.stopSession();
   },
 
+  async updatePreviewBounds(bounds: SessionPreviewBounds) {
+    const bridge = await getSessionBridgeOrThrow();
+    await bridge.updatePreviewBounds(
+      bounds.left,
+      bounds.top,
+      bounds.width,
+      bounds.height,
+      bounds.devicePixelRatio ?? window.devicePixelRatio ?? 1,
+    );
+  },
+
+  async openCameraSettings() {
+    const bridge = await getSessionBridgeOrThrow();
+
+    if (!bridge.openCameraSettings) {
+      throw new Error("Desktop camera settings are unavailable in this build.");
+    }
+
+    await bridge.openCameraSettings();
+  },
+
   onSessionStatus(listener) {
     let unsubscribe = () => {};
 
@@ -69,6 +102,10 @@ const sessionBridge: SessionBridge = {
         }
 
         bridge.sessionStatusChanged.connect(listener);
+        const currentState = bridge.getSessionState?.();
+        if (currentState) {
+          listener({ state: currentState });
+        }
         unsubscribe = () => {
           bridge.sessionStatusChanged?.disconnect?.(listener);
         };

@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "app/**"
+      - "Makefile"
       - ".github/workflows/app-check.yml"
   push:
     branches:
       - main
     paths:
       - "app/**"
+      - "Makefile"
       - ".github/workflows/app-check.yml"
 
 jobs:

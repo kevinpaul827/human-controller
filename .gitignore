@@ -12,3 +12,6 @@ vite.config.d.ts
 .venv/
 __pycache__/
 *.pyc
+.pyinstaller/
+build/
+human_controller.spec

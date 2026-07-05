@@ -13,6 +13,10 @@ type GestureMappingItem = {
   confidence: number;
 };
 
+type GestureMappingProps = {
+  onCalibrateNewGesture: () => void;
+};
+
 const gestureMappings: GestureMappingItem[] = [
   { gesture: "Right Arm Raise", keycap: "up", confidence: 87 },
   { gesture: "Squat", keycap: "down", confidence: 82 },
@@ -35,7 +39,7 @@ const keycapIcons: Record<string, ReactElement> = {
   right: <ArrowForwardIcon fontSize="inherit" />,
 };
 
-const GestureMapping = () => (
+const GestureMapping = ({ onCalibrateNewGesture }: GestureMappingProps) => (
   <Paper className={`${styles.dashboardPanel} ${styles.mappingPanel}`}>
     <Box className={styles.mappingHeader}>
       <Typography variant="h6" component="h2">
@@ -67,7 +71,11 @@ const GestureMapping = () => (
       <Typography variant="body2" className={styles.footerCopy}>
         Showing 8 of 12 · scroll for more
       </Typography>
-      <Button variant="outlined" className={styles.secondaryButton}>
+      <Button
+        variant="outlined"
+        className={styles.secondaryButton}
+        onClick={onCalibrateNewGesture}
+      >
         Calibrate New Gesture
       </Button>
     </Box>
