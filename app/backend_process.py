@@ -13,9 +13,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BACKEND_HELPER_FLAG = "--backend-helper"
+BACKEND_RELOAD_FLAG = "HUMAN_CONTROLLER_BACKEND_RELOAD"
+BACKEND_RUNNER_ENV = "HUMAN_CONTROLLER_BACKEND_RUNNER"
+PROJECT_ROOT_ENV = "HUMAN_CONTROLLER_PROJECT_ROOT"
+BACKEND_RELOADER_PATH = Path("scripts") / "run_backend_dev.py"
 
 
-def build_backend_command():
+def build_backend_command(env: dict[str, str] | None = None):
+    env = env or os.environ
+    if env.get(BACKEND_RELOAD_FLAG) == "1":
+        runner = env.get(BACKEND_RUNNER_ENV)
+        project_root = env.get(PROJECT_ROOT_ENV)
+        if runner and project_root:
+            return [runner, str(Path(project_root) / BACKEND_RELOADER_PATH)]
+
     if getattr(sys, "frozen", False):
         return [sys.executable, BACKEND_HELPER_FLAG]
 
@@ -40,15 +51,16 @@ class BackendProcessManager:
             "HUMAN_CONTROLLER_BACKEND_HOST": self.host,
             "HUMAN_CONTROLLER_BACKEND_PORT": str(self.port),
         }
+        full_env = {**os.environ, **env}
 
         self.process = subprocess.Popen(
-            build_backend_command(),
-            cwd=str(ROOT),
+            build_backend_command(full_env),
+            cwd=str(Path(full_env.get(PROJECT_ROOT_ENV, ROOT))),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            env={**os.environ, **env},
+            env=full_env,
         )
         self._threads = [
             threading.Thread(

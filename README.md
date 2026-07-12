@@ -76,7 +76,7 @@ Notes:
 - On macOS, run `make macos-app` once before `make preview-local` so camera permission works through the real app bundle identity.
 - With `make preview-local`:
   - frontend changes: prompt/live
-  - backend changes: usually need restarting `make preview-local`
+  - backend changes: auto-restart after save
   - desktop Python changes: still need `make macos-app` on macOS
 - Optional preview logs:
 

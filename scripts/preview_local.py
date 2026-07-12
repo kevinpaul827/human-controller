@@ -120,6 +120,14 @@ def resolve_desktop_command():
     return [sys.executable, "-m", "app.main"]
 
 
+def resolve_backend_runner():
+    venv_python = ROOT / ".venv" / "bin" / "python"
+    if venv_python.exists():
+        return str(venv_python)
+
+    return sys.executable
+
+
 def cleanup_orphan_processes():
     if os.name == "nt":
         return
@@ -155,6 +163,9 @@ def main():
             "HUMAN_CONTROLLER_BACKEND_AUTOSTART": "1",
             "HUMAN_CONTROLLER_BACKEND_HOST": BACKEND_HOST,
             "HUMAN_CONTROLLER_BACKEND_PORT": BACKEND_PORT,
+            "HUMAN_CONTROLLER_BACKEND_RELOAD": "1",
+            "HUMAN_CONTROLLER_BACKEND_RUNNER": resolve_backend_runner(),
+            "HUMAN_CONTROLLER_PROJECT_ROOT": str(ROOT),
             "HUMAN_CONTROLLER_LOG_BE": "1" if args.log_be else "0",
         }
     )
