@@ -23,10 +23,17 @@ class Handler(BaseHTTPRequestHandler):
         print(format % args, flush=True)
 
 
+class DevThreadingHTTPServer(ThreadingHTTPServer):
+    # SO_REUSEADDR permits multiple listeners on the same port on Windows.
+    # Disable it there so an orphan is reported as a port conflict instead of
+    # intermittently receiving requests intended for the new preview backend.
+    allow_reuse_address = os.name != "nt"
+
+
 def main():
     host = os.environ.get("HUMAN_CONTROLLER_BACKEND_HOST", "127.0.0.1")
     port = int(os.environ.get("HUMAN_CONTROLLER_BACKEND_PORT", "8000"))
-    server = ThreadingHTTPServer((host, port), Handler)
+    server = DevThreadingHTTPServer((host, port), Handler)
     print(f"dev backend listening on http://{host}:{port}", flush=True)
     try:
         server.serve_forever()

@@ -105,6 +105,12 @@ make macos-app
 make preview-local
 ```
 
+On Windows, GNU Make is optional; run the cross-platform supervisor directly:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\preview_local.py
+```
+
 This loads the frontend from the Vite dev server and starts a temporary backend
 helper process under the desktop app.
 

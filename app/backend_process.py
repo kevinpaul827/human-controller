@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import os
 import subprocess
 import sys
@@ -72,14 +73,29 @@ class BackendProcessManager:
         for thread in self._threads:
             thread.start()
 
-        self._wait_until_healthy()
+        try:
+            self._wait_until_healthy()
+        except Exception:
+            self.stop()
+            raise
 
     def stop(self):
         if self.process is None:
             return
 
         if self.process.poll() is None:
-            self.process.terminate()
+            if os.name == "nt":
+                # Windows does not propagate terminate() from the Python/venv
+                # launcher to its children. /T removes the reloader and backend
+                # server together so closing the app does not leave port 8000 in use.
+                subprocess.run(
+                    ["taskkill", "/PID", str(self.process.pid), "/T", "/F"],
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            else:
+                self.process.terminate()
             try:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
@@ -114,7 +130,14 @@ class BackendProcessManager:
                 with urllib.request.urlopen(self.health_url, timeout=0.5) as response:
                     if response.status == 200:
                         return
-            except (urllib.error.URLError, TimeoutError):
+            except (
+                urllib.error.URLError,
+                http.client.RemoteDisconnected,
+                TimeoutError,
+            ):
+                # On Windows a backend that is still starting or restarting can
+                # accept the connection before it can return /health. Treat that
+                # short disconnect as a retryable readiness state.
                 time.sleep(0.2)
 
         self.stop()

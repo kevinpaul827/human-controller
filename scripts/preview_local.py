@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import threading
@@ -50,6 +51,11 @@ class ManagedProcess:
         self.thread = None
 
     def start(self):
+        popen_options = {}
+        if os.name == "nt":
+            # Keep each service in its own process group so Ctrl+C is handled by
+            # this supervisor and shutdown can clean up the complete child tree.
+            popen_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         self.process = subprocess.Popen(
             self.command,
             cwd=self.cwd,
@@ -58,6 +64,7 @@ class ManagedProcess:
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            **popen_options,
         )
         self.thread = threading.Thread(target=self._read_output, daemon=True)
         self.thread.start()
@@ -66,7 +73,17 @@ class ManagedProcess:
         if self.process is None or self.process.poll() is not None:
             return
 
-        self.process.terminate()
+        if os.name == "nt":
+            # npm and the desktop app both spawn child processes on Windows.
+            # taskkill /T ensures Vite, Qt, and their helpers close as one tree.
+            subprocess.run(
+                ["taskkill", "/PID", str(self.process.pid), "/T", "/F"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            self.process.terminate()
         try:
             self.process.wait(timeout=5)
         except subprocess.TimeoutExpired:
@@ -121,9 +138,16 @@ def resolve_desktop_command():
 
 
 def resolve_backend_runner():
-    venv_python = ROOT / ".venv" / "bin" / "python"
-    if venv_python.exists():
-        return str(venv_python)
+    # Virtual environments use Scripts/python.exe on Windows and bin/python on
+    # Unix. Passing the matching interpreter keeps backend reload dependencies
+    # consistent with the desktop app's environment.
+    candidates = (
+        ROOT / ".venv" / "Scripts" / "python.exe",
+        ROOT / ".venv" / "bin" / "python",
+    )
+    for venv_python in candidates:
+        if venv_python.exists():
+            return str(venv_python)
 
     return sys.executable
 
@@ -148,9 +172,16 @@ def main():
         args.log_app = True
         args.log_be = True
 
+    # npm is a .cmd launcher on Windows; Popen needs that executable rather than
+    # relying on shell command resolution.
+    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    if npm is None:
+        print("Could not find npm. Install Node.js and ensure npm is on PATH.", file=sys.stderr)
+        return 1
+
     frontend = ManagedProcess(
         "frontend",
-        ["npm", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5173", "--strictPort"],
+        [npm, "run", "dev", "--", "--host", "127.0.0.1", "--port", "5173", "--strictPort"],
         cwd=str(FRONTEND_DIR),
         stream_logs=args.log_fe,
         env=os.environ.copy(),

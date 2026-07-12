@@ -1,5 +1,9 @@
-# Use local .venv if present (dev devices), else fall back to python3
+# Use the repository virtual environment when present.
+ifeq ($(OS),Windows_NT)
+PYTHON := $(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,python)
+else
 PYTHON := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
+endif
 
 .PHONY: ptest app-check backend-check backend-test frontend-build macos-app preview-local
 

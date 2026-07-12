@@ -42,7 +42,17 @@ def stop_backend(process):
     if process.poll() is not None:
         return
 
-    process.terminate()
+    if os.name == "nt":
+        # The venv Python launcher may create a separate interpreter process on
+        # Windows. Kill its full tree so reloads do not orphan backend servers.
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        process.terminate()
     try:
         process.wait(timeout=5)
     except subprocess.TimeoutExpired:

@@ -1,13 +1,14 @@
 import os
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from app.backend_process import (
     BACKEND_HELPER_FLAG,
     BACKEND_RELOAD_FLAG,
     BACKEND_RUNNER_ENV,
     PROJECT_ROOT_ENV,
+    BackendProcessManager,
     build_backend_command,
 )
 
@@ -38,6 +39,24 @@ class BackendProcessCommandTests(unittest.TestCase):
             command,
             ["/tmp/dev-python", "/tmp/human-controller/scripts/run_backend_dev.py"],
         )
+
+    @patch("app.backend_process.subprocess.run")
+    def test_windows_stop_terminates_the_backend_process_tree(self, run):
+        manager = BackendProcessManager()
+        process = Mock(pid=1234)
+        process.poll.return_value = None
+        manager.process = process
+
+        with patch("app.backend_process.os.name", "nt"):
+            manager.stop()
+
+        run.assert_called_once_with(
+            ["taskkill", "/PID", "1234", "/T", "/F"],
+            check=False,
+            stdout=-3,
+            stderr=-3,
+        )
+        process.wait.assert_called_once_with(timeout=5)
 
 
 if __name__ == "__main__":
