@@ -63,37 +63,29 @@ npm ci
 npm run build
 ```
 
-If you launch the macOS packaged app, use this faster workflow:
+## macOS Workflows
+
+| Workflow | Command | Use it when | What it does | What updates quickly |
+| --- | --- | --- | --- | --- |
+| Packaged build | `make macos-app` | You changed desktop Python code, want a real app bundle, or need a packaged test build | Builds `Human Controller.app` with the desktop app, bundled frontend, backend helper runtime, and bundled backend assets | Nothing live; this is a rebuild step |
+| Local preview | `make preview-local` | You want to iterate in the real desktop app while getting live frontend updates | Starts Vite, launches the desktop app in dev mode, and auto-starts a temporary backend helper | Frontend changes are prompt/live |
+| Direct Python launch | `python3 -m app.main` | Non-macOS local runs or basic debugging without bundle-specific macOS behavior | Launches the desktop app directly from Python | No live frontend unless separately wired |
+
+Notes:
+
+- On macOS, run `make macos-app` once before `make preview-local` so camera permission works through the real app bundle identity.
+- With `make preview-local`:
+  - frontend changes: prompt/live
+  - backend changes: usually need restarting `make preview-local`
+  - desktop Python changes: still need `make macos-app` on macOS
+- Optional preview logs:
 
 ```bash
-make macos-app
+make preview-local ARGS="--log-all"
+make preview-local ARGS="--log-fe --log-be"
 ```
 
-After the first packaged build:
-
-- Frontend-only changes:
-
-```bash
-make macos-refresh-frontend
-```
-
-- Python desktop app changes:
-
-```bash
-make macos-app
-```
-
-- Changes to both frontend and Python app:
-
-```bash
-make macos-app
-```
-
-### Launching the Application
-
-```bash
-python3 -m app.main
-```
+- If `preview-local` startup fails, it attempts to clean up leftover Human Controller, backend helper, and Vite processes before exiting.
 
 ### macOS Camera Permission Fix
 
@@ -104,10 +96,10 @@ make macos-app
 open "dist/Human Controller.app"
 ```
 
-If you only changed frontend files and already have a packaged app bundle, you can refresh just the bundled frontend assets instead of rebuilding the whole app:
+If you changed frontend assets, rebuild the packaged app before testing the bundle:
 
 ```bash
-make macos-refresh-frontend
+make macos-app
 open "dist/Human Controller.app"
 ```
 
@@ -128,3 +120,4 @@ GitHub Actions currently enforce:
 - `frontend-check.yml` for frontend lint, formatting, and type checks.
 - `app-check.yml` for the Python app checks.
 - `backend-check.yml` for backend dependency install and compile validation.
+- `macos-app-build.yml` for packaged macOS app build and downloadable artifact upload.

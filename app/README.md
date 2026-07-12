@@ -27,8 +27,7 @@ Repository build and packaging helpers live under `scripts/`, not in `app/`.
 │   └── tests/
 │       └── test_profile_manager.py
 ├── scripts/
-│   ├── build_macos_app.py
-│   └── sync_frontend_to_macos_app.py
+│   └── build_macos_app.py
 ```
 
 ## Profile Manager
@@ -83,17 +82,11 @@ For macOS packaged-app development:
 make macos-app
 ```
 
-These Make targets call the helper scripts in `scripts/`.
+The packaged app build is intended to include the desktop app, built frontend,
+and backend helper runtime in one macOS artifact.
 
-After the first packaged build:
-
-- Frontend-only changes:
-
-```bash
-make macos-refresh-frontend
-```
-
-- Python desktop app changes:
+After the first packaged build, rebuild the packaged app whenever frontend or
+Python desktop app changes:
 
 ```bash
 make macos-app
@@ -104,6 +97,19 @@ make macos-app
 ```bash
 python3 -m app.main
 ```
+
+For integrated local preview during development:
+
+```bash
+make macos-app
+make preview-local
+```
+
+This loads the frontend from the Vite dev server and starts a temporary backend
+helper process under the desktop app.
+
+On macOS, the initial `make macos-app` step is required so the app runs with the
+bundle identity needed for camera permissions.
 
 ## Camera permission notes
 
@@ -117,10 +123,10 @@ make macos-app
 open "dist/Human Controller.app"
 ```
 
-If you only changed frontend files, you can update the packaged app faster with:
+If you changed frontend assets, rebuild the packaged app before testing it:
 
 ```bash
-make macos-refresh-frontend
+make macos-app
 open "dist/Human Controller.app"
 ```
 

@@ -7,22 +7,26 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT / "dist"
-BUILD_DIR = ROOT / "build"
 PYINSTALLER_CONFIG_DIR = ROOT / ".pyinstaller"
 SPEC_PATH = ROOT / "human_controller.spec"
 FRONTEND_PATH = ROOT / "frontend" / "dist" / "index.html"
+POSE_MODEL_PATH = ROOT / "backend" / "perception" / "pose_landmarker_lite.task"
 
 
 SPEC_TEMPLATE = """# -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = collect_submodules("PySide6")
+hiddenimports += collect_submodules("backend")
 
 a = Analysis(
     ["run_app.py"],
     pathex=[],
     binaries=[],
-    datas=[("frontend/dist", "frontend/dist")],
+    datas=[
+        ("frontend/dist", "frontend/dist"),
+        ("backend/perception/pose_landmarker_lite.task", "backend/perception"),
+    ],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -81,6 +85,10 @@ def main() -> int:
         print("Frontend build is missing. Run `npm run build` in `frontend/` first.")
         return 1
 
+    if not POSE_MODEL_PATH.exists():
+        print(f"Backend model asset is missing: {POSE_MODEL_PATH}")
+        return 1
+
     if shutil.which("pyinstaller") is None and not (ROOT / ".venv" / "bin" / "pyinstaller").exists():
         print("PyInstaller is not installed in the current environment.")
         print("Install it with: .venv/bin/python -m pip install pyinstaller")
@@ -89,7 +97,7 @@ def main() -> int:
     SPEC_PATH.write_text(SPEC_TEMPLATE, encoding="utf-8")
 
     pyinstaller_executable = ROOT / ".venv" / "bin" / "pyinstaller"
-    print("Building real macOS app bundle with PyInstaller...")
+    print("Building real macOS app bundle with integrated frontend and backend runtime...")
     if pyinstaller_executable.exists():
         command = [str(pyinstaller_executable), "--noconfirm", str(SPEC_PATH)]
     else:

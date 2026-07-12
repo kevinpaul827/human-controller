@@ -1,0 +1,110 @@
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+from collections import deque
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+BACKEND_HELPER_FLAG = "--backend-helper"
+
+
+def build_backend_command():
+    if getattr(sys, "frozen", False):
+        return [sys.executable, BACKEND_HELPER_FLAG]
+
+    return [sys.executable, "-m", "backend.dev_server"]
+
+
+class BackendProcessManager:
+    def __init__(self):
+        self.host = os.environ.get("HUMAN_CONTROLLER_BACKEND_HOST", "127.0.0.1")
+        self.port = int(os.environ.get("HUMAN_CONTROLLER_BACKEND_PORT", "8000"))
+        self.health_url = f"http://{self.host}:{self.port}/health"
+        self.log_backend = os.environ.get("HUMAN_CONTROLLER_LOG_BE") == "1"
+        self.process = None
+        self._tail = deque(maxlen=40)
+        self._threads: list[threading.Thread] = []
+
+    def start(self):
+        if self.process is not None:
+            return
+
+        env = {
+            "HUMAN_CONTROLLER_BACKEND_HOST": self.host,
+            "HUMAN_CONTROLLER_BACKEND_PORT": str(self.port),
+        }
+
+        self.process = subprocess.Popen(
+            build_backend_command(),
+            cwd=str(ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env={**os.environ, **env},
+        )
+        self._threads = [
+            threading.Thread(
+                target=self._read_output,
+                args=(self.process.stdout,),
+                daemon=True,
+            )
+        ]
+        for thread in self._threads:
+            thread.start()
+
+        self._wait_until_healthy()
+
+    def stop(self):
+        if self.process is None:
+            return
+
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+
+        self.process = None
+
+    def _read_output(self, stream):
+        if stream is None:
+            return
+
+        for line in stream:
+            cleaned = line.rstrip()
+            if cleaned:
+                self._tail.append(cleaned)
+                if self.log_backend:
+                    print(f"[backend] {cleaned}", flush=True)
+
+    def _wait_until_healthy(self):
+        deadline = time.time() + 10
+
+        while time.time() < deadline:
+            if self.process is None:
+                raise RuntimeError("Backend process was not started.")
+
+            if self.process.poll() is not None:
+                tail = "\n".join(self._tail) or "No backend logs captured."
+                raise RuntimeError(f"Backend process exited early.\n{tail}")
+
+            try:
+                with urllib.request.urlopen(self.health_url, timeout=0.5) as response:
+                    if response.status == 200:
+                        return
+            except (urllib.error.URLError, TimeoutError):
+                time.sleep(0.2)
+
+        self.stop()
+        tail = "\n".join(self._tail) or "No backend logs captured."
+        raise RuntimeError(f"Backend failed health check at {self.health_url}.\n{tail}")

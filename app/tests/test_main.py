@@ -33,7 +33,10 @@ def _install_pyside6_stub():
     qtcore_module.QUrl = type(
         "QUrl",
         (),
-        {"fromLocalFile": staticmethod(lambda path: path)},
+        {
+            "__init__": lambda self, value=None: None,
+            "fromLocalFile": staticmethod(lambda path: path),
+        },
     )
     qtcore_module.QCameraPermission = type("QCameraPermission", (), {})
     qtcore_module.QCoreApplication = type("QCoreApplication", (), {})
@@ -91,6 +94,10 @@ class FrontendPathTests(unittest.TestCase):
 
         self.assertEqual(main_window.FRONTEND_PATH, expected)
 
+    def test_frontend_source_exists_with_dev_url(self):
+        with patch.object(main_window, "FRONTEND_URL", "http://127.0.0.1:5173"):
+            self.assertTrue(main_window.frontend_source_exists())
+
 
 class MainEntryPointTests(unittest.TestCase):
     @patch("app.main.QApplication")
@@ -104,7 +111,32 @@ class MainEntryPointTests(unittest.TestCase):
     ):
         exit_mock.side_effect = SystemExit(1)
 
-        with patch.object(main, "FRONTEND_PATH", Path("/tmp/does-not-exist/index.html")):
+        with patch("app.main.frontend_source_exists", return_value=False):
+            with patch(
+                "app.main.frontend_source_for_display",
+                return_value="/tmp/does-not-exist/index.html",
+            ):
+                with self.assertRaises(SystemExit):
+                    main.main()
+
+        app_ctor_mock.assert_called_once()
+        critical_mock.assert_called_once()
+        exit_mock.assert_called_once_with(1)
+
+    @patch("app.main.MainWindow", side_effect=RuntimeError("backend failed"))
+    @patch("app.main.QApplication")
+    @patch("app.main.QMessageBox.critical")
+    @patch("app.main.sys.exit")
+    def test_main_exits_with_error_when_window_startup_fails(
+        self,
+        exit_mock,
+        critical_mock,
+        app_ctor_mock,
+        _window_ctor_mock,
+    ):
+        exit_mock.side_effect = SystemExit(1)
+
+        with patch("app.main.frontend_source_exists", return_value=True):
             with self.assertRaises(SystemExit):
                 main.main()
 
@@ -130,7 +162,7 @@ class MainEntryPointTests(unittest.TestCase):
         window_ctor_mock.return_value = fake_window
         exit_mock.side_effect = SystemExit(0)
 
-        with patch.object(main, "FRONTEND_PATH", Path(__file__).resolve()):
+        with patch("app.main.frontend_source_exists", return_value=True):
             with self.assertRaises(SystemExit):
                 main.main()
 
