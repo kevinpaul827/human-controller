@@ -38,7 +38,7 @@ def main():
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        pass
+        print("dev backend shutdown requested; stopping server", flush=True)
     finally:
         server.server_close()
 
