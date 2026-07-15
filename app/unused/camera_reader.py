@@ -1,3 +1,5 @@
+# DO NOT REMOVE THIS FILE, WILL USE FOR FUTURE INTEGRATION
+
 import threading
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -14,6 +16,7 @@ class CameraReader(QObject):
         self.feed = CameraFeed()
         self.stop_event = threading.Event()
 
+    @Slot()
     def stop(self):
         self.stop_event.set()
 
@@ -31,7 +34,8 @@ class CameraReader(QObject):
                 ret, frame, timestamp_ms = self.feed.read()
 
                 if not ret:
-                    self.errorOccurred.emit("Failed to read frame")
+                    if not self.stop_event.is_set():
+                        self.errorOccurred.emit("Failed to read frame")
                     break
 
                 if frame is None:
@@ -39,8 +43,9 @@ class CameraReader(QObject):
 
                 self.frameReady.emit(frame, timestamp_ms)
 
-        except Exception as error_msg:
-            self.errorOccurred.emit(str(error_msg))
+        except Exception as error:
+            if not self.stop_event.is_set():
+                self.errorOccurred.emit(str(error))
             
         finally:
             self.feed.close()

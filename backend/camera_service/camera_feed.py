@@ -65,7 +65,7 @@ def main():
 
     try:
         while True:
-            ret, frame, _ = frame.read()
+            ret, frame, _ = feed.read()
             if not ret:
                 break
 
