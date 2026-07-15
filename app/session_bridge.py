@@ -214,7 +214,6 @@ class SessionBridge(QObject):
                     "landmarks": pose.xyz,
                     "visibility": pose.visibility
                 })
-                print(pose.xyz)
 
     def handle_processing_finished(self):
         self.pose_processing = False
