@@ -49,6 +49,7 @@ def _install_pyside6_stub():
     qtmultimedia_module.QCamera = type("QCamera", (), {})
     qtmultimedia_module.QMediaCaptureSession = type("QMediaCaptureSession", (), {})
     qtmultimedia_module.QMediaDevices = type("QMediaDevices", (), {})
+    qtmultimedia_module.QVideoFrame = type("QVideoFrame", (), {})
     qtwebchannel_module.QWebChannel = type("QWebChannel", (), {})
     qtwebengine_module.QWebEngineView = type("QWebEngineView", (), {})
     qtmultimediawidgets_module.QVideoWidget = type("QVideoWidget", (), {})
@@ -73,7 +74,7 @@ def _install_pyside6_stub():
 try:
     from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl  # noqa: F401
     from PySide6.QtGui import QDesktopServices  # noqa: F401
-    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices  # noqa: F401
+    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame  # noqa: F401
     from PySide6.QtMultimediaWidgets import QVideoWidget  # noqa: F401
     from PySide6.QtWebChannel import QWebChannel  # noqa: F401
     from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
