@@ -1,10 +1,12 @@
 import sys
 from enum import Enum
 
-from PySide6.QtCore import QCameraPermission, QCoreApplication, QObject, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QCameraPermission, QCoreApplication, QElapsedTimer, QObject, QThread, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices
+from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame
+from PySide6.QtMultimediaWidgets import QVideoWidget
 
+from .pose_processor import PoseProcessor
 
 class SessionState(str, Enum):
     IDLE = "idle"
@@ -16,17 +18,40 @@ class SessionBridge(QObject):
     sessionStatusChanged = Signal(dict)
     previewBoundsChanged = Signal(int, int, int, int)
 
+    processFrame = Signal(object, int)
+    poseEstimated = Signal(dict)
+    closePoseProcessor = Signal()
+
     def __init__(self):
         super().__init__()
         self.state = SessionState.IDLE
         self.active_camera = None
+        self.camera_timer = QElapsedTimer()
         self.capture_session = None
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
+        self.video_sink = None
 
-    def attach_preview_widget(self, preview_widget):
+        self.pose_processing = False
+        self.pose_thread = QThread(self)
+        self.pose_processor = PoseProcessor()
+        self.pose_processor.moveToThread(self.pose_thread)
+
+        self.processFrame.connect(self.pose_processor.process_frame, Qt.ConnectionType.QueuedConnection)
+        self.pose_processor.poseEstimated.connect(self.handle_pose_estimated)
+        self.pose_processor.processingFinished.connect(self.handle_processing_finished)
+        self.pose_processor.errorOccurred.connect(self.handle_pose_error)
+
+        self.closePoseProcessor.connect(self.pose_processor.close, Qt.ConnectionType.BlockingQueuedConnection)
+        self.pose_thread.finished.connect(self.pose_processor.deleteLater)
+        self.pose_thread.start()
+
+    def attach_preview_widget(self, preview_widget: QVideoWidget):
         self.preview_widget = preview_widget
         self.preview_widget.hide()
+
+        self.video_sink = self.preview_widget.videoSink()
+        self.video_sink.videoFrameChanged.connect(self.handle_video_frame)
 
         if self.capture_session is not None:
             self.capture_session.setVideoOutput(self.preview_widget)
@@ -97,6 +122,7 @@ class SessionBridge(QObject):
         if not self.ensure_camera_session():
             return
 
+        self.camera_timer.restart()
         self.active_camera.start()
         self.set_state(SessionState.LIVE)
         self.apply_preview_bounds()
@@ -152,6 +178,49 @@ class SessionBridge(QObject):
             message = error_message or "Unable to start camera session."
 
         self.emit_error(message)
+    
+    def handle_video_frame(self, video_frame: QVideoFrame):
+        if self.state != SessionState.LIVE:
+            return
+
+        if self.pose_processing:
+            return
+        
+        image = video_frame.toImage()
+
+        if image.isNull():
+            return
+        
+        timestamp_ms = video_frame.startTime() // 1000
+
+        if timestamp_ms < 0:
+            timestamp_ms = self.camera_timer.elapsed()
+
+        self.pose_processing = True
+
+        self.processFrame.emit(image.copy(), int(timestamp_ms))
+    
+    def handle_pose_estimated(self, pose):
+        if self.state == SessionState.LIVE:
+            if pose is None:
+                self.poseEstimated.emit({
+                    "detected": False,
+                    "landmarks": [],
+                    "visibility": []
+                })
+            else:
+                self.poseEstimated.emit({
+                    "detected": True,
+                    "landmarks": pose.xyz,
+                    "visibility": pose.visibility
+                })
+                print(pose.xyz)
+
+    def handle_processing_finished(self):
+        self.pose_processing = False
+    
+    def handle_pose_error(self, message):
+        self.emit_error(message)
 
     @Slot()
     def startSession(self):
@@ -197,3 +266,12 @@ class SessionBridge(QObject):
             return
 
         self.emit_error("Open your system camera privacy settings to allow access.")
+
+    @Slot()
+    def shutdown(self):
+        self.stop_camera()
+
+        if self.pose_thread.isRunning():
+            self.closePoseProcessor.emit()
+            self.pose_thread.quit()
+            self.pose_thread.wait()
