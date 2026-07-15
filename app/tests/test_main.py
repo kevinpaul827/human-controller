@@ -40,9 +40,11 @@ def _install_pyside6_stub():
     )
     qtcore_module.QCameraPermission = type("QCameraPermission", (), {})
     qtcore_module.QCoreApplication = type("QCoreApplication", (), {})
+    qtcore_module.QElapsedTimer = type("QElapsedTimer", (), {})
     qtcore_module.QObject = type("QObject", (), {})
     qtcore_module.Signal = lambda *args, **kwargs: MagicMock()
     qtcore_module.Slot = lambda *args, **kwargs: (lambda func: func)
+    qtcore_module.QThread = type("QThread", (), {})
     qtgui_module.QDesktopServices = type("QDesktopServices", (), {})
     qtmultimedia_module.QCamera = type("QCamera", (), {})
     qtmultimedia_module.QMediaCaptureSession = type("QMediaCaptureSession", (), {})
@@ -69,7 +71,7 @@ def _install_pyside6_stub():
 
 
 try:
-    from PySide6.QtCore import Qt, QUrl  # noqa: F401
+    from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl  # noqa: F401
     from PySide6.QtGui import QDesktopServices  # noqa: F401
     from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices  # noqa: F401
     from PySide6.QtMultimediaWidgets import QVideoWidget  # noqa: F401
