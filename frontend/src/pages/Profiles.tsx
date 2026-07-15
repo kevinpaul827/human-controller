@@ -36,7 +36,8 @@ const Profiles = () => {
   });
 
   const sortedProfiles = useMemo(
-    () => [...profiles].sort((a, b) => a.patientName.localeCompare(b.patientName)),
+    () =>
+      [...profiles].sort((a, b) => a.patientName.localeCompare(b.patientName)),
     [profiles],
   );
 
@@ -105,8 +106,14 @@ const Profiles = () => {
     window.alert(`Load last session: ${profile.patientName} → ${gameName}`);
   };
 
-  const handleGameAction = (profile: PatientProfile, gameName: string, action: "load" | "edit") => {
-    window.alert(`${action === "load" ? "Load" : "Edit"} game profile: ${profile.patientName} → ${gameName}`);
+  const handleGameAction = (
+    profile: PatientProfile,
+    gameName: string,
+    action: "load" | "edit",
+  ) => {
+    window.alert(
+      `${action === "load" ? "Load" : "Edit"} game profile: ${profile.patientName} → ${gameName}`,
+    );
   };
 
   const handleDeleteProfile = (profile: PatientProfile) => {
@@ -117,7 +124,9 @@ const Profiles = () => {
       return;
     }
 
-    setProfiles((current) => current.filter((item) => item.patientId !== profile.patientId));
+    setProfiles((current) =>
+      current.filter((item) => item.patientId !== profile.patientId),
+    );
     if (expandedPatientId === profile.patientId) {
       setExpandedPatientId(null);
     }
@@ -152,24 +161,32 @@ const Profiles = () => {
       <header>
         <h1 className={styles.heading}>Patient &amp; Game Profiles</h1>
         <p className={styles.subheading}>
-          One patient profile may contain multiple game mapping profiles. Each game profile holds all
-          gesture-to-key bindings for that title.
+          One patient profile may contain multiple game mapping profiles. Each
+          game profile holds all gesture-to-key bindings for that title.
         </p>
       </header>
 
       <div className={styles.list}>
         {sortedProfiles.length === 0 ? (
-          <p className={styles.empty}>No profiles yet. Use ADD NEW to create one.</p>
+          <p className={styles.empty}>
+            No profiles yet. Use ADD NEW to create one.
+          </p>
         ) : (
           sortedProfiles.map((profile) => (
             <PatientCard
               key={profile.patientId}
               profile={profile}
               expanded={expandedPatientId === profile.patientId}
-              onExpandChange={(expanded) => handleExpandChange(profile.patientId, expanded)}
+              onExpandChange={(expanded) =>
+                handleExpandChange(profile.patientId, expanded)
+              }
               onLoadLastSession={() => handleLoadLastSession(profile)}
-              onGameLoad={(gameName) => handleGameAction(profile, gameName, "load")}
-              onGameEdit={(gameName) => handleGameAction(profile, gameName, "edit")}
+              onGameLoad={(gameName) =>
+                handleGameAction(profile, gameName, "load")
+              }
+              onGameEdit={(gameName) =>
+                handleGameAction(profile, gameName, "edit")
+              }
               onAddGameProfile={() => handleAddGameProfile(profile)}
               onDelete={() => handleDeleteProfile(profile)}
             />
@@ -177,12 +194,20 @@ const Profiles = () => {
         )}
       </div>
 
-      <button type="button" className={styles.addNewButton} onClick={() => setShowNewDialog(true)}>
+      <button
+        type="button"
+        className={styles.addNewButton}
+        onClick={() => setShowNewDialog(true)}
+      >
         ADD NEW
       </button>
 
       {showNewDialog ? (
-        <div className={styles.dialogBackdrop} role="presentation" onClick={() => setShowNewDialog(false)}>
+        <div
+          className={styles.dialogBackdrop}
+          role="presentation"
+          onClick={() => setShowNewDialog(false)}
+        >
           <div
             className={styles.dialog}
             role="dialog"
@@ -199,7 +224,9 @@ const Profiles = () => {
               <input
                 id="patient-name"
                 value={form.patientName}
-                onChange={(event) => handlePatientNameChange(event.target.value)}
+                onChange={(event) =>
+                  handlePatientNameChange(event.target.value)
+                }
                 placeholder="e.g. Patient C"
               />
             </div>
@@ -209,7 +236,12 @@ const Profiles = () => {
               <input
                 id="patient-id"
                 value={form.patientId}
-                onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    patientId: event.target.value,
+                  }))
+                }
                 placeholder="e.g. patient-c"
               />
             </div>
@@ -219,7 +251,12 @@ const Profiles = () => {
               <input
                 id="game-name"
                 value={form.gameName}
-                onChange={(event) => setForm((current) => ({ ...current, gameName: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    gameName: event.target.value,
+                  }))
+                }
                 placeholder="e.g. Celeste — Rehab Mode"
               />
             </div>
@@ -229,7 +266,12 @@ const Profiles = () => {
               <input
                 id="gesture-name"
                 value={form.gestureName}
-                onChange={(event) => setForm((current) => ({ ...current, gestureName: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    gestureName: event.target.value,
+                  }))
+                }
                 placeholder="e.g. Right Arm Raise"
               />
             </div>
@@ -239,7 +281,12 @@ const Profiles = () => {
               <input
                 id="gesture-key"
                 value={form.gestureKey}
-                onChange={(event) => setForm((current) => ({ ...current, gestureKey: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    gestureKey: event.target.value,
+                  }))
+                }
                 placeholder="e.g. ArrowUp"
               />
             </div>
@@ -255,7 +302,11 @@ const Profiles = () => {
               >
                 Cancel
               </button>
-              <button type="button" className={styles.dialogSubmit} onClick={handleCreateProfile}>
+              <button
+                type="button"
+                className={styles.dialogSubmit}
+                onClick={handleCreateProfile}
+              >
                 Create
               </button>
             </div>

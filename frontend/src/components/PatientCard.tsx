@@ -14,9 +14,13 @@ const gestureKeyPreview = (gestures: GameProfile["gestures"], visible = 5) => {
     return "No bindings";
   }
 
-  const shown = gestures.slice(0, visible).map((gesture) => KEY_LABELS[gesture.key] ?? gesture.key);
+  const shown = gestures
+    .slice(0, visible)
+    .map((gesture) => KEY_LABELS[gesture.key] ?? gesture.key);
   const remaining = gestures.length - visible;
-  return remaining > 0 ? `${shown.join(" ")}  + ${remaining} more` : shown.join(" ");
+  return remaining > 0
+    ? `${shown.join(" ")}  + ${remaining} more`
+    : shown.join(" ");
 };
 
 type PatientCardProps = {
@@ -44,12 +48,18 @@ const PatientCard = ({
   const gameLabel = `${gameCount} game profile${gameCount === 1 ? "" : "s"}`;
 
   return (
-    <article className={`${styles.card} ${expanded ? styles.cardExpanded : ""}`}>
+    <article
+      className={`${styles.card} ${expanded ? styles.cardExpanded : ""}`}
+    >
       <div className={styles.header}>
         <h2 className={styles.patientName}>👤 {profile.patientName}</h2>
         <span className={styles.gameCount}>{gameLabel}</span>
         {expanded ? (
-          <button type="button" className={styles.buttonHeader} onClick={onAddGameProfile}>
+          <button
+            type="button"
+            className={styles.buttonHeader}
+            onClick={onAddGameProfile}
+          >
             + Add Game Profile
           </button>
         ) : null}
@@ -61,9 +71,13 @@ const PatientCard = ({
             <div key={game.gameName} className={styles.gameRow}>
               <div className={styles.gameInfo}>
                 <h3 className={styles.gameTitle}>🎮 {game.gameName}</h3>
-                <p className={styles.gesturePreview}>{gestureKeyPreview(game.gestures)}</p>
+                <p className={styles.gesturePreview}>
+                  {gestureKeyPreview(game.gestures)}
+                </p>
               </div>
-              <span className={styles.badge}>{game.gestures.length} gestures</span>
+              <span className={styles.badge}>
+                {game.gestures.length} gestures
+              </span>
               <div className={styles.rowActions}>
                 <button
                   type="button"
@@ -88,23 +102,43 @@ const PatientCard = ({
       <div className={styles.actions}>
         {expanded ? (
           <>
-            <button type="button" className={styles.buttonSecondary} onClick={() => onExpandChange(false)}>
+            <button
+              type="button"
+              className={styles.buttonSecondary}
+              onClick={() => onExpandChange(false)}
+            >
               Close
             </button>
             <span className={styles.actionsSpacer} aria-hidden="true" />
-            <button type="button" className={styles.buttonDanger} onClick={onDelete}>
+            <button
+              type="button"
+              className={styles.buttonDanger}
+              onClick={onDelete}
+            >
               Delete
             </button>
           </>
         ) : (
           <>
-            <button type="button" className={styles.buttonSecondary} onClick={() => onExpandChange(true)}>
+            <button
+              type="button"
+              className={styles.buttonSecondary}
+              onClick={() => onExpandChange(true)}
+            >
               Expand
             </button>
-            <button type="button" className={styles.buttonPrimary} onClick={onLoadLastSession}>
+            <button
+              type="button"
+              className={styles.buttonPrimary}
+              onClick={onLoadLastSession}
+            >
               Load Last Session
             </button>
-            <button type="button" className={styles.buttonDanger} onClick={onDelete}>
+            <button
+              type="button"
+              className={styles.buttonDanger}
+              onClick={onDelete}
+            >
               Delete
             </button>
           </>
