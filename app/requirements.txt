@@ -3,4 +3,5 @@ PySide6_Addons==6.11.1
 PySide6_Essentials==6.11.1
 shiboken6==6.11.1
 pydantic>=2.0,<3.0
-numpy==2.4.6
+numpy>=1.26
+opencv-python>=4.10,<5
