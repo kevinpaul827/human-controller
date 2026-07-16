@@ -20,6 +20,9 @@ FRONTEND_URL = "http://127.0.0.1:5173"
 BACKEND_HOST = "127.0.0.1"
 BACKEND_PORT = "8000"
 MACOS_APP_BINARY = ROOT / "dist" / "Human Controller.app" / "Contents" / "MacOS" / "Human Controller"
+# This supervisor script is the "one command local preview" workflow.
+# It keeps the frontend dev server and desktop app running together so team
+# members can test the integrated experience without starting each piece by hand.
 PROCESS_PATTERNS = [
     "Human Controller",
     "app.main",
@@ -127,6 +130,8 @@ def format_tail(process):
 
 def resolve_desktop_command():
     if sys.platform == "darwin":
+        # On macOS we deliberately launch the packaged app bundle because camera
+        # permissions are tied to that bundle identity, not to `python -m app.main`.
         if not MACOS_APP_BINARY.exists():
             raise RuntimeError(
                 "macOS local preview requires the packaged app bundle for camera permissions.\n"
@@ -200,6 +205,8 @@ def main():
             "HUMAN_CONTROLLER_LOG_BE": "1" if args.log_be else "0",
         }
     )
+    # These env vars tell the desktop app to load the live Vite URL instead of
+    # bundled frontend files, and to spin up the lightweight preview backend.
     desktop = ManagedProcess(
         "app",
         resolve_desktop_command(),

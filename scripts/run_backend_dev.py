@@ -12,12 +12,17 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
 POLL_INTERVAL_SECONDS = 0.75
 
+# This helper watches backend Python files during local preview.
+# When someone edits backend code, it restarts the preview backend so the
+# desktop app can pick up the change without rerunning the full preview flow.
 
 def backend_command():
     return [sys.executable, "-m", "backend.dev_server"]
 
 
 def snapshot_backend_files():
+    # We keep the reload logic simple for students: if any backend `.py` file
+    # timestamp changes, restart the preview backend process.
     tracked = {}
     for path in BACKEND_DIR.rglob("*.py"):
         try:

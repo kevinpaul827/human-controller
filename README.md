@@ -3,16 +3,18 @@
 This repository is split into three main areas:
 
 - `frontend/`: Vite + React + TypeScript web frontend.
-- `app/`: Python desktop app code and tests.
-- `backend/`: Early backend services and experiments, including camera input code in `camera_service/`.
+- `app/`: Python desktop app, Qt session bridge, backend launcher, and tests.
+- `backend/`: Pose-estimation and development backend helpers used by the desktop app.
 
 ## Current Structure
 
 ```text
 .
 ├── app/
+│   ├── backend_process.py
 │   ├── main.py
 │   ├── main_window.py
+│   ├── pose_processor.py
 │   ├── session_bridge.py
 │   ├── profile_manager/
 │   ├── data/profiles/
@@ -21,6 +23,7 @@ This repository is split into three main areas:
 ├── backend/
 │   ├── camera_service/
 │   │   └── camera_feed.py
+│   ├── dev_server.py
 │   ├── matching_engine/
 │   ├── perception/
 │   └── requirements.txt
@@ -31,7 +34,12 @@ This repository is split into three main areas:
 ├── .github/workflows/
 │   ├── app-check.yml
 │   ├── backend-check.yml
-│   └── frontend-check.yml
+│   ├── frontend-check.yml
+│   └── macos-app-build.yml
+├── scripts/
+│   ├── build_macos_app.py
+│   ├── preview_local.py
+│   └── run_backend_dev.py
 └── Makefile
 ```
 
@@ -45,6 +53,8 @@ Create a virtual environment and install the dependencies:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r app/requirements.txt
+pip install -r backend/requirements.txt
+pip install -r backend/matching_engine/requirements.txt
 ```
 
 ### Windows
@@ -53,6 +63,8 @@ pip install -r app/requirements.txt
 python3 -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r app/requirements.txt
+pip install -r backend/requirements.txt
+pip install -r backend/matching_engine/requirements.txt
 ```
 
 ### Frontend Setup
@@ -71,6 +83,11 @@ npm run build
 | Local preview | `make preview-local` | You want to iterate in the real desktop app while getting live frontend updates | Starts Vite, launches the desktop app in dev mode, and auto-starts a temporary backend helper | Frontend changes are prompt/live |
 | Direct Python launch | `python3 -m app.main` | Non-macOS local runs or basic debugging without bundle-specific macOS behavior | Launches the desktop app directly from Python | No live frontend unless separately wired |
 
+Plain English:
+- `make macos-app` is the packaging/build workflow.
+- `make preview-local` is the easiest day-to-day development workflow when you want the desktop app and web UI running together.
+- The `scripts/` folder contains helper tools for packaging and preview; it is not app runtime code by itself.
+
 On Windows, GNU Make is optional. Run the equivalent workflow from the repository root:
 
 ```powershell
@@ -86,6 +103,7 @@ Optional logging uses the same flags as the Make target:
 Notes:
 
 - On macOS, run `make macos-app` once before `make preview-local` so camera permission works through the real app bundle identity.
+- `make preview-local` also expects the backend Python dependencies above to be installed, because it auto-starts the preview backend helper.
 - With `make preview-local`:
   - frontend changes: prompt/live
   - backend changes: auto-restart after save
