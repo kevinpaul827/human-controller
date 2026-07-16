@@ -72,6 +72,12 @@ def _install_pyside6_stub():
     sys.modules["PySide6.QtWidgets"] = qtwidgets_module
 
 
+def _install_pose_processor_stub():
+    pose_processor_module = ModuleType("app.pose_processor")
+    pose_processor_module.PoseProcessor = type("PoseProcessor", (), {})
+    sys.modules["app.pose_processor"] = pose_processor_module
+
+
 try:
     from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl  # noqa: F401
     from PySide6.QtGui import QDesktopServices, QImage  # noqa: F401
@@ -82,6 +88,11 @@ try:
     from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox  # noqa: F401
 except Exception:
     _install_pyside6_stub()
+
+# These entrypoint tests only care about startup/error handling in app.main.
+# Stubbing PoseProcessor keeps the import lightweight so the tests do not need
+# numpy, OpenCV, or MediaPipe just to import the window module graph.
+_install_pose_processor_stub()
 
 from app import main
 from app import main_window
