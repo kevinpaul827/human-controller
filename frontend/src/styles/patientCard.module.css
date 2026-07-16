@@ -1,0 +1,145 @@
+.card {
+  padding: 20px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.cardExpanded {
+  border: 2px solid #2563eb;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.patientName {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  flex: 1 1 auto;
+}
+
+.gameCount {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.gameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.gameInfo {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.gameTitle {
+  margin: 0 0 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.gesturePreview {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background-color: #e0e7f8;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.buttonPrimary,
+.buttonSecondary,
+.buttonHeader {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.buttonPrimary {
+  border: none;
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.buttonPrimary:hover {
+  background-color: #1d4ed8;
+}
+
+.buttonSecondary,
+.buttonHeader {
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.buttonSecondary:hover,
+.buttonHeader:hover {
+  background-color: #f8fafc;
+}
+
+.buttonDanger {
+  padding: 6px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.buttonDanger:hover {
+  background-color: #fef2f2;
+}
+
+.actionsSpacer {
+  flex: 1;
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+}
