@@ -83,6 +83,8 @@ class MainWindow(QMainWindow):
         self.preview.raise_()
 
     def closeEvent(self, event):
+        self.bridge.shutdown()
+
         if self.backend_manager is not None:
             self.backend_manager.stop()
         super().closeEvent(event)

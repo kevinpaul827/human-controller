@@ -19,6 +19,9 @@ BACKEND_RUNNER_ENV = "HUMAN_CONTROLLER_BACKEND_RUNNER"
 PROJECT_ROOT_ENV = "HUMAN_CONTROLLER_PROJECT_ROOT"
 BACKEND_RELOADER_PATH = Path("scripts") / "run_backend_dev.py"
 
+# This module is the desktop app's small process manager for the preview/backend
+# helper. Its job is to start the helper, wait until `/health` responds, and
+# stop the helper cleanly when the app closes.
 
 def build_backend_command(env: dict[str, str] | None = None):
     env = env or os.environ

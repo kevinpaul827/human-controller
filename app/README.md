@@ -1,6 +1,6 @@
 # App
 
-This directory contains the Python files for creating the app of the project.
+This directory contains the Python desktop app code for the project.
 
 Repository build and packaging helpers live under `scripts/`, not in `app/`.
 
@@ -9,13 +9,16 @@ Repository build and packaging helpers live under `scripts/`, not in `app/`.
 - Python
 - PySide6
 - Pydantic (profile data validation)
+- NumPy and OpenCV (camera frame processing for pose estimation)
 
 ## Structure
 
 ```text
 ├── app/
+│   ├── backend_process.py
 │   ├── main.py
 │   ├── main_window.py
+│   ├── pose_processor.py
 │   ├── session_bridge.py
 │   ├── profile_demo.py
 │   ├── profile_manager/
@@ -24,11 +27,28 @@ Repository build and packaging helpers live under `scripts/`, not in `app/`.
 │   │   └── exceptions.py
 │   ├── data/profiles/
 │   ├── requirements.txt
-│   └── tests/
+│   ├── tests/
+│       ├── test_backend_process.py
+│       ├── test_main.py
 │       └── test_profile_manager.py
+│   └── unused/
+│       └── camera_reader.py
+├── backend/
+│   ├── dev_server.py
+│   └── perception/
 ├── scripts/
-│   └── build_macos_app.py
+│   ├── build_macos_app.py
+│   ├── preview_local.py
+│   └── run_backend_dev.py
 ```
+
+Plain English:
+- `main.py` is the app entry point.
+- `main_window.py` builds the main Qt window and loads the frontend.
+- `session_bridge.py` is the bridge between the web frontend and the Qt/camera side.
+- `pose_processor.py` turns Qt camera frames into data the backend pose estimator can use.
+- `backend_process.py` starts and stops the small backend helper used in preview and packaged builds.
+- `scripts/` contains developer tooling such as packaging and local preview helpers.
 
 ## Profile Manager
 
@@ -58,6 +78,8 @@ Create a virtual environment and install the dependencies:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r app/requirements.txt
+pip install -r backend/requirements.txt
+pip install -r backend/matching_engine/requirements.txt
 ```
 
 ### Windows
@@ -66,6 +88,8 @@ pip install -r app/requirements.txt
 python3 -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r app/requirements.txt
+pip install -r backend/requirements.txt
+pip install -r backend/matching_engine/requirements.txt
 ```
 
 ## Frontend Setup
@@ -113,6 +137,11 @@ On Windows, GNU Make is optional; run the cross-platform supervisor directly:
 
 This loads the frontend from the Vite dev server and starts a temporary backend
 helper process under the desktop app.
+
+The preview helper is mainly for development convenience:
+- frontend code updates live from Vite
+- backend helper code restarts automatically
+- desktop Python code inside the packaged macOS app still needs `make macos-app` again
 
 On macOS, the initial `make macos-app` step is required so the app runs with the
 bundle identity needed for camera permissions.

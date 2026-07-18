@@ -12,6 +12,9 @@ SPEC_PATH = ROOT / "human_controller.spec"
 FRONTEND_PATH = ROOT / "frontend" / "dist" / "index.html"
 POSE_MODEL_PATH = ROOT / "backend" / "perception" / "pose_landmarker_lite.task"
 
+# This helper is the "package the whole desktop app" script.
+# It bundles the Qt app, built frontend files, and backend pose model into one
+# macOS `.app` so teammates can test the real desktop experience.
 
 SPEC_TEMPLATE = """# -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
@@ -81,10 +84,14 @@ def main() -> int:
         print("This builder is only intended for macOS.")
         return 1
 
+    # The packaged app serves the built frontend files from inside the bundle,
+    # so we fail early if the frontend has not been built yet.
     if not FRONTEND_PATH.exists():
         print("Frontend build is missing. Run `npm run build` in `frontend/` first.")
         return 1
 
+    # Pose estimation needs the MediaPipe task file at runtime. Packaging would
+    # succeed without it, but the app would later fail when the camera flow starts.
     if not POSE_MODEL_PATH.exists():
         print(f"Backend model asset is missing: {POSE_MODEL_PATH}")
         return 1

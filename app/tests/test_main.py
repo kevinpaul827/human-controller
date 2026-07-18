@@ -40,13 +40,17 @@ def _install_pyside6_stub():
     )
     qtcore_module.QCameraPermission = type("QCameraPermission", (), {})
     qtcore_module.QCoreApplication = type("QCoreApplication", (), {})
+    qtcore_module.QElapsedTimer = type("QElapsedTimer", (), {})
     qtcore_module.QObject = type("QObject", (), {})
     qtcore_module.Signal = lambda *args, **kwargs: MagicMock()
     qtcore_module.Slot = lambda *args, **kwargs: (lambda func: func)
+    qtcore_module.QThread = type("QThread", (), {})
     qtgui_module.QDesktopServices = type("QDesktopServices", (), {})
+    qtgui_module.QImage = type("QImage", (), {})
     qtmultimedia_module.QCamera = type("QCamera", (), {})
     qtmultimedia_module.QMediaCaptureSession = type("QMediaCaptureSession", (), {})
     qtmultimedia_module.QMediaDevices = type("QMediaDevices", (), {})
+    qtmultimedia_module.QVideoFrame = type("QVideoFrame", (), {})
     qtwebchannel_module.QWebChannel = type("QWebChannel", (), {})
     qtwebengine_module.QWebEngineView = type("QWebEngineView", (), {})
     qtmultimediawidgets_module.QVideoWidget = type("QVideoWidget", (), {})
@@ -68,16 +72,27 @@ def _install_pyside6_stub():
     sys.modules["PySide6.QtWidgets"] = qtwidgets_module
 
 
+def _install_pose_processor_stub():
+    pose_processor_module = ModuleType("app.pose_processor")
+    pose_processor_module.PoseProcessor = type("PoseProcessor", (), {})
+    sys.modules["app.pose_processor"] = pose_processor_module
+
+
 try:
-    from PySide6.QtCore import Qt, QUrl  # noqa: F401
-    from PySide6.QtGui import QDesktopServices  # noqa: F401
-    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices  # noqa: F401
+    from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl  # noqa: F401
+    from PySide6.QtGui import QDesktopServices, QImage  # noqa: F401
+    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame  # noqa: F401
     from PySide6.QtMultimediaWidgets import QVideoWidget  # noqa: F401
     from PySide6.QtWebChannel import QWebChannel  # noqa: F401
     from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
     from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox  # noqa: F401
 except Exception:
     _install_pyside6_stub()
+
+# These entrypoint tests only care about startup/error handling in app.main.
+# Stubbing PoseProcessor keeps the import lightweight so the tests do not need
+# numpy, OpenCV, or MediaPipe just to import the window module graph.
+_install_pose_processor_stub()
 
 from app import main
 from app import main_window

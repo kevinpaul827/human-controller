@@ -1,3 +1,3 @@
-__all__ = ["estimate_pose"]
+__all__ = ["PoseEstimator"]
 
-from .pose_estimator import estimate_pose
+from .pose_estimator import PoseEstimator
