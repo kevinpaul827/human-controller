@@ -26,10 +26,14 @@ def _install_pyside6_stub():
             "WidgetAttribute": type(
                 "WidgetAttribute",
                 (),
-                {"WA_TransparentForMouseEvents": object()},
+                {
+                    "WA_TransparentForMouseEvents": object(),
+                    "WA_TranslucentBackground": object(),
+                },
             )
         },
     )
+    qtcore_module.QRectF = type("QRectF", (), {})
     qtcore_module.QUrl = type(
         "QUrl",
         (),
@@ -45,12 +49,16 @@ def _install_pyside6_stub():
     qtcore_module.Signal = lambda *args, **kwargs: MagicMock()
     qtcore_module.Slot = lambda *args, **kwargs: (lambda func: func)
     qtcore_module.QThread = type("QThread", (), {})
+    qtgui_module.QColor = type("QColor", (), {})
     qtgui_module.QDesktopServices = type("QDesktopServices", (), {})
     qtgui_module.QImage = type("QImage", (), {})
+    qtgui_module.QPainter = type("QPainter", (), {})
+    qtgui_module.QPen = type("QPen", (), {})
     qtmultimedia_module.QCamera = type("QCamera", (), {})
     qtmultimedia_module.QMediaCaptureSession = type("QMediaCaptureSession", (), {})
     qtmultimedia_module.QMediaDevices = type("QMediaDevices", (), {})
     qtmultimedia_module.QVideoFrame = type("QVideoFrame", (), {})
+    qtmultimedia_module.QVideoSink = type("QVideoSink", (), {})
     qtwebchannel_module.QWebChannel = type("QWebChannel", (), {})
     qtwebengine_module.QWebEngineView = type("QWebEngineView", (), {})
     qtmultimediawidgets_module.QVideoWidget = type("QVideoWidget", (), {})
@@ -61,6 +69,7 @@ def _install_pyside6_stub():
         {"critical": staticmethod(lambda *args, **kwargs: None)},
     )
     qtwidgets_module.QMainWindow = type("QMainWindow", (), {})
+    qtwidgets_module.QWidget = type("QWidget", (), {})
 
     sys.modules.setdefault("PySide6", pyside6_module)
     sys.modules["PySide6.QtCore"] = qtcore_module
@@ -78,6 +87,13 @@ def _install_pose_processor_stub():
     sys.modules["app.pose_processor"] = pose_processor_module
 
 
+def _install_overlay_constants_stub():
+    overlay_constants_module = ModuleType("app.overlay_constants")
+    overlay_constants_module.MIN_VISIBILITY = 0.5
+    overlay_constants_module.POSE_CONNECTIONS = []
+    sys.modules["app.overlay_constants"] = overlay_constants_module
+
+
 try:
     from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl  # noqa: F401
     from PySide6.QtGui import QDesktopServices, QImage  # noqa: F401
@@ -93,6 +109,7 @@ except Exception:
 # Stubbing PoseProcessor keeps the import lightweight so the tests do not need
 # numpy, OpenCV, or MediaPipe just to import the window module graph.
 _install_pose_processor_stub()
+_install_overlay_constants_stub()
 
 from app import main
 from app import main_window

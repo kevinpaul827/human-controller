@@ -172,9 +172,7 @@ const SessionCamera = () => {
   return (
     <>
       <div className={styles.cameraSection}>
-        <Paper
-          className={`${styles.dashboardPanel} ${styles.cameraPanel}`}
-        >
+        <Paper className={`${styles.dashboardPanel} ${styles.cameraPanel}`}>
           <div className={styles.cameraFeed}>
             <div
               className={`${styles.cameraHeader} ${isLive ? styles.recordingBoxActive : ""}`}

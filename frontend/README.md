@@ -28,6 +28,7 @@ frontend/
 ```
 
 Plain English:
+
 - `pages/` contains route-level screens such as Home, Profiles, Calibrate, Session, and Settings.
 - `components/` contains reusable UI pieces, including the session camera panel.
 - `services/sessionBridge.ts` talks to the desktop `sessionBridge` object exposed over Qt WebChannel.
