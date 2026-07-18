@@ -16,6 +16,8 @@ Repository build and packaging helpers live under `scripts/`, not in `app/`.
 ```text
 ├── app/
 │   ├── backend_process.py
+│   ├── camera_overlay_widget.py
+│   ├── logging_utils.py
 │   ├── main.py
 │   ├── main_window.py
 │   ├── pose_processor.py
@@ -46,7 +48,9 @@ Plain English:
 - `main.py` is the app entry point.
 - `main_window.py` builds the main Qt window and loads the frontend.
 - `session_bridge.py` is the bridge between the web frontend and the Qt/camera side.
-- `pose_processor.py` turns Qt camera frames into data the backend pose estimator can use.
+- `camera_overlay_widget.py` draws the native desktop session preview and pose overlay.
+- `pose_processor.py` turns Qt camera frames into data the backend pose estimator can use on a worker thread.
+- `logging_utils.py` provides simple `info` / `debug` / `verbose` log gating for the desktop app.
 - `backend_process.py` starts and stops the small backend helper used in preview and packaged builds.
 - `scripts/` contains developer tooling such as packaging and local preview helpers.
 
@@ -109,6 +113,9 @@ make macos-app
 The packaged app build is intended to include the desktop app, built frontend,
 and backend helper runtime in one macOS artifact.
 
+`make macos-app` now performs a clean PyInstaller rebuild, so newly added
+desktop modules are picked up without needing manual cache cleanup.
+
 After the first packaged build, rebuild the packaged app whenever frontend or
 Python desktop app changes:
 
@@ -138,10 +145,25 @@ On Windows, GNU Make is optional; run the cross-platform supervisor directly:
 This loads the frontend from the Vite dev server and starts a temporary backend
 helper process under the desktop app.
 
+Desktop session preview behavior:
+- the React session page reports the preview viewport bounds to Qt
+- the desktop app positions a native overlay widget over that viewport
+- the overlay now renders the frame that was actually used for pose inference,
+  so the displayed image and landmarks stay synchronized
+
 The preview helper is mainly for development convenience:
 - frontend code updates live from Vite
 - backend helper code restarts automatically
 - desktop Python code inside the packaged macOS app still needs `make macos-app` again
+
+Desktop logging can be tuned with `HUMAN_CONTROLLER_LOG_LEVEL`:
+
+```bash
+HUMAN_CONTROLLER_LOG_LEVEL=info make preview-local
+HUMAN_CONTROLLER_LOG_LEVEL=debug make preview-local
+HUMAN_CONTROLLER_LOG_LEVEL=verbose make preview-local
+HUMAN_CONTROLLER_LOG_LEVEL=silent make preview-local
+```
 
 On macOS, the initial `make macos-app` step is required so the app runs with the
 bundle identity needed for camera permissions.

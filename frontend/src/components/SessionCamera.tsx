@@ -9,7 +9,8 @@ const SessionCamera = () => {
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [errorEvent, setErrorEvent] = useState<SessionStatusEvent | null>(null);
-  const cameraPanelRef = useRef<HTMLDivElement | null>(null);
+  const [previewAspectRatio, setPreviewAspectRatio] = useState(4 / 3);
+  const previewViewportRef = useRef<HTMLDivElement | null>(null);
   const isLive = sessionState === "live";
 
   useEffect(() => {
@@ -25,7 +26,7 @@ const SessionCamera = () => {
   }, [isLive]);
 
   useEffect(() => {
-    const panel = cameraPanelRef.current;
+    const panel = previewViewportRef.current;
 
     if (!panel) {
       return;
@@ -82,7 +83,7 @@ const SessionCamera = () => {
         devicePixelRatio: window.devicePixelRatio,
       });
     };
-  }, []);
+  }, [isLive, previewAspectRatio]);
 
   useEffect(() => {
     const unsubscribe = sessionBridge.onSessionStatus((event) => {
@@ -101,6 +102,14 @@ const SessionCamera = () => {
     });
 
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    return sessionBridge.onPreviewAspectRatio((aspectRatio) => {
+      if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
+        setPreviewAspectRatio(aspectRatio);
+      }
+    });
   }, []);
 
   const handleStartSession = async () => {
@@ -163,10 +172,7 @@ const SessionCamera = () => {
   return (
     <>
       <div className={styles.cameraSection}>
-        <Paper
-          ref={cameraPanelRef}
-          className={`${styles.dashboardPanel} ${styles.cameraPanel}`}
-        >
+        <Paper className={`${styles.dashboardPanel} ${styles.cameraPanel}`}>
           <div className={styles.cameraFeed}>
             <div
               className={`${styles.cameraHeader} ${isLive ? styles.recordingBoxActive : ""}`}
@@ -181,11 +187,17 @@ const SessionCamera = () => {
               </Typography>
             </div>
             <div className={styles.cameraFeedContent}>
-              <Typography className={styles.cameraPlaceholder}>
-                {isLive
-                  ? "Desktop camera preview is being rendered by the PySide6 app."
-                  : "Idle camera feed"}
-              </Typography>
+              <div
+                ref={previewViewportRef}
+                className={styles.cameraViewport}
+                style={{ aspectRatio: String(previewAspectRatio) }}
+              >
+                {!isLive ? (
+                  <Typography className={styles.cameraPlaceholder}>
+                    Idle camera feed
+                  </Typography>
+                ) : null}
+              </div>
             </div>
           </div>
         </Paper>
