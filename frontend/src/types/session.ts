@@ -11,6 +11,7 @@ export type SessionStatusEvent = {
 };
 
 export type SessionStatusListener = (event: SessionStatusEvent) => void;
+export type SessionAspectRatioListener = (aspectRatio: number) => void;
 
 export type SessionPreviewBounds = {
   left: number;
@@ -26,4 +27,5 @@ export interface SessionBridge {
   updatePreviewBounds(bounds: SessionPreviewBounds): Promise<void>;
   openCameraSettings(): Promise<void>;
   onSessionStatus(listener: SessionStatusListener): () => void;
+  onPreviewAspectRatio(listener: SessionAspectRatioListener): () => void;
 }

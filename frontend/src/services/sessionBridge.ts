@@ -1,4 +1,5 @@
 import type {
+  SessionAspectRatioListener,
   SessionBridge,
   SessionPreviewBounds,
   SessionStatusEvent,
@@ -25,6 +26,7 @@ type QtSessionBridgeObject = {
   ) => void | Promise<void>;
   openCameraSettings?: () => void | Promise<void>;
   sessionStatusChanged?: QtSignal<SessionStatusEvent>;
+  previewAspectRatioChanged?: QtSignal<number>;
 };
 
 const BRIDGE_NAME = "sessionBridge";
@@ -113,6 +115,25 @@ const sessionBridge: SessionBridge = {
       .catch((error: Error) => {
         listener({ state: "error", message: error.message });
       });
+
+    return () => unsubscribe();
+  },
+
+  onPreviewAspectRatio(listener: SessionAspectRatioListener) {
+    let unsubscribe = () => {};
+
+    void getSessionBridgeOrThrow()
+      .then((bridge) => {
+        if (!bridge.previewAspectRatioChanged) {
+          return;
+        }
+
+        bridge.previewAspectRatioChanged.connect(listener);
+        unsubscribe = () => {
+          bridge.previewAspectRatioChanged?.disconnect?.(listener);
+        };
+      })
+      .catch(() => {});
 
     return () => unsubscribe();
   },

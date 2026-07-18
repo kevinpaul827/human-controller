@@ -12,6 +12,8 @@ This repository is split into three main areas:
 .
 ├── app/
 │   ├── backend_process.py
+│   ├── camera_overlay_widget.py
+│   ├── logging_utils.py
 │   ├── main.py
 │   ├── main_window.py
 │   ├── pose_processor.py
@@ -87,6 +89,7 @@ Plain English:
 - `make macos-app` is the packaging/build workflow.
 - `make preview-local` is the easiest day-to-day development workflow when you want the desktop app and web UI running together.
 - The `scripts/` folder contains helper tools for packaging and preview; it is not app runtime code by itself.
+- The desktop session preview is rendered by a native Qt overlay widget that stays aligned with the React session page.
 
 On Windows, GNU Make is optional. Run the equivalent workflow from the repository root:
 
@@ -103,6 +106,7 @@ Optional logging uses the same flags as the Make target:
 Notes:
 
 - On macOS, run `make macos-app` once before `make preview-local` so camera permission works through the real app bundle identity.
+- `make macos-app` performs a clean PyInstaller rebuild and refreshes the packaged app bundle from the current source tree.
 - `make preview-local` also expects the backend Python dependencies above to be installed, because it auto-starts the preview backend helper.
 - With `make preview-local`:
   - frontend changes: prompt/live
@@ -113,6 +117,14 @@ Notes:
 ```bash
 make preview-local ARGS="--log-all"
 make preview-local ARGS="--log-fe --log-be"
+```
+
+- Desktop app log verbosity can also be controlled with `HUMAN_CONTROLLER_LOG_LEVEL`:
+
+```bash
+HUMAN_CONTROLLER_LOG_LEVEL=info make preview-local
+HUMAN_CONTROLLER_LOG_LEVEL=debug make preview-local
+HUMAN_CONTROLLER_LOG_LEVEL=verbose make preview-local
 ```
 
 - If `preview-local` startup fails, it attempts to clean up the frontend, desktop app, and their child processes before exiting.
@@ -131,6 +143,13 @@ If you changed frontend assets, rebuild the packaged app before testing the bund
 ```bash
 make macos-app
 open "dist/Human Controller.app"
+```
+
+If you changed desktop Python modules on macOS, rebuild the packaged app before running `make preview-local` again:
+
+```bash
+make macos-app
+make preview-local
 ```
 
 If you already denied access earlier, reset camera permission and relaunch:

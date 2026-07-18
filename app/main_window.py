@@ -3,12 +3,13 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
 
 from .backend_process import BackendProcessManager
+from .camera_overlay_widget import CameraOverlayWidget
+from .logging_utils import log_info
 from .session_bridge import SessionBridge
 
 
@@ -48,7 +49,6 @@ def frontend_qurl():
 
     return QUrl.fromLocalFile(str(FRONTEND_PATH))
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
 
         self.frontend = QWebEngineView()
         self.bridge = SessionBridge()
-        self.preview = QVideoWidget(self.frontend)
+        self.preview = CameraOverlayWidget(self.frontend)
         self.channel = QWebChannel()
         self.channel.registerObject("sessionBridge", self.bridge)
 
@@ -69,6 +69,8 @@ class MainWindow(QMainWindow):
 
         self.bridge.attach_preview_widget(self.preview)
         self.bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
+        self.bridge.poseEstimated.connect(self.preview.set_pose)
+        self.bridge.sessionStatusChanged.connect(self.handle_session_status_changed)
 
         if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") == "1":
             self.backend_manager = BackendProcessManager()
@@ -81,6 +83,17 @@ class MainWindow(QMainWindow):
     def handle_preview_bounds_changed(self, left, top, width, height):
         self.preview.setGeometry(left, top, width, height)
         self.preview.raise_()
+
+    def handle_session_status_changed(self, payload):
+        log_info(f"[main_window] session status changed: {payload}")
+        if payload.get("state") == "live":
+            self.preview.show()
+            self.preview.raise_()
+            return
+
+        self.preview.hide()
+        self.preview.clear_pose()
+        self.preview.clear_frame()
 
     def closeEvent(self, event):
         self.bridge.shutdown()

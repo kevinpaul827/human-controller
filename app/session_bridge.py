@@ -2,10 +2,9 @@ import sys
 from enum import Enum
 
 from PySide6.QtCore import QCameraPermission, QCoreApplication, QElapsedTimer, QObject, QThread, Qt, QUrl, Signal, Slot
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QImage
 from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame
-from PySide6.QtMultimediaWidgets import QVideoWidget
-
+from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
 
 class SessionState(str, Enum):
@@ -17,6 +16,7 @@ class SessionState(str, Enum):
 class SessionBridge(QObject):
     sessionStatusChanged = Signal(dict)
     previewBoundsChanged = Signal(int, int, int, int)
+    previewAspectRatioChanged = Signal(float)
 
     processFrame = Signal(object, int)
     poseEstimated = Signal(dict)
@@ -31,6 +31,9 @@ class SessionBridge(QObject):
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
         self.video_sink = None
+        self._frame_log_emitted = False
+        self._preview_aspect_ratio = 4 / 3
+        self._pending_pose_frame = QImage()
 
         self.pose_processing = False
         self.pose_thread = QThread(self)
@@ -46,15 +49,16 @@ class SessionBridge(QObject):
         self.pose_thread.finished.connect(self.pose_processor.deleteLater)
         self.pose_thread.start()
 
-    def attach_preview_widget(self, preview_widget: QVideoWidget):
+    def attach_preview_widget(self, preview_widget):
         self.preview_widget = preview_widget
         self.preview_widget.hide()
+        self.preview_widget.set_sync_to_pose(True)
 
         self.video_sink = self.preview_widget.videoSink()
         self.video_sink.videoFrameChanged.connect(self.handle_video_frame)
 
         if self.capture_session is not None:
-            self.capture_session.setVideoOutput(self.preview_widget)
+            self.capture_session.setVideoSink(self.video_sink)
 
     def set_state(self, state):
         self.state = state
@@ -111,8 +115,8 @@ class SessionBridge(QObject):
         self.capture_session = QMediaCaptureSession()
         self.capture_session.setCamera(self.active_camera)
 
-        if self.preview_widget is not None:
-            self.capture_session.setVideoOutput(self.preview_widget)
+        if self.video_sink is not None:
+            self.capture_session.setVideoSink(self.video_sink)
 
         self.active_camera.activeChanged.connect(self.handle_active_changed)
         self.active_camera.errorOccurred.connect(self.handle_error_occurred)
@@ -123,13 +127,19 @@ class SessionBridge(QObject):
             return
 
         self.camera_timer.restart()
+        self._frame_log_emitted = False
+        log_info("[session_bridge] starting camera session")
         self.active_camera.start()
         self.set_state(SessionState.LIVE)
         self.apply_preview_bounds()
 
     def stop_camera(self):
+        log_info("[session_bridge] stopping camera session")
+        self._pending_pose_frame = QImage()
         if self.preview_widget is not None:
             self.preview_widget.hide()
+            self.preview_widget.clear_pose()
+            self.preview_widget.clear_frame()
 
         if self.active_camera is not None:
             self.active_camera.stop()
@@ -138,7 +148,7 @@ class SessionBridge(QObject):
 
         if self.capture_session is not None:
             self.capture_session.setCamera(None)
-            self.capture_session.setVideoOutput(None)
+            self.capture_session.setVideoSink(None)
             self.capture_session.deleteLater()
             self.capture_session = None
 
@@ -189,36 +199,58 @@ class SessionBridge(QObject):
         image = video_frame.toImage()
 
         if image.isNull():
+            log_debug("[session_bridge] skipped null video frame")
             return
+
+        aspect_ratio = image.width() / image.height() if image.height() > 0 else self._preview_aspect_ratio
+        if abs(aspect_ratio - self._preview_aspect_ratio) > 0.001:
+            self._preview_aspect_ratio = aspect_ratio
+            log_debug(f"[session_bridge] preview aspect ratio updated to {aspect_ratio:.4f}")
+            self.previewAspectRatioChanged.emit(aspect_ratio)
         
         timestamp_ms = video_frame.startTime() // 1000
 
         if timestamp_ms < 0:
             timestamp_ms = self.camera_timer.elapsed()
 
+        if not self._frame_log_emitted:
+            log_debug(
+                f"[session_bridge] received first frame {image.width()}x{image.height()} at {timestamp_ms}ms"
+            )
+            self._frame_log_emitted = True
+
+        self._pending_pose_frame = image.copy()
         self.pose_processing = True
 
-        self.processFrame.emit(image.copy(), int(timestamp_ms))
+        self.processFrame.emit(self._pending_pose_frame.copy(), int(timestamp_ms))
     
     def handle_pose_estimated(self, pose):
         if self.state == SessionState.LIVE:
+            if self.preview_widget is not None and not self._pending_pose_frame.isNull():
+                self.preview_widget.set_frame(self._pending_pose_frame)
+
             if pose is None:
+                log_verbose("[session_bridge] pose not detected")
                 self.poseEstimated.emit({
                     "detected": False,
                     "landmarks": [],
-                    "visibility": []
+                    "visibility": [],
                 })
             else:
+                log_verbose("[session_bridge] pose detected, forwarding live landmarks")
                 self.poseEstimated.emit({
                     "detected": True,
                     "landmarks": pose.xyz,
                     "visibility": pose.visibility
                 })
 
+            self._pending_pose_frame = QImage()
+
     def handle_processing_finished(self):
         self.pose_processing = False
     
     def handle_pose_error(self, message):
+        log_info(f"[session_bridge] pose processor error: {message}")
         self.emit_error(message)
 
     @Slot()
@@ -242,8 +274,6 @@ class SessionBridge(QObject):
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
-        del device_pixel_ratio
-
         self.preview_bounds = (
             max(0, round(left)),
             max(0, round(top)),

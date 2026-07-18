@@ -20,6 +20,7 @@ SPEC_TEMPLATE = """# -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = collect_submodules("PySide6")
+hiddenimports += collect_submodules("app")
 hiddenimports += collect_submodules("backend")
 
 a = Analysis(
@@ -101,14 +102,21 @@ def main() -> int:
         print("Install it with: .venv/bin/python -m pip install pyinstaller")
         return 1
 
+    # Force a fresh analysis whenever the desktop app grows new Python modules.
+    # Relying on PyInstaller's cached analysis can leave recently added modules
+    # out of the packaged app even after a successful rebuild.
+    shutil.rmtree(ROOT / "build" / "human_controller", ignore_errors=True)
+    shutil.rmtree(DIST_DIR / "Human Controller", ignore_errors=True)
+    shutil.rmtree(DIST_DIR / "Human Controller.app", ignore_errors=True)
+
     SPEC_PATH.write_text(SPEC_TEMPLATE, encoding="utf-8")
 
     pyinstaller_executable = ROOT / ".venv" / "bin" / "pyinstaller"
     print("Building real macOS app bundle with integrated frontend and backend runtime...")
     if pyinstaller_executable.exists():
-        command = [str(pyinstaller_executable), "--noconfirm", str(SPEC_PATH)]
+        command = [str(pyinstaller_executable), "--clean", "--noconfirm", str(SPEC_PATH)]
     else:
-        command = ["pyinstaller", "--noconfirm", str(SPEC_PATH)]
+        command = ["pyinstaller", "--clean", "--noconfirm", str(SPEC_PATH)]
 
     PYINSTALLER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
