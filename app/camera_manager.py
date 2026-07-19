@@ -8,9 +8,9 @@ from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
 
 class CameraManager(QObject):
-    cameraStarted = Signal()
-    cameraStopped = Signal()
-    errorOccurred = Signal(str)
+    cameraStarted = Signal(str)
+    cameraStopped = Signal(str)
+    errorOccurred = Signal(str, str)
 
     frameProcessed = Signal(QImage, dict)
     previewAspectRatioChanged = Signal(float)
@@ -20,11 +20,13 @@ class CameraManager(QObject):
     def __init__(self):
         super().__init__()
         self.active_camera = None
+        self.active_bridge = None
         self.camera_timer = QElapsedTimer()
         self.capture_session = None
         self.video_sink = QVideoSink(self)
 
         self._active = False
+        self._stopping = False
         self._frame_log_emitted = False
         self._pending_pose_frame = QImage()
         self._preview_aspect_ratio = 4 / 3
@@ -44,17 +46,24 @@ class CameraManager(QObject):
         self.video_sink.videoFrameChanged.connect(self.handle_video_frame)
         self.pose_thread.start()
     
-    def start(self):
-        if self._active:
+    def start(self, bridge):
+        if self._active and self.active_bridge == bridge:
             return
         
-        if self.active_camera is not None:
-            self.start_camera()
-            return
+        if self.active_bridge is not None and self.active_bridge != bridge:
+            self.stop_camera()
+        
+        self.active_bridge = bridge
         
         if self.check_camera_permissions():
-            if self.create_camera:
+            if self.create_camera():
                 self.start_camera()
+        
+    def stop(self, bridge):
+        if self.active_bridge != bridge:
+            return
+        
+        self.stop_camera()
 
     def permission_denied_message(self):
         if sys.platform == "win32":
@@ -80,7 +89,7 @@ class CameraManager(QObject):
             return True
 
         if status == Qt.PermissionStatus.Denied:
-            self.errorOccurred.emit(self.permission_denied_message())
+            self.emit_camera_error(self.permission_denied_message())
             return False
 
         app.requestPermission(permission, self, self.handle_request_camera)
@@ -93,10 +102,10 @@ class CameraManager(QObject):
         video_input = QMediaDevices.defaultVideoInput()
 
         if video_input.isNull():
-            self.errorOccurred.emit("No camera detected on this device.")
+            self.emit_camera_error("No camera detected on this device.")
             return False
 
-        self.stop_camera()
+        self.release_camera()
 
         self.active_camera = QCamera(video_input, self)
         self.capture_session = QMediaCaptureSession()
@@ -108,6 +117,9 @@ class CameraManager(QObject):
         return True
 
     def start_camera(self):
+        if self.active_bridge is None:
+            return
+
         if self.active_camera is None:
             if not self.create_camera():
                 return
@@ -120,32 +132,57 @@ class CameraManager(QObject):
 
     def stop_camera(self):
         log_info("[camera_manager] stopping camera session")
-        was_active = self._active
+        self._stopping = True
         self._active = False
         self._pending_pose_frame = QImage()
 
+        self.release_camera()
+        stopping_bridge = self.active_bridge
+        self.active_bridge = None
+        self._stopping = False
+        
+        if stopping_bridge is not None:
+            self.cameraStopped.emit(stopping_bridge)
+    
+    def release_camera(self):
         if self.active_camera is not None:
             self.active_camera.stop()
             self.active_camera.deleteLater()
             self.active_camera = None
-
+        
         if self.capture_session is not None:
             self.capture_session.setCamera(None)
             self.capture_session.setVideoSink(None)
             self.capture_session.deleteLater()
             self.capture_session = None
+    
+    def emit_camera_error(self, message):
+        if self.active_bridge is None:
+            return
         
-        if was_active:
-            self.cameraStopped.emit()
+        self._stopping = True
+        self._active = False
+        self._pending_pose_frame = QImage()
+
+        self.release_camera()
+        stopping_bridge = self.active_bridge
+        self.active_bridge = None
+        self._stopping = False
+        
+        if stopping_bridge is not None:
+            self.errorOccurred.emit(message, stopping_bridge)
 
     def handle_request_camera(self, permission):
         app = QCoreApplication.instance()
 
         if app.checkPermission(permission) == Qt.PermissionStatus.Granted:
+            if self.active_bridge is None:
+                return
+
             if self.create_camera():
                 self.start_camera()
         else:
-            self.errorOccurred.emit(self.permission_denied_message())
+            self.emit_camera_error(self.permission_denied_message())
 
     def handle_active_changed(self, active):
         if active:
@@ -153,14 +190,24 @@ class CameraManager(QObject):
                 return
             
             self._active = True
-            self.cameraStarted.emit()
+
+            if self.active_bridge is not None:
+                self.cameraStarted.emit(self.active_bridge)
+
             return
         
         if not self._active:
             return
         
         self._active = False
-        self.cameraStopped.emit()
+
+        if self._stopping:
+            return
+        
+        stopping_bridge = self.active_bridge
+        self.active_bridge = None
+        if stopping_bridge is not None:
+            self.cameraStopped.emit(stopping_bridge)
 
     def handle_error_occurred(self, error, error_message):
         if sys.platform == "win32":
@@ -171,11 +218,10 @@ class CameraManager(QObject):
         else:
             message = error_message or "Unable to start camera session."
 
-        self.stop_camera()
-        self.errorOccurred.emit(message)
+        self.emit_camera_error(message)
 
     def handle_video_frame(self, video_frame: QVideoFrame):
-        if not self._active:
+        if not self._active or self.active_bridge is None:
             return
 
         if self.pose_processing:
@@ -190,7 +236,7 @@ class CameraManager(QObject):
         aspect_ratio = image.width() / image.height() if image.height() > 0 else self._preview_aspect_ratio
         if abs(aspect_ratio - self._preview_aspect_ratio) > 0.001:
             self._preview_aspect_ratio = aspect_ratio
-            log_debug(f"[session_bridge] preview aspect ratio updated to {aspect_ratio:.4f}")
+            log_debug(f"[camera_manager] preview aspect ratio updated to {aspect_ratio:.4f}")
             self.previewAspectRatioChanged.emit(aspect_ratio)
         
         timestamp_ms = video_frame.startTime() // 1000
@@ -210,7 +256,7 @@ class CameraManager(QObject):
         self.processFrame.emit(self._pending_pose_frame.copy(), int(timestamp_ms))
 
     def handle_pose_estimated(self, pose):
-        if not self._active:
+        if not self._active or self.active_bridge is None:
             self._pending_pose_frame = QImage()
             return
 
@@ -241,8 +287,7 @@ class CameraManager(QObject):
 
     def handle_pose_error(self, message):
         log_info(f"[camera_manager] pose processor error: {message}")
-        self.stop_camera()
-        self.errorOccurred.emit_error(message)
+        self.emit_camera_error(message)
 
     @Slot()
     def openCameraSettings(self):
@@ -256,7 +301,7 @@ class CameraManager(QObject):
             )
             return
 
-        self.errorOccurred.emit("Open your system camera privacy settings to allow access.")
+        self.emit_camera_error("Open your system camera privacy settings to allow access.")
 
     @Slot()
     def shutdown(self):
