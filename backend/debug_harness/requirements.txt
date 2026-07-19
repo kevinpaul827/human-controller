@@ -1,0 +1,5 @@
+# Debug harness only (not needed by the production backend or its tests).
+fastapi>=0.115
+uvicorn[standard]>=0.30
+numpy>=1.26
+pytest>=8.0
