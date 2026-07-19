@@ -7,7 +7,7 @@ from typing import Callable, Dict, Iterable, List, Optional
 
 import numpy as np
 
-from backend.pose_types import BlazePose33, PoseLandmarks
+from backend.pose_types import ALL_BODY_REGIONS, MEASURABLE_REGIONS, BlazePose33, BodyRegion, PoseLandmarks
 
 VIS_FLOOR = 0.5
 
@@ -39,6 +39,43 @@ ANGLE_TRIPLETS: Dict[AngleKey, tuple[BlazePose33, BlazePose33, BlazePose33]] = {
 }
 
 AngleVector = Dict[AngleKey, Optional[float]]
+
+REGION_ANGLES: Dict[BodyRegion, list[AngleKey]] = {
+    BodyRegion.TORSO: [],
+    BodyRegion.HEAD: [],
+    BodyRegion.LEFT_SHOULDER: [AngleKey.L_SHOULDER_ABD],
+    BodyRegion.LEFT_ELBOW: [AngleKey.L_ELBOW],
+    BodyRegion.LEFT_WRIST: [],
+    BodyRegion.LEFT_HAND: [],
+    BodyRegion.RIGHT_SHOULDER: [AngleKey.R_SHOULDER_ABD],
+    BodyRegion.RIGHT_ELBOW: [AngleKey.R_ELBOW],
+    BodyRegion.RIGHT_WRIST: [],
+    BodyRegion.RIGHT_HAND: [],
+    BodyRegion.LEFT_HIP: [AngleKey.L_HIP],
+    BodyRegion.LEFT_KNEE: [AngleKey.L_KNEE],
+    BodyRegion.LEFT_ANKLE: [AngleKey.L_ANKLE],
+    BodyRegion.RIGHT_HIP: [AngleKey.R_HIP],
+    BodyRegion.RIGHT_KNEE: [AngleKey.R_KNEE],
+    BodyRegion.RIGHT_ANKLE: [AngleKey.R_ANKLE],
+}
+
+
+def angle_keys_for_regions(regions: list[BodyRegion]) -> set[AngleKey]:
+    keys: set[AngleKey] = set()
+    for region in regions:
+        keys.update(REGION_ANGLES[region])
+    return keys
+
+
+def mask_angles(angles: AngleVector, active: set[AngleKey]) -> AngleVector:
+    return {key: (angles.get(key) if key in active else None) for key in AngleKey}
+
+
+def default_focus_angle_keys() -> set[AngleKey]:
+    return angle_keys_for_regions(MEASURABLE_REGIONS)
+
+
+assert angle_keys_for_regions(MEASURABLE_REGIONS) == set(AngleKey)
 
 
 def valid_values(values: Iterable[Optional[float]]) -> List[float]:
