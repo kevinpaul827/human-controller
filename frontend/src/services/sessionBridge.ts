@@ -4,7 +4,6 @@ import type {
   SessionPreviewBounds,
   SessionStatusEvent,
 } from "../types/session";
-import type { SaveGesturePayload, SavedGesture } from "../types/gesture";
 
 /**
  * Wrapper around the PySide6 Qt WebChannel session bridge.
@@ -18,8 +17,6 @@ type QtSessionBridgeObject = {
   startSession: () => void | Promise<void>;
   stopSession: () => void | Promise<void>;
   getSessionState?: () => SessionStatusEvent["state"];
-  listGestures?: () => SavedGesture[] | Promise<SavedGesture[]>;
-  saveGesture?: (payloadJson: string) => { ok: boolean; message?: string; gesture?: SavedGesture } | Promise<{ ok: boolean; message?: string; gesture?: SavedGesture }>;
   updatePreviewBounds: (
     left: number,
     top: number,
@@ -73,31 +70,6 @@ const sessionBridge: SessionBridge = {
   async stopSession() {
     const bridge = await getSessionBridgeOrThrow();
     await bridge.stopSession();
-  },
-
-  async listGestures() {
-    const bridge = await getSessionBridgeOrThrow();
-
-    if (!bridge.listGestures) {
-      return [];
-    }
-
-    return (await bridge.listGestures()) ?? [];
-  },
-
-  async saveGesture(payload: SaveGesturePayload) {
-    const bridge = await getSessionBridgeOrThrow();
-
-    if (!bridge.saveGesture) {
-      throw new Error("Desktop gesture saving is unavailable in this build.");
-    }
-
-    const result = await bridge.saveGesture(JSON.stringify(payload));
-    if (!result?.ok || !result.gesture) {
-      throw new Error(result?.message ?? "Unable to save gesture.");
-    }
-
-    return result.gesture;
   },
 
   async updatePreviewBounds(bounds: SessionPreviewBounds) {

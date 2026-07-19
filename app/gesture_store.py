@@ -73,7 +73,6 @@ class SavedGesture:
             fps=self.fps,
         )
 
-
 class GestureStore:
     def __init__(self, gestures_dir: Path = DEFAULT_GESTURES_DIR) -> None:
         self.gestures_dir = Path(gestures_dir)

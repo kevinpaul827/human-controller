@@ -24,8 +24,6 @@ export type SessionPreviewBounds = {
 export interface SessionBridge {
   startSession(): Promise<void>;
   stopSession(): Promise<void>;
-  listGestures(): Promise<import("./gesture").SavedGesture[]>;
-  saveGesture(payload: import("./gesture").SaveGesturePayload): Promise<import("./gesture").SavedGesture>;
   updatePreviewBounds(bounds: SessionPreviewBounds): Promise<void>;
   openCameraSettings(): Promise<void>;
   onSessionStatus(listener: SessionStatusListener): () => void;
