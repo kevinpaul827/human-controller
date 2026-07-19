@@ -53,9 +53,19 @@ def test_auto_threshold_scales_with_variance():
     assert template.tolerance_deg[AngleKey.L_ELBOW] == pytest.approx(40.0, abs=2.0)
 
 
-def test_motion_mode_not_supported_in_v1():
+def test_motion_mode_builds_trajectory():
+    builder = TemplateBuilder(motion_trajectory_frames=24)
+    reps = [_rep(90.0, 170.0), _rep(92.0, 172.0)]
+    template = builder.build(reps, name="arm raise", mode="motion")
+    assert template.type == "motion"
+    assert len(template.trajectory) == 24
+    assert AngleKey.L_ELBOW in template.active_joints
+    assert template.target_angles == {}
+
+
+def test_unknown_mode_raises():
     with pytest.raises(NotImplementedError):
-        TemplateBuilder().build([_rep(90.0, 170.0)], name="arm raise", mode="motion")
+        TemplateBuilder().build([_rep(90.0, 170.0)], name="arm raise", mode="bogus")
 
 
 def test_empty_reps_raises():
