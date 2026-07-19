@@ -1,8 +1,9 @@
-"""Matching Engine (v1) - joint-angle state matching + gesture templates.
+"""Matching Engine - joint-angle state matching (v1) + DTW motion matching (v2).
 
 Public API:
     - Feature extraction: ``FeatureExtractor``, ``AngleKey``, ``PoseLandmarks``
-    - Matching: ``PoseMatcher``, ``MatcherStrategy``, ``MatchResult``
+    - Matching: ``PoseMatcher`` (state), ``MotionMatcher`` (DTW),
+      ``MatcherStrategy``, ``MatchResult``
     - Templates: ``TemplateBuilder``, ``GestureTemplate``
 """
 
@@ -16,7 +17,7 @@ from .core import (
     PoseLandmarks,
     joint_angle,
 )
-from .matching import MatcherStrategy, PoseMatcher, state_score
+from .matching import MatcherStrategy, MotionMatcher, PoseMatcher, dtw_distance, state_score
 from .smoothing import AngleSmoother
 from .templates import TemplateBuilder
 
@@ -31,6 +32,8 @@ __all__ = [
     "joint_angle",
     "MatcherStrategy",
     "PoseMatcher",
+    "MotionMatcher",
+    "dtw_distance",
     "state_score",
     "AngleSmoother",
     "TemplateBuilder",
