@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "gesture_id": "gesture1",
+  "name": "Gesture 1",
+  "type": "state",
+  "regions": [
+    "upper_body"
+  ],
+  "active_joints": [
+    "L_ELBOW",
+    "L_SHOULDER_ABD"
+  ],
+  "target_angles": {
+    "L_ELBOW": 170.0,
+    "L_SHOULDER_ABD": 90.0
+  },
+  "tolerance_deg": {
+    "L_ELBOW": 20.0,
+    "L_SHOULDER_ABD": 10.0
+  },
+  "trajectory": [],
+  "fps": 30
+}
