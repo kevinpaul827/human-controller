@@ -1,6 +1,5 @@
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPen
-from PySide6.QtMultimedia import QVideoSink
 from PySide6.QtWidgets import QWidget
 
 from .logging_utils import log_debug, log_verbose
@@ -13,24 +12,15 @@ LINE_WIDTH = 3
 class CameraOverlayWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._video_sink = QVideoSink(self)
-        self._video_sink.videoFrameChanged.connect(self._handle_video_frame_changed)
         self._frame_image = QImage()
         self._draw_rect = QRectF()
         self._landmarks = []
         self._visibility = []
         self._frame_log_emitted = False
         self._paint_log_emitted = False
-        self._sync_to_pose = False
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.hide()
-
-    def videoSink(self):
-        return self._video_sink
-
-    def set_sync_to_pose(self, enabled):
-        self._sync_to_pose = bool(enabled)
 
     def set_frame(self, image):
         if not isinstance(image, QImage) or image.isNull():
@@ -163,19 +153,6 @@ class CameraOverlayWidget(QWidget):
         x = round(min(max(x, min_x), max_x))
         y = round(min(max(y, min_y), max_y))
         return x, y
-
-    def _handle_video_frame_changed(self, frame):
-        if self._sync_to_pose:
-            return
-
-        image = frame.toImage()
-        self._frame_image = image if not image.isNull() else QImage()
-        if image.isNull():
-            log_debug("[overlay] received null video frame from sink")
-        elif not self._frame_log_emitted:
-            log_debug(f"[overlay] received first video frame {image.width()}x{image.height()}")
-            self._frame_log_emitted = True
-        self.update()
 
     def _aspect_fit_rect(self):
         if self._frame_image.isNull() or self.width() <= 0 or self.height() <= 0:
