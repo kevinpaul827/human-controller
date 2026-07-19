@@ -8,6 +8,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
 
 from .backend_process import BackendProcessManager
+from .camera_manager import CameraManager
 from .camera_overlay_widget import CameraOverlayWidget
 from .logging_utils import log_info
 from .session_bridge import SessionBridge
@@ -58,19 +59,20 @@ class MainWindow(QMainWindow):
         self.backend_manager = None
 
         self.frontend = QWebEngineView()
-        self.bridge = SessionBridge()
+        self.camera_manager = CameraManager()
+        self.session_bridge = SessionBridge(self.camera_manager)
         self.preview = CameraOverlayWidget(self.frontend)
         self.channel = QWebChannel()
-        self.channel.registerObject("sessionBridge", self.bridge)
+        self.channel.registerObject("sessionBridge", self.session_bridge)
 
         self.preview.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.preview.setAutoFillBackground(True)
         self.preview.hide()
 
-        self.bridge.attach_preview_widget(self.preview)
-        self.bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
-        self.bridge.poseEstimated.connect(self.preview.set_pose)
-        self.bridge.sessionStatusChanged.connect(self.handle_session_status_changed)
+        self.session_bridge.attach_preview_widget(self.preview)
+        self.session_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
+        self.session_bridge.poseEstimated.connect(self.preview.set_pose)
+        self.session_bridge.sessionStatusChanged.connect(self.handle_session_status_changed)
 
         if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") == "1":
             self.backend_manager = BackendProcessManager()
@@ -96,7 +98,7 @@ class MainWindow(QMainWindow):
         self.preview.clear_frame()
 
     def closeEvent(self, event):
-        self.bridge.shutdown()
+        self.camera_manager.shutdown()
 
         if self.backend_manager is not None:
             self.backend_manager.stop()
