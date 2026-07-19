@@ -2,7 +2,9 @@ import { type CSSProperties, useEffect, useState } from "react";
 import CalibrationProgress from "../components/CalibrationProgress";
 import CalibrateSkeleton from "../components/CalibrateSkeleton";
 import KeyButton from "../components/KeyButton";
+import sessionBridge from "../services/sessionBridge";
 import styles from "../styles/calibratePage.module.css";
+import type { SavedGesture } from "../types/gesture";
 
 type KeyOption = {
   id: string;
@@ -27,13 +29,34 @@ const STEP_LABELS = [
 
 const SIMILARITY_SCORE = 87;
 const THRESHOLD = 75;
+const DEFAULT_GESTURE_NAME = "Right Arm Raise";
+const DEFAULT_GESTURE_REGIONS = ["right_arm"];
+const DEFAULT_ACTIVE_JOINTS = ["R_SHOULDER_ABD", "R_ELBOW"];
+const DEFAULT_TARGET_ANGLES = {
+  R_SHOULDER_ABD: 90,
+  R_ELBOW: 170,
+};
+const DEFAULT_TOLERANCE_DEG = {
+  R_SHOULDER_ABD: 20,
+  R_ELBOW: 20,
+};
 
 const Calibrate = () => {
   const [step, setStep] = useState(1);
   const [selectedKeyId, setSelectedKeyId] = useState("up");
-  const [customKey, setCustomKey] = useState("");
+  const [gestureName, setGestureName] = useState(DEFAULT_GESTURE_NAME);
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [savedGestures, setSavedGestures] = useState<SavedGesture[]>([]);
+  const [saveError, setSaveError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    void sessionBridge
+      .listGestures()
+      .then(setSavedGestures)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!isRecording) {
@@ -68,12 +91,44 @@ const Calibrate = () => {
     setStep(3);
   };
 
+  const handleConfirmSave = async () => {
+    setIsSaving(true);
+    setSaveError("");
+
+    try {
+      const savedGesture = await sessionBridge.saveGesture({
+        name: gestureName.trim() || DEFAULT_GESTURE_NAME,
+        regions: DEFAULT_GESTURE_REGIONS,
+        active_joints: DEFAULT_ACTIVE_JOINTS,
+        target_angles: DEFAULT_TARGET_ANGLES,
+        tolerance_deg: DEFAULT_TOLERANCE_DEG,
+      });
+
+      setSavedGestures((current) => {
+        const next = current.filter(
+          (gesture) => gesture.gesture_id !== savedGesture.gesture_id,
+        );
+        return [...next, savedGesture].sort((left, right) =>
+          left.name.localeCompare(right.name),
+        );
+      });
+      setStep(4);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Unable to save gesture.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const restart = () => {
     setStep(1);
     setSelectedKeyId("up");
-    setCustomKey("");
+    setGestureName(DEFAULT_GESTURE_NAME);
     setElapsed(0);
     setIsRecording(false);
+    setSaveError("");
   };
 
   return (
@@ -112,18 +167,24 @@ const Calibrate = () => {
             <input
               type="text"
               className={styles.customInput}
-              placeholder="Custom Key"
-              value={customKey}
-              onChange={(event) => setCustomKey(event.target.value)}
+              placeholder="Movement Name"
+              value={gestureName}
+              onChange={(event) => setGestureName(event.target.value)}
             />
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => setCustomKey("")}
-            >
-              Add Key Binding
-            </button>
           </div>
+
+          {savedGestures.length > 0 ? (
+            <div className={styles.savedSection}>
+              <p className={styles.savedTitle}>Saved Gestures</p>
+              <div className={styles.savedList}>
+                {savedGestures.map((gesture) => (
+                  <p key={gesture.gesture_id} className={styles.savedItem}>
+                    {gesture.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className={styles.navRow}>
             <button
@@ -270,11 +331,15 @@ const Calibrate = () => {
               <button
                 type="button"
                 className={styles.primaryButton}
-                onClick={() => setStep(4)}
+                onClick={() => void handleConfirmSave()}
+                disabled={isSaving}
               >
-                Confirm &amp; Save →
+                {isSaving ? "Saving..." : "Confirm & Save →"}
               </button>
             </div>
+            {saveError ? (
+              <p className={styles.errorText}>{saveError}</p>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -283,9 +348,21 @@ const Calibrate = () => {
         <div className={styles.completeCard}>
           <h2 className={styles.completeTitle}>Calibration Complete</h2>
           <p className={styles.completeMessage}>
-            Gesture saved successfully. Right Arm Raise is now bound to{" "}
+            Gesture saved successfully. {gestureName.trim() || DEFAULT_GESTURE_NAME} is now bound to{" "}
             {selectedKeyText}.
           </p>
+          {savedGestures.length > 0 ? (
+            <div className={styles.savedSection}>
+              <p className={styles.savedTitle}>Saved Gestures</p>
+              <div className={styles.savedList}>
+                {savedGestures.map((gesture) => (
+                  <p key={gesture.gesture_id} className={styles.savedItem}>
+                    {gesture.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className={styles.navRow}>
             <button
               type="button"

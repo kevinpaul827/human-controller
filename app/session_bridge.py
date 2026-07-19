@@ -1,9 +1,11 @@
+import json
 import sys
 from enum import Enum
 
 from PySide6.QtCore import QCameraPermission, QCoreApplication, QElapsedTimer, QObject, QThread, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QImage
 from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame
+from .gesture_store import GestureStore
 from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
 
@@ -34,6 +36,7 @@ class SessionBridge(QObject):
         self._frame_log_emitted = False
         self._preview_aspect_ratio = 4 / 3
         self._pending_pose_frame = QImage()
+        self.gesture_store = GestureStore()
 
         self.pose_processing = False
         self.pose_thread = QThread(self)
@@ -271,6 +274,62 @@ class SessionBridge(QObject):
     @Slot(result=str)
     def getSessionState(self):
         return self.state.value
+
+    @Slot(result="QVariantList")
+    def listGestures(self):
+        return [
+            gesture.to_dict()
+            for gesture in self.gesture_store.load_all()
+        ]
+
+    @Slot(str, result="QVariantMap")
+    def saveGesture(self, payload_json):
+        try:
+            payload = json.loads(payload_json)
+        except json.JSONDecodeError:
+            return {"ok": False, "message": "Invalid gesture payload."}
+
+        name = str(payload.get("name") or "").strip()
+        if not name:
+            return {"ok": False, "message": "Action name is required."}
+
+        active_joints = [
+            str(joint).strip()
+            for joint in payload.get("active_joints", [])
+            if str(joint).strip()
+        ]
+        target_angles = {
+            str(joint).strip(): float(angle)
+            for joint, angle in payload.get("target_angles", {}).items()
+            if str(joint).strip()
+        }
+
+        if not active_joints or not target_angles:
+            return {
+                "ok": False,
+                "message": "Active joints and target angles are required.",
+            }
+
+        gesture = self.gesture_store.create_or_update(
+            gesture_id=str(payload.get("gesture_id") or "").strip() or None,
+            name=name,
+            regions=[
+                str(region).strip()
+                for region in payload.get("regions", [])
+                if str(region).strip()
+            ],
+            active_joints=active_joints,
+            target_angles=target_angles,
+            tolerance_deg={
+                str(joint).strip(): float(angle)
+                for joint, angle in payload.get("tolerance_deg", {}).items()
+                if str(joint).strip()
+            },
+        )
+        return {
+            "ok": True,
+            "gesture": gesture.to_dict(),
+        }
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
