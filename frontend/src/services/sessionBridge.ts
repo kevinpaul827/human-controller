@@ -5,6 +5,8 @@ import type {
   SessionStatusEvent,
 } from "../types/session";
 
+import { getQtWebChannel } from "./qtWebChannel";
+
 /**
  * Wrapper around the PySide6 Qt WebChannel session bridge.
  */
@@ -38,24 +40,16 @@ let bridgePromise: Promise<QtSessionBridgeObject> | null = null;
  * Resolves the desktop bridge exposed by PySide6.
  */
 const getSessionBridgeOrThrow = () => {
-  bridgePromise ??= new Promise<QtSessionBridgeObject>((resolve, reject) => {
-    if (!window.qt?.webChannelTransport || !window.QWebChannel) {
-      reject(new Error(BRIDGE_ERROR));
-      return;
+  bridgePromise ??= getQtWebChannel().then((channel) => {
+    const bridge = channel.objects[BRIDGE_NAME] as
+      | QtSessionBridgeObject
+      | undefined;
+
+    if (!bridge) {
+      throw new Error(BRIDGE_ERROR);
     }
 
-    new window.QWebChannel(window.qt.webChannelTransport, (channel) => {
-      const bridge = channel.objects[BRIDGE_NAME] as
-        | QtSessionBridgeObject
-        | undefined;
-
-      if (!bridge) {
-        reject(new Error(BRIDGE_ERROR));
-        return;
-      }
-
-      resolve(bridge);
-    });
+    return bridge;
   });
 
   return bridgePromise;
@@ -94,36 +88,52 @@ const sessionBridge: SessionBridge = {
   },
 
   onSessionStatus(listener) {
+    let active = true;
     let unsubscribe = () => {};
 
     void getSessionBridgeOrThrow()
       .then((bridge) => {
+        if (!active) {
+          return;
+        }
+
         if (!bridge.sessionStatusChanged) {
           listener({ state: "error", message: BRIDGE_ERROR });
           return;
         }
 
         bridge.sessionStatusChanged.connect(listener);
-        const currentState = bridge.getSessionState?.();
-        if (currentState) {
-          listener({ state: currentState });
-        }
         unsubscribe = () => {
           bridge.sessionStatusChanged?.disconnect?.(listener);
         };
+        const currentState = bridge.getSessionState?.();
+        if (active && currentState) {
+          listener({ state: currentState });
+        }
       })
       .catch((error: Error) => {
+        if (!active) {
+          return;
+        }
         listener({ state: "error", message: error.message });
       });
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   },
 
   onPreviewAspectRatio(listener: SessionAspectRatioListener) {
+    let active = true;
     let unsubscribe = () => {};
 
     void getSessionBridgeOrThrow()
       .then((bridge) => {
+        if (!active) {
+          return;
+        }
+
         if (!bridge.previewAspectRatioChanged) {
           return;
         }
@@ -135,7 +145,10 @@ const sessionBridge: SessionBridge = {
       })
       .catch(() => {});
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   },
 };
 

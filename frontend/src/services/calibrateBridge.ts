@@ -5,6 +5,8 @@ import type {
   CalibrateStatusEvent,
 } from "../types/calibrate";
 
+import { getQtWebChannel } from "./qtWebChannel";
+
 /**
  * Wrapper around the PySide6 Qt WebChannel calibrate bridge.
  */
@@ -38,24 +40,16 @@ let bridgePromise: Promise<QtCalibrateBridgeObject> | null = null;
  * Resolves the desktop bridge exposed by PySide6.
  */
 const getCalibrateBridgeOrThrow = () => {
-  bridgePromise ??= new Promise<QtCalibrateBridgeObject>((resolve, reject) => {
-    if (!window.qt?.webChannelTransport || !window.QWebChannel) {
-      reject(new Error(BRIDGE_ERROR));
-      return;
+  bridgePromise ??= getQtWebChannel().then((channel) => {
+    const bridge = channel.objects[BRIDGE_NAME] as
+      | QtCalibrateBridgeObject
+      | undefined;
+
+    if (!bridge) {
+      throw new Error(BRIDGE_ERROR);
     }
 
-    new window.QWebChannel(window.qt.webChannelTransport, (channel) => {
-      const bridge = channel.objects[BRIDGE_NAME] as
-        | QtCalibrateBridgeObject
-        | undefined;
-
-      if (!bridge) {
-        reject(new Error(BRIDGE_ERROR));
-        return;
-      }
-
-      resolve(bridge);
-    });
+    return bridge;
   });
 
   return bridgePromise;
@@ -94,36 +88,52 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   onCalibrateStatus(listener) {
+    let active = true;
     let unsubscribe = () => {};
 
     void getCalibrateBridgeOrThrow()
       .then((bridge) => {
+        if (!active) {
+          return;
+        }
+
         if (!bridge.calibrateStatusChanged) {
           listener({ state: "error", message: BRIDGE_ERROR });
           return;
         }
 
         bridge.calibrateStatusChanged.connect(listener);
-        const currentState = bridge.getCalibrateState?.();
-        if (currentState) {
-          listener({ state: currentState });
-        }
         unsubscribe = () => {
           bridge.calibrateStatusChanged?.disconnect?.(listener);
         };
+        const currentState = bridge.getCalibrateState?.();
+        if (active && currentState) {
+          listener({ state: currentState });
+        }
       })
       .catch((error: Error) => {
+        if (!active) {
+          return;
+        }
         listener({ state: "error", message: error.message });
       });
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   },
 
   onPreviewAspectRatio(listener: CalibrateAspectRatioListener) {
+    let active = true;
     let unsubscribe = () => {};
 
     void getCalibrateBridgeOrThrow()
       .then((bridge) => {
+        if (!active) {
+          return;
+        }
+
         if (!bridge.previewAspectRatioChanged) {
           return;
         }
@@ -135,7 +145,10 @@ const calibrateBridge: CalibrateBridge = {
       })
       .catch(() => {});
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   },
 };
 
