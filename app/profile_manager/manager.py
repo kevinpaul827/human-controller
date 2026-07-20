@@ -8,15 +8,14 @@ from pydantic import ValidationError
 
 from .exceptions import (
     ProfileAlreadyExistsError,
-    ProfileConflictError,
     ProfileNotFoundError,
     ProfileValidationError,
 )
-from .models import CURRENT_SCHEMA_VERSION, GameProfile, PatientProfile
+from .models import CURRENT_SCHEMA_VERSION, PatientProfile
 
 
 class ProfileManager:
-    """Save, load, list, duplicate, and delete versioned patient profiles."""
+    """Persist versioned patient profiles and calibrated gesture bindings."""
 
     def __init__(self, profiles_dir: str | Path) -> None:
         self.profiles_dir = Path(profiles_dir)
@@ -37,7 +36,9 @@ class ProfileManager:
 
     def create(self, profile: PatientProfile) -> PatientProfile:
         if self.exists(profile.patient_id):
-            raise ProfileAlreadyExistsError(f"Profile already exists: {profile.patient_id}")
+            raise ProfileAlreadyExistsError(
+                f"Profile already exists: {profile.patient_id}"
+            )
         self.save(profile)
         return profile
 
@@ -48,6 +49,12 @@ class ProfileManager:
 
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            schema_version = data.get("schemaVersion")
+            if schema_version != CURRENT_SCHEMA_VERSION:
+                raise ProfileValidationError(
+                    f"Profile '{patient_id}' uses unsupported schema version "
+                    f"{schema_version!r}; expected {CURRENT_SCHEMA_VERSION}"
+                )
             return PatientProfile.model_validate(data)
         except json.JSONDecodeError as exc:
             raise ProfileValidationError(f"Invalid JSON in profile '{patient_id}'") from exc
@@ -64,18 +71,31 @@ class ProfileManager:
                 continue
         return profiles
 
-    def duplicate(self, patient_id: str, new_patient_id: str, new_patient_name: str | None = None) -> PatientProfile:
+    def duplicate(
+        self,
+        patient_id: str,
+        new_patient_id: str,
+        new_patient_name: str | None = None,
+    ) -> PatientProfile:
         if self.exists(new_patient_id):
-            raise ProfileAlreadyExistsError(f"Profile already exists: {new_patient_id}")
+            raise ProfileAlreadyExistsError(
+                f"Profile already exists: {new_patient_id}"
+            )
 
         source = self.load(patient_id)
-        duplicate_profile = source.model_copy(
-            update={
-                "patient_id": new_patient_id,
-                "patient_name": new_patient_name or f"{source.patient_name} (Copy)",
-                "last_session_game": source.last_session_game,
-            }
-        )
+        try:
+            duplicate_profile = PatientProfile.model_validate(
+                {
+                    **source.model_dump(mode="json", by_alias=True),
+                    "patientId": new_patient_id,
+                    "patientName": new_patient_name
+                    or f"{source.patient_name} (Copy)",
+                }
+            )
+        except ValidationError as exc:
+            raise ProfileValidationError(
+                f"Invalid duplicate profile '{new_patient_id}'"
+            ) from exc
         self.save(duplicate_profile)
         return duplicate_profile
 
@@ -85,59 +105,42 @@ class ProfileManager:
             raise ProfileNotFoundError(f"Profile not found: {patient_id}")
         path.unlink()
 
-    def record_last_session(self, patient_id: str, game_name: str) -> PatientProfile:
-        profile = self.load(patient_id)
-        if not any(game.game_name == game_name for game in profile.game_profiles):
-            raise ProfileNotFoundError(f"Game profile not found: {game_name}")
-
-        profile.last_session_game = game_name
-        self.save(profile)
-        return profile
-
-    def load_last_session(self, patient_id: str) -> tuple[PatientProfile, GameProfile]:
-        profile = self.load(patient_id)
-        if not profile.last_session_game:
-            raise ProfileNotFoundError("No last session recorded for this patient")
-
-        for game in profile.game_profiles:
-            if game.game_name == profile.last_session_game:
-                return profile, game
-
-        raise ProfileNotFoundError(
-            f"Last session game '{profile.last_session_game}' is no longer available"
-        )
-
-    def add_game_profile(self, patient_id: str, game_profile: GameProfile) -> PatientProfile:
-        profile = self.load(patient_id)
-        if any(game.game_name == game_profile.game_name for game in profile.game_profiles):
-            raise ProfileConflictError(f"Game profile already exists: {game_profile.game_name}")
-
-        profile.game_profiles.append(game_profile)
-        self.save(profile)
-        return profile
-
-    def update_game_profile(
+    def set_key_binding(
         self,
         patient_id: str,
-        current_game_name: str,
-        updated_game_profile: GameProfile,
+        gesture_id: str,
+        key: str,
     ) -> PatientProfile:
         profile = self.load(patient_id)
-        index = next(
-            (idx for idx, game in enumerate(profile.game_profiles) if game.game_name == current_game_name),
-            None,
-        )
-        if index is None:
-            raise ProfileNotFoundError(f"Game profile not found: {current_game_name}")
+        updated_bindings = {
+            **profile.key_bindings,
+            gesture_id: key,
+        }
+        try:
+            updated_profile = PatientProfile.model_validate(
+                {
+                    **profile.model_dump(mode="json", by_alias=True),
+                    "keyBindings": updated_bindings,
+                }
+            )
+        except ValidationError as exc:
+            raise ProfileValidationError(
+                f"Invalid key binding for gesture '{gesture_id}'"
+            ) from exc
+        self.save(updated_profile)
+        return updated_profile
 
-        renamed = updated_game_profile.game_name != current_game_name
-        if renamed and any(game.game_name == updated_game_profile.game_name for game in profile.game_profiles):
-            raise ProfileConflictError(f"Game profile already exists: {updated_game_profile.game_name}")
-
-        if profile.last_session_game == current_game_name and renamed:
-            profile.last_session_game = updated_game_profile.game_name
-
-        profile.game_profiles[index] = updated_game_profile
+    def remove_key_binding(
+        self,
+        patient_id: str,
+        gesture_id: str,
+    ) -> PatientProfile:
+        profile = self.load(patient_id)
+        if gesture_id not in profile.key_bindings:
+            raise ProfileNotFoundError(
+                f"Gesture binding not found: {gesture_id}"
+            )
+        del profile.key_bindings[gesture_id]
         self.save(profile)
         return profile
 

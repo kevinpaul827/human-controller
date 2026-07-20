@@ -5,56 +5,60 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-CURRENT_SCHEMA_VERSION = 1
-
-
-class GestureBinding(BaseModel):
-    """One therapeutic movement mapped to a keyboard key."""
-
-    name: str = Field(min_length=1, max_length=80)
-    key: str = Field(min_length=1, max_length=32)
-    threshold: float = Field(default=0.75, ge=0.0, le=1.0)
-
-
-class GameProfile(BaseModel):
-    """Gesture bindings for one game under a patient profile."""
-
-    game_name: str = Field(min_length=1, max_length=80, alias="gameName")
-    gestures: list[GestureBinding] = Field(default_factory=list)
-
-    model_config = {"populate_by_name": True}
-
-    @field_validator("gestures")
-    @classmethod
-    def gestures_must_not_be_empty(cls, value: list[GestureBinding]) -> list[GestureBinding]:
-        if not value:
-            raise ValueError("game profile must contain at least one gesture binding")
-        return value
+CURRENT_SCHEMA_VERSION = 2
 
 
 class PatientProfile(BaseModel):
-    """Top-level patient configuration saved to disk."""
+    """Patient configuration that maps calibrated gestures to keyboard keys."""
 
-    schema_version: Literal[1] = Field(default=CURRENT_SCHEMA_VERSION, alias="schemaVersion")
+    schema_version: Literal[2] = Field(
+        default=CURRENT_SCHEMA_VERSION,
+        alias="schemaVersion",
+    )
     patient_id: str = Field(min_length=1, max_length=64, alias="patientId")
     patient_name: str = Field(min_length=1, max_length=80, alias="patientName")
     notes: str = ""
-    last_session_game: str | None = Field(default=None, alias="lastSessionGame")
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), alias="updatedAt")
-    game_profiles: list[GameProfile] = Field(default_factory=list, alias="gameProfiles")
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        alias="updatedAt",
+    )
+    key_bindings: dict[str, str] = Field(
+        default_factory=dict,
+        alias="keyBindings",
+    )
 
-    model_config = {"populate_by_name": True}
+    model_config = {
+        "populate_by_name": True,
+        "extra": "forbid",
+    }
 
     @field_validator("patient_id")
     @classmethod
     def patient_id_must_be_safe_filename(cls, value: str) -> str:
         if any(char in value for char in r'\/:*?"<>|'):
-            raise ValueError("patient_id cannot contain path separators or invalid filename characters")
+            raise ValueError(
+                "patient_id cannot contain path separators or invalid "
+                "filename characters"
+            )
         return value
 
-    @field_validator("game_profiles")
+    @field_validator("key_bindings")
     @classmethod
-    def game_profiles_must_not_be_empty(cls, value: list[GameProfile]) -> list[GameProfile]:
-        if not value:
-            raise ValueError("patient profile must contain at least one game profile")
-        return value
+    def key_bindings_must_be_valid(
+        cls,
+        value: dict[str, str],
+    ) -> dict[str, str]:
+        validated: dict[str, str] = {}
+        for gesture_id, key in value.items():
+            resolved_gesture_id = gesture_id.strip()
+            resolved_key = key.strip()
+            if not resolved_gesture_id:
+                raise ValueError("gesture_id cannot be empty")
+            if len(resolved_gesture_id) > 64:
+                raise ValueError("gesture_id cannot exceed 64 characters")
+            if not resolved_key:
+                raise ValueError("key binding cannot be empty")
+            if len(resolved_key) > 32:
+                raise ValueError("key binding cannot exceed 32 characters")
+            validated[resolved_gesture_id] = resolved_key
+        return validated
