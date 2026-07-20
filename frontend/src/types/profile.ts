@@ -1,19 +1,14 @@
-export type GestureBinding = {
-  name: string;
-  key: string;
-  threshold: number;
-};
-
-export type GameProfile = {
-  gameName: string;
-  gestures: GestureBinding[];
-};
-
 export type PatientProfile = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   patientId: string;
   patientName: string;
-  notes?: string;
-  lastSessionGame?: string | null;
-  gameProfiles: GameProfile[];
+  notes: string;
+  updatedAt: string;
+  keyBindings: Record<string, string>;
+};
+
+export type GestureSummary = {
+  gestureId: string;
+  name: string;
+  type: string;
 };

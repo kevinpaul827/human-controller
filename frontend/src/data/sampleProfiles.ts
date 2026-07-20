@@ -1,44 +1,38 @@
-import type { PatientProfile } from "../types/profile";
+import type { GestureSummary, PatientProfile } from "../types/profile";
 
-/** Sample data for Sprint 1 UI — replace with ProfileBridge in Sprint 2. */
+/** Browser-only data used when Qt WebChannel is unavailable. */
 export const SAMPLE_PROFILES: PatientProfile[] = [
   {
-    schemaVersion: 1,
+    schemaVersion: 2,
     patientId: "patient-a",
     patientName: "Patient A",
-    lastSessionGame: "Celeste — Rehab 1",
-    gameProfiles: [
-      {
-        gameName: "Celeste — Rehab 1",
-        gestures: [
-          { name: "Right Arm Raise", key: "ArrowUp", threshold: 0.87 },
-          { name: "Squat", key: "ArrowDown", threshold: 0.82 },
-          { name: "Lean Left", key: "ArrowLeft", threshold: 0.8 },
-          { name: "Lean Right", key: "ArrowRight", threshold: 0.8 },
-          { name: "Hold Pose", key: "Space", threshold: 0.9 },
-        ],
-      },
-      {
-        gameName: "Super Mario Bros",
-        gestures: [
-          { name: "Jump", key: "Space", threshold: 0.78 },
-          { name: "Run", key: "ArrowRight", threshold: 0.75 },
-        ],
-      },
-    ],
+    notes: "Working on upper-body mobility and balance.",
+    updatedAt: "2026-07-20T08:30:00Z",
+    keyBindings: {
+      right_arm_raise: "ArrowUp",
+      squat: "ArrowDown",
+      lean_left: "ArrowLeft",
+      lean_right: "ArrowRight",
+      hold_pose: "Space",
+    },
   },
   {
-    schemaVersion: 1,
+    schemaVersion: 2,
     patientId: "demo-profile",
     patientName: "Demo Profile",
-    gameProfiles: [
-      {
-        gameName: "Celeste — Rehab Mode",
-        gestures: [
-          { name: "Right Arm Raise", key: "ArrowUp", threshold: 0.75 },
-          { name: "Squat", key: "ArrowDown", threshold: 0.75 },
-        ],
-      },
-    ],
+    notes: "Example profile for local browser preview.",
+    updatedAt: "2026-07-20T08:30:00Z",
+    keyBindings: {
+      gesture1: "Space",
+    },
   },
+];
+
+export const SAMPLE_GESTURES: GestureSummary[] = [
+  { gestureId: "gesture1", name: "Gesture 1", type: "state" },
+  { gestureId: "right_arm_raise", name: "Right Arm Raise", type: "state" },
+  { gestureId: "squat", name: "Squat", type: "state" },
+  { gestureId: "lean_left", name: "Lean Left", type: "state" },
+  { gestureId: "lean_right", name: "Lean Right", type: "state" },
+  { gestureId: "hold_pose", name: "Hold Pose", type: "state" },
 ];

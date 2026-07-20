@@ -11,6 +11,7 @@ from .backend_process import BackendProcessManager
 from .calibrate_bridge import CalibrateBridge
 from .camera_manager import CameraManager
 from .camera_overlay_widget import CameraOverlayWidget
+from .profile_bridge import ProfileBridge
 from .session_bridge import SessionBridge
 
 
@@ -78,6 +79,9 @@ class MainWindow(QMainWindow):
         self.calibrate_bridge.attach_preview_widget(self.preview)
         self.calibrate_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
         self.calibrate_bridge.poseEstimated.connect(self.preview.set_pose)
+
+        self.profile_bridge = ProfileBridge()
+        self.channel.registerObject("profileBridge", self.profile_bridge)
 
         if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") == "1":
             self.backend_manager = BackendProcessManager()
