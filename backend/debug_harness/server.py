@@ -39,7 +39,13 @@ from backend.matching_engine.core.angles import (
     mask_angles,
     reduce_joints,
 )
-from backend.pose_types import NUM_LANDMARKS, BodyRegion, parse_regions
+from backend.pose_types import (
+    NUM_LANDMARKS,
+    BodyRegion,
+    connections_for_regions,
+    landmarks_for_regions,
+    parse_regions,
+)
 
 from .store import DebugGestureStore
 
@@ -109,6 +115,14 @@ def _angle_payload(angles: AngleVector, keys: set[AngleKey]) -> dict:
     }
 
 
+def _skeleton_payload(regions: List[BodyRegion]) -> dict:
+    """Landmark indices + edges for drawing only the focused body regions."""
+    return {
+        "landmarks": landmarks_for_regions(regions),
+        "connections": [list(edge) for edge in connections_for_regions(regions)],
+    }
+
+
 @app.get("/health")
 def health() -> dict:
     return {"ok": True, "gestures": len(store.all())}
@@ -154,6 +168,7 @@ async def ws(socket: WebSocket) -> None:
         "type": "hello",
         "kind": s.kind,
         "regions": [r.value for r in s.focus_regions],
+        "skeleton": _skeleton_payload(s.focus_regions),
     })
     await _send_gestures(socket)
 
@@ -184,6 +199,7 @@ async def ws(socket: WebSocket) -> None:
                 await socket.send_json({
                     "type": "focus_regions",
                     "regions": [r.value for r in s.focus_regions],
+                    "skeleton": _skeleton_payload(s.focus_regions),
                     "reps_cleared": s.mode == "calibrate",
                 })
 
@@ -201,13 +217,18 @@ async def ws(socket: WebSocket) -> None:
                     "kind": s.kind,
                     "reps": 0,
                     "regions": [r.value for r in s.focus_regions],
+                    "skeleton": _skeleton_payload(s.focus_regions),
                 })
 
             elif mtype == "frame":
                 lm = _to_landmarks(msg)
                 if lm is None:
                     continue
-                angles = mask_angles(s.smoother.update(fx.to_angles(lm)), s.focus_angles)
+                # Only compute + smooth the focused joints.
+                angles = mask_angles(
+                    s.smoother.update(fx.to_angles(lm, s.focus_angles)),
+                    s.focus_angles,
+                )
                 s.window.append(angles)
                 if s.recording:
                     s.current_rep.append(angles)

@@ -133,7 +133,20 @@
     const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
 
     const $ = (id) => document.getElementById(id);
-    const state = { kind: "state", mode: "idle", recording: false };
+    const state = {
+      kind: "state",
+      mode: "idle",
+      recording: false,
+      // Focused skeleton from the server (region-filtered landmark indices / edges).
+      landmarks: [],
+      connections: [],
+    };
+
+    function setSkeleton(skel) {
+      if (!skel) return;
+      state.landmarks = Array.isArray(skel.landmarks) ? skel.landmarks : [];
+      state.connections = Array.isArray(skel.connections) ? skel.connections : [];
+    }
 
     // ---- WebSocket ----------------------------------------------------
     let ws;
@@ -147,7 +160,11 @@
 
     function handle(msg) {
       switch (msg.type) {
-        case "hello": setKind(msg.kind, false); renderRegions(msg.regions); break;
+        case "hello":
+          setKind(msg.kind, false);
+          setSkeleton(msg.skeleton);
+          renderRegions(msg.regions);
+          break;
         case "kind": setKind(msg.kind, false); break;
         case "tick":
           renderAngles(msg.angles);
@@ -158,9 +175,15 @@
           if (msg.match) renderMatch(msg.match); else if (state.mode === "match") renderMatch(null);
           $("err").textContent = "";
           break;
-        case "calibration": setKind(msg.kind, false); $("repCount").textContent = msg.reps; break;
+        case "calibration":
+          setKind(msg.kind, false);
+          setSkeleton(msg.skeleton);
+          $("repCount").textContent = msg.reps;
+          break;
         case "rep_captured": $("repCount").textContent = msg.rep; break;
-        case "focus_regions": break;
+        case "focus_regions":
+          setSkeleton(msg.skeleton);
+          break;
         case "saved": $("gName").value = ""; $("repCount").textContent = 0; setMode("idle"); break;
         case "gestures": renderGestures(msg.items); break;
         case "error": $("err").textContent = "⚠ " + msg.message; $("err").className = ""; break;
@@ -278,8 +301,17 @@
           const norm = res.landmarks?.[0];
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           if (norm) {
-            draw.drawConnectors(norm, PoseLandmarker.POSE_CONNECTIONS, { color: "#22c55e", lineWidth: 3 });
-            draw.drawLandmarks(norm, { color: "#ef4444", radius: 3 });
+            // Draw only focused-region bones / joints (fallback to full skeleton).
+            const conns = state.connections.length
+              ? state.connections.map(([a, b]) => ({ start: a, end: b }))
+              : PoseLandmarker.POSE_CONNECTIONS;
+            draw.drawConnectors(norm, conns, { color: "#22c55e", lineWidth: 3 });
+            if (state.landmarks.length) {
+              const pts = state.landmarks.map((i) => norm[i]).filter(Boolean);
+              if (pts.length) draw.drawLandmarks(pts, { color: "#ef4444", radius: 3 });
+            } else {
+              draw.drawLandmarks(norm, { color: "#ef4444", radius: 3 });
+            }
           }
           if (world && norm && world.length === 33) {
             send({
