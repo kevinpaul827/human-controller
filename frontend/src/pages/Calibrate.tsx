@@ -693,18 +693,25 @@ const Calibrate = () => {
             {availableGestures.length > 0 ? (
               availableGestures.map((gesture) => {
                 const isLoaded = loadedGestures.some(
-                  (loadedGesture) => loadedGesture.gestureId === gesture.gestureId,
+                  (loadedGesture) =>
+                    loadedGesture.gestureId === gesture.gestureId,
                 );
 
                 return (
                   <ListItem key={gesture.gestureId} disablePadding>
                     <ListItemButton
                       disabled={isSubmitting || isLoaded}
-                      onClick={() => void handleLoadSavedGesture(gesture.gestureId)}
+                      onClick={() =>
+                        void handleLoadSavedGesture(gesture.gestureId)
+                      }
                     >
                       <ListItemText
                         primary={gesture.name}
-                        secondary={isLoaded ? "Already loaded for this session" : gesture.gestureId}
+                        secondary={
+                          isLoaded
+                            ? "Already loaded for this session"
+                            : gesture.gestureId
+                        }
                       />
                     </ListItemButton>
                   </ListItem>

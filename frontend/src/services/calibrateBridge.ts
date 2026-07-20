@@ -27,7 +27,9 @@ type QtCalibrateBridgeObject = {
   captureRep?: () => QtCapturedRepResult | Promise<QtCapturedRepResult>;
   resetRep?: () => void | Promise<void>;
   saveRep?: (name: string) => QtSavedRepResult | Promise<QtSavedRepResult>;
-  listSavedGestures?: () => SavedGestureSummary[] | Promise<SavedGestureSummary[]>;
+  listSavedGestures?: () =>
+    | SavedGestureSummary[]
+    | Promise<SavedGestureSummary[]>;
   getLoadedSessionGestures?: () =>
     | SavedGestureSummary[]
     | Promise<SavedGestureSummary[]>;

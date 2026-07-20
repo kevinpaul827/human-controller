@@ -3,8 +3,12 @@ import calibrateBridge from "../services/calibrateBridge";
 import type { SavedGestureSummary } from "../types/calibrate";
 
 const useSavedGestures = () => {
-  const [availableGestures, setAvailableGestures] = useState<SavedGestureSummary[]>([]);
-  const [loadedGestures, setLoadedGestures] = useState<SavedGestureSummary[]>([]);
+  const [availableGestures, setAvailableGestures] = useState<
+    SavedGestureSummary[]
+  >([]);
+  const [loadedGestures, setLoadedGestures] = useState<SavedGestureSummary[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const refresh = useCallback(async () => {
