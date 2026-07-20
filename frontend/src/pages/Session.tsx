@@ -10,7 +10,9 @@ import styles from "../styles/session.module.css";
 
 const Session = () => {
   const navigate = useNavigate();
-  const [loadedGestures, setLoadedGestures] = useState<SavedGestureSummary[]>([]);
+  const [loadedGestures, setLoadedGestures] = useState<SavedGestureSummary[]>(
+    [],
+  );
   const [gestureLoadError, setGestureLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ const Session = () => {
         if (!active) {
           return;
         }
-  
+
         setLoadedGestures(gestures);
         setGestureLoadError(null);
       } catch (error) {
@@ -32,7 +34,11 @@ const Session = () => {
         }
 
         setLoadedGestures([]);
-        setGestureLoadError(error instanceof Error ? error.message : "Unable to load session gestures");
+        setGestureLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load session gestures",
+        );
       }
     };
 
@@ -66,7 +72,11 @@ const Session = () => {
 
         <Box className={styles.dashboardGrid}>
           <SessionCamera />
-          <GestureMapping gestures={loadedGestures} errorMessage={gestureLoadError} onCalibrateNewGesture={handleCalibrateNewGesture} />
+          <GestureMapping
+            gestures={loadedGestures}
+            errorMessage={gestureLoadError}
+            onCalibrateNewGesture={handleCalibrateNewGesture}
+          />
         </Box>
       </Paper>
     </Container>

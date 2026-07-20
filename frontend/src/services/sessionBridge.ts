@@ -22,7 +22,7 @@ type QtSessionBridgeObject = {
   getSessionState?: () => SessionStatusEvent["state"];
   getLoadedSessionGestures?: () =>
     | SavedGestureSummary[]
-    | Promise<SavedGestureSummary[]>
+    | Promise<SavedGestureSummary[]>;
   updatePreviewBounds: (
     left: number,
     top: number,
@@ -73,7 +73,7 @@ const sessionBridge: SessionBridge = {
   async getLoadedSessionGestures() {
     const bridge = await getSessionBridgeOrThrow();
     if (!bridge.getLoadedSessionGestures) {
-      throw new Error("Loaded session gestures unavailable in this build.")
+      throw new Error("Loaded session gestures unavailable in this build.");
     }
 
     return (await bridge.getLoadedSessionGestures()) ?? [];

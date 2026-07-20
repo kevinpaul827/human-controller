@@ -15,7 +15,11 @@ type GestureMappingProps = {
   onCalibrateNewGesture: () => void;
 };
 
-const GestureMapping = ({ gestures, errorMessage, onCalibrateNewGesture }: GestureMappingProps) => {
+const GestureMapping = ({
+  gestures,
+  errorMessage,
+  onCalibrateNewGesture,
+}: GestureMappingProps) => {
   const visibleGestureCount = Math.min(gestures.length, 8);
 
   return (
@@ -48,9 +52,7 @@ const GestureMapping = ({ gestures, errorMessage, onCalibrateNewGesture }: Gestu
         ) : (
           <Box className={styles.mappingRow}>
             <Box className={styles.mappingInfo}>
-              <Typography variant="body1">
-                No gestures loaded
-              </Typography>
+              <Typography variant="body1">No gestures loaded</Typography>
             </Box>
 
             <Typography variant="body2">
@@ -62,9 +64,11 @@ const GestureMapping = ({ gestures, errorMessage, onCalibrateNewGesture }: Gestu
 
       <Box className={styles.mappingFooter}>
         <Typography variant="body2" className={styles.footerCopy}>
-          {gestures.length == 0 ? "No gestures loaded for this session"
-            : gestures.length > 8 ? `Showing ${visibleGestureCount} of ${gestures.length} · scroll for more`
-            : `${gestures.length} gestures${gestures.length == 1 ? "" : "s"} loaded`}
+          {gestures.length == 0
+            ? "No gestures loaded for this session"
+            : gestures.length > 8
+              ? `Showing ${visibleGestureCount} of ${gestures.length} · scroll for more`
+              : `${gestures.length} gestures${gestures.length == 1 ? "" : "s"} loaded`}
         </Typography>
         <Button
           variant="outlined"
