@@ -8,6 +8,7 @@ from backend.matching_engine import AngleKey, TemplateBuilder
 from backend.matching_engine.core.angles import reduce_joints
 
 from .gesture_matcher import GestureMatcher
+from .gesture_regions import infer_gesture_regions
 from .gesture_store import SavedGesture
 from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
@@ -58,6 +59,8 @@ class CameraManager(QObject):
         log_info(f"gesture matcher file: {self.gesture_matcher.__class__.__module__}")
         log_info(f"has angles_for_pose: {hasattr(self.gesture_matcher, 'angles_for_pose')}")
         self.template_builder = TemplateBuilder()
+        self._loaded_session_gesture_ids = []
+        self._use_session_gesture_subset = False
         self._calibration_frames = []
         self._calibration_reps = []
         self.pose_processing = False
@@ -153,7 +156,7 @@ class CameraManager(QObject):
             if not self.create_camera():
                 return
 
-        self.gesture_matcher.reload_templates()
+        self._refresh_gesture_matcher_templates()
         self.camera_timer.restart()
         self._frame_log_emitted = False
         self._pending_pose_frame = QImage()
@@ -350,6 +353,43 @@ class CameraManager(QObject):
         self.emit_camera_error(message)
 
 ############################## Calibration Methods #############################
+    def _loaded_session_gestures(self):
+        gestures = []
+        for gesture_id in self._loaded_session_gesture_ids:
+            try:
+                gestures.append(self.gesture_matcher.store.load(gesture_id))
+            except (OSError, ValueError, FileNotFoundError):
+                continue
+        return gestures
+
+    def _refresh_gesture_matcher_templates(self):
+        if self._use_session_gesture_subset:
+            self.gesture_matcher.set_saved_gestures(self._loaded_session_gestures())
+            return
+
+        self.gesture_matcher.reload_templates()
+
+    def list_saved_gestures(self):
+        return self.gesture_matcher.store.list_gestures()
+
+    def loaded_session_gestures(self):
+        return [gesture.to_summary() for gesture in self._loaded_session_gestures()]
+
+    def load_saved_gesture(self, gesture_id):
+        resolved_gesture_id = str(gesture_id or "").strip()
+        if not resolved_gesture_id:
+            raise ValueError("Gesture ID is required.")
+
+        gesture = self.gesture_matcher.store.load(resolved_gesture_id)
+        if resolved_gesture_id not in self._loaded_session_gesture_ids:
+            self._loaded_session_gesture_ids.append(resolved_gesture_id)
+        self._use_session_gesture_subset = True
+        self._refresh_gesture_matcher_templates()
+        return {
+            "gesture": gesture.to_summary(),
+            "loadedGestures": self.loaded_session_gestures(),
+        }
+
     def _append_calibration_frame(self, angles):
         if not angles:
             return
@@ -413,8 +453,10 @@ class CameraManager(QObject):
         """
         resolved_name = str(name or "").strip()
         if not resolved_name:
+            log_info("[camera_manager.save_rep] aborted: empty gesture name")
             raise ValueError("Gesture name is required.")
         if not self._calibration_reps:
+            log_info("[camera_manager.save_rep] aborted: no captured reps available")
             raise ValueError("Capture at least one rep before saving.")
 
         active_joints = [
@@ -431,15 +473,16 @@ class CameraManager(QObject):
             gesture_id=template.gesture_id,
             name=template.name,
             type=template.type,
-            regions=[],
+            regions=infer_gesture_regions([joint.value for joint in template.active_joints]),
             active_joints=[joint.value for joint in template.active_joints],
             target_angles={joint.value: float(value) for joint, value in template.target_angles.items()},
             tolerance_deg={joint.value: float(value) for joint, value in template.tolerance_deg.items()},
             trajectory=list(template.trajectory),
             fps=int(template.fps),
         )
-        self.gesture_matcher.store.save(saved)
-        self.gesture_matcher.reload_templates()
+        if self._use_session_gesture_subset and saved.gesture_id not in self._loaded_session_gesture_ids:
+            self._loaded_session_gesture_ids.append(saved.gesture_id)
+        self._refresh_gesture_matcher_templates()
         self._calibration_frames = []
         self._calibration_reps = []
         self._emit_calibration_updated()
@@ -447,6 +490,7 @@ class CameraManager(QObject):
             "gestureId": saved.gesture_id,
             "name": saved.name,
             "repCount": 0,
+            "loadedGestures": self.loaded_session_gestures(),
         }
 ################################################################################
     @Slot()

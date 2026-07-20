@@ -163,3 +163,21 @@ class CalibrateBridge(QObject):
             return self.camera.save_rep(name)
         except ValueError as error:
             return {"error": str(error)}
+
+    @Slot(result="QVariantList")
+    def listSavedGestures(self):
+        # FIXME: this should comes from self.gesture_store.list_saved_gestures()
+        return self.camera.list_saved_gestures()
+
+    @Slot(result="QVariantList")
+    def getLoadedSessionGestures(self):
+        return self.camera.loaded_session_gestures()
+
+    @Slot(str, result="QVariantMap")
+    def loadSavedGesture(self, gesture_id):
+        try:
+            return self.camera.load_saved_gesture(gesture_id)
+        except ValueError as error:
+            return {"error": str(error)}
+        except FileNotFoundError:
+            return {"error": "Selected gesture could not be found."}

@@ -4,8 +4,13 @@ import {
   Button,
   Chip,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Paper,
   Stack,
@@ -18,12 +23,14 @@ import { useNavigate } from "react-router-dom";
 import CalibrationProgress from "../components/CalibrationProgress";
 import SessionCameraErrorModal from "../components/modals/SessionCameraErrorModal";
 import useDesktopCameraPreview from "../hooks/useDesktopCameraPreview";
+import useSavedGestures from "../hooks/useSavedGestures";
 import calibrateBridge from "../services/calibrateBridge";
 import styles from "../styles/calibratePage.module.css";
 import type {
   CalibrateState,
   CalibrateStatusEvent,
   CapturedRep,
+  SavedGestureSummary,
 } from "../types/calibrate";
 import { ROUTES, CALIBRATION_STEPS } from "../utils/constants";
 
@@ -112,6 +119,8 @@ type CalibrationPanelProps = {
   previewAspectRatio: number;
   repCount: number;
   saveMessage: string | null;
+  loadedGestures: SavedGestureSummary[];
+  onLoadGestureClick: () => void;
   onCaptureRep: () => Promise<void>;
   onConfigure: () => Promise<void>;
   onGestureNameChange: (value: string) => void;
@@ -133,6 +142,8 @@ const CalibrationPanel = ({
   previewAspectRatio,
   repCount,
   saveMessage,
+  loadedGestures,
+  onLoadGestureClick,
   onCaptureRep,
   onConfigure,
   onGestureNameChange,
@@ -243,6 +254,14 @@ const CalibrationPanel = ({
             </Stack>
             <Button
               size="small"
+              variant="outlined"
+              onClick={onLoadGestureClick}
+              disabled={isSubmitting}
+            >
+              Load Gesture
+            </Button>
+            <Button
+              size="small"
               variant="contained"
               color="success"
               onClick={onSaveRep}
@@ -254,6 +273,25 @@ const CalibrationPanel = ({
               <Typography className={styles.saveMessage}>
                 {saveMessage}
               </Typography>
+            ) : null}
+            {loadedGestures.length > 0 ? (
+              <Stack
+                direction="row"
+                spacing={0.75}
+                flexWrap="wrap"
+                useFlexGap
+                className={styles.loadedGestureRow}
+              >
+                {loadedGestures.map((gesture) => (
+                  <Chip
+                    key={gesture.gestureId}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    label={gesture.name}
+                  />
+                ))}
+              </Stack>
             ) : null}
           </Stack>
         </Box>
@@ -355,7 +393,15 @@ const Calibrate = () => {
   const [capturedReps, setCapturedReps] = useState<CapturedRep[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGesturePickerOpen, setIsGesturePickerOpen] = useState(false);
   const isLive = calibrateState === "live";
+  const {
+    availableGestures,
+    loadedGestures,
+    isLoading: isLoadingGestures,
+    loadGesture,
+    refresh: refreshSavedGestures,
+  } = useSavedGestures();
   const { elapsed, previewAspectRatio, previewViewportRef, setElapsed } =
     useDesktopCameraPreview({
       bridge: calibrateBridge,
@@ -507,6 +553,9 @@ const Calibrate = () => {
       setGestureName("");
       setRepCount(result.repCount);
       setCapturedReps([]);
+      if (result.loadedGestures) {
+        void refreshSavedGestures();
+      }
       setSaveMessage(`Saved "${result.name}" successfully.`);
     } catch (error) {
       setErrorEvent({
@@ -515,6 +564,28 @@ const Calibrate = () => {
           error instanceof Error
             ? error.message
             : "Unable to save the captured gesture reps.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLoadSavedGesture = async (gestureId: string) => {
+    setErrorEvent(null);
+    setSaveMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const result = await loadGesture(gestureId);
+      setSaveMessage(`Loaded "${result.gesture.name}" for this session.`);
+      setIsGesturePickerOpen(false);
+    } catch (error) {
+      setErrorEvent({
+        state: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to load the selected saved gesture.",
       });
     } finally {
       setIsSubmitting(false);
@@ -593,6 +664,11 @@ const Calibrate = () => {
             previewAspectRatio={previewAspectRatio}
             repCount={repCount}
             saveMessage={saveMessage}
+            loadedGestures={loadedGestures}
+            onLoadGestureClick={() => {
+              void refreshSavedGestures();
+              setIsGesturePickerOpen(true);
+            }}
             onCaptureRep={handleCaptureRep}
             onConfigure={handleConfigure}
             onGestureNameChange={setGestureName}
@@ -604,6 +680,61 @@ const Calibrate = () => {
           />
         </Box>
       </Box>
+
+      <Dialog
+        open={isGesturePickerOpen}
+        onClose={() => setIsGesturePickerOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Load saved gestures</DialogTitle>
+        <DialogContent dividers>
+          <List disablePadding>
+            {availableGestures.length > 0 ? (
+              availableGestures.map((gesture) => {
+                const isLoaded = loadedGestures.some(
+                  (loadedGesture) =>
+                    loadedGesture.gestureId === gesture.gestureId,
+                );
+
+                return (
+                  <ListItem key={gesture.gestureId} disablePadding>
+                    <ListItemButton
+                      disabled={isSubmitting || isLoaded}
+                      onClick={() =>
+                        void handleLoadSavedGesture(gesture.gestureId)
+                      }
+                    >
+                      <ListItemText
+                        primary={gesture.name}
+                        secondary={
+                          isLoaded
+                            ? "Already loaded for this session"
+                            : gesture.gestureId
+                        }
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })
+            ) : (
+              <ListItem disableGutters>
+                <ListItemText
+                  primary="No saved gestures found"
+                  secondary={
+                    isLoadingGestures
+                      ? "Loading saved gestures..."
+                      : "Save a gesture first, then load it into this session."
+                  }
+                />
+              </ListItem>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsGesturePickerOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <SessionCameraErrorModal
         open={errorEvent !== null}
