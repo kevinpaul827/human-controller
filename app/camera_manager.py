@@ -55,6 +55,8 @@ class CameraManager(QObject):
         self._preview_aspect_ratio = 4 / 3
 
         self.gesture_matcher = GestureMatcher()
+        log_info(f"gesture matcher file: {self.gesture_matcher.__class__.__module__}")
+        log_info(f"has angles_for_pose: {hasattr(self.gesture_matcher, 'angles_for_pose')}")
         self.template_builder = TemplateBuilder()
         self._calibration_frames = []
         self._calibration_reps = []
@@ -292,7 +294,26 @@ class CameraManager(QObject):
             return
 
         try:
-            angles = self.gesture_matcher.angles_for_pose(pose)
+            if hasattr(self.gesture_matcher, "angles_for_pose"):
+                angles = self.gesture_matcher.angles_for_pose(pose)
+            elif hasattr(self.gesture_matcher, "feature_extractor") and hasattr(
+                self.gesture_matcher.feature_extractor, "to_angles"
+            ):
+                angles = (
+                    self.gesture_matcher.feature_extractor.to_angles(pose)
+                    if pose is not None
+                    else {}
+                )
+                log_info(
+                    "[camera_manager] gesture matcher missing angles_for_pose; "
+                    "using feature extractor fallback"
+                )
+            else:
+                raise AttributeError(
+                    "Gesture matcher is missing angles_for_pose and has no fallback "
+                    "feature extractor."
+                )
+
             # If we are in calibration mode, save the current pose angles
             # so the user can capture them later as a calibration rep.
             if self.active_bridge == "calibrate":

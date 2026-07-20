@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import {
   Box,
   Button,
@@ -9,38 +9,26 @@ import {
   ListItemText,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import CalibrationProgress from "../components/CalibrationProgress";
 import SessionCameraErrorModal from "../components/modals/SessionCameraErrorModal";
+import useDesktopCameraPreview from "../hooks/useDesktopCameraPreview";
 import calibrateBridge from "../services/calibrateBridge";
+import styles from "../styles/calibratePage.module.css";
 import type {
   CalibrateState,
   CalibrateStatusEvent,
   CapturedRep,
 } from "../types/calibrate";
-import { ROUTES } from "../utils/constants";
-
-const CALIBRATION_STEPS = [
-  "Choose movement",
-  "Align camera",
-  "Record gesture",
-  "Save mapping",
-];
-
-const LIVE_CHECKLIST = [
-  "Center the patient so both shoulders and arms remain visible.",
-  "Use the live preview to confirm the desktop overlay is aligned.",
-  "Only begin capture once the patient can comfortably hold the final pose.",
-];
-
-const IDLE_CHECKLIST = [
-  "Open the calibration camera to attach the desktop preview to this page.",
-  "Check framing before recording so the target joints stay in shot.",
-  "Use camera settings if permissions or device selection need attention.",
-];
+import {
+  ROUTES,
+  CALIBRATION_STEPS,
+} from "../utils/constants";
 
 const formatRepAngles = (rep: CapturedRep) => {
   const joints = Object.entries(rep.angles);
@@ -53,95 +41,328 @@ const formatRepAngles = (rep: CapturedRep) => {
     .join(" · ");
 };
 
+const renderTextBlock = (primary: string, secondary: string) => (
+  <Box>
+    <Typography className={styles.textPrimary}>{primary}</Typography>
+    {secondary ? (
+      <Typography className={styles.textSecondary}>{secondary}</Typography>
+    ) : null}
+  </Box>
+);
+
+type CameraPreviewProps = {
+  elapsed: number;
+  isLive: boolean;
+  previewAspectRatio: number;
+  previewViewportRef: RefObject<HTMLDivElement | null>;
+};
+
+const CameraPreview = ({
+  elapsed,
+  isLive,
+  previewAspectRatio,
+  previewViewportRef,
+}: CameraPreviewProps) => (
+  <Box className={styles.previewColumn}>
+    <Box
+      ref={previewViewportRef}
+      // Keep this ref mount. The desktop app draws the preview here.
+      className={styles.previewViewport}
+    >
+      {!isLive ? (
+        <Stack spacing={1} alignItems="center" className={styles.previewIdle}>
+          <Typography variant="h6" className={styles.previewIdleTitle}>
+            Camera preview waiting
+          </Typography>
+          <Typography className={styles.previewIdleText}>
+            Start calibration to hand camera ownership to the calibration
+            bridge and render the desktop overlay in this viewport.
+          </Typography>
+        </Stack>
+      ) : null}
+
+      <Box className={styles.previewOverlay}>
+        <Chip
+          label={isLive ? "REC" : "Preview idle"}
+          color={isLive ? "error" : "default"}
+          size="small"
+          className={`${styles.previewChip} ${
+            isLive ? styles.previewChipLive : styles.previewChipDark
+          }`}
+        />
+        <Chip
+          label={
+            isLive
+              ? `${elapsed.toFixed(1)}s elapsed`
+              : `aspect ${previewAspectRatio.toFixed(2)}`
+          }
+          size="small"
+          className={`${styles.previewChip} ${styles.previewChipDark}`}
+        />
+      </Box>
+    </Box>
+  </Box>
+);
+
+type CalibrationPanelProps = {
+  calibrateState: CalibrateState;
+  capturedReps: CapturedRep[];
+  currentStep: number;
+  elapsed: number;
+  gestureName: string;
+  isLive: boolean;
+  isSubmitting: boolean;
+  previewAspectRatio: number;
+  repCount: number;
+  saveMessage: string | null;
+  onCaptureRep: () => Promise<void>;
+  onConfigure: () => Promise<void>;
+  onGestureNameChange: (value: string) => void;
+  onNavigateBack: () => void;
+  onResetReps: () => Promise<void>;
+  onSaveRep: () => Promise<void>;
+  onStartCalibration: () => Promise<void>;
+  onStopCalibration: () => Promise<void>;
+};
+
+const CalibrationPanel = ({
+  calibrateState,
+  capturedReps,
+  currentStep,
+  elapsed,
+  gestureName,
+  isLive,
+  isSubmitting,
+  previewAspectRatio,
+  repCount,
+  saveMessage,
+  onCaptureRep,
+  onConfigure,
+  onGestureNameChange,
+  onNavigateBack,
+  onResetReps,
+  onSaveRep,
+  onStartCalibration,
+  onStopCalibration,
+}: CalibrationPanelProps) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  return (
+    <Paper variant="outlined" className={styles.sidebar}>
+      <Box className={styles.sidebarBody}>
+        <Box className={styles.sidebarTop}>
+          <Stack direction="row" spacing={1} className={styles.controlRow}>
+            <Button
+              size="small"
+              variant={isLive ? "outlined" : "contained"}
+              onClick={onStartCalibration}
+              disabled={isLive}
+              className={styles.controlButton}
+            >
+              Start
+            </Button>
+            <Button
+              size="small"
+              variant={isLive ? "contained" : "outlined"}
+              color={isLive ? "error" : "inherit"}
+              onClick={onStopCalibration}
+              disabled={!isLive}
+              className={styles.controlButton}
+            >
+              Stop
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={onConfigure}
+              className={`${styles.controlButton} ${styles.cameraButton}`}
+            >
+              Camera
+            </Button>
+          </Stack>
+
+          <Typography variant="subtitle2" className={styles.sectionTitle}>
+            Calibration status
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            flexWrap="wrap"
+            useFlexGap
+            className={styles.chipRow}
+          >
+            <Chip
+              label={`state: ${calibrateState}`}
+              size="small"
+              color={isLive ? "success" : "default"}
+              variant={isLive ? "filled" : "outlined"}
+            />
+            <Chip
+              label={`step: ${CALIBRATION_STEPS[currentStep - 1]}`}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
+            <Chip
+              label={`timer: ${elapsed.toFixed(1)}s`}
+              size="small"
+              variant="outlined"
+            />
+            <Chip label={`reps: ${repCount}`} size="small" variant="outlined" />
+          </Stack>
+
+          <Divider className={styles.sectionDivider} />
+
+          <Typography variant="subtitle2" className={styles.sectionTitle}>
+            Gesture capture
+          </Typography>
+          <Stack spacing={1} className={styles.sectionBlock}>
+            <TextField
+              size="small"
+              label="Gesture name"
+              value={gestureName}
+              onChange={(event) => onGestureNameChange(event.target.value)}
+              disabled={isSubmitting}
+            />
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={onCaptureRep}
+                disabled={!isLive || isSubmitting}
+                className={styles.equalButton}
+              >
+                Capture Rep
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={onResetReps}
+                disabled={repCount === 0 || isSubmitting}
+                className={styles.equalButton}
+              >
+                Clear Reps
+              </Button>
+            </Stack>
+            <Button
+              size="small"
+              variant="contained"
+              color="success"
+              onClick={onSaveRep}
+              disabled={!gestureName.trim() || repCount === 0 || isSubmitting}
+            >
+              Save Gesture
+            </Button>
+            {saveMessage ? (
+              <Typography className={styles.saveMessage}>{saveMessage}</Typography>
+            ) : null}
+          </Stack>
+        </Box>
+
+        <Box className={styles.tabSection}>
+          <Divider className={styles.sectionDivider} />
+          <Tabs
+            value={activeTab}
+            onChange={(_, value: number) => setActiveTab(value)}
+            variant="fullWidth"
+            className={styles.sectionTabs}
+          >
+            <Tab label="Captured reps" />
+            <Tab label="Bridge telemetry" />
+          </Tabs>
+
+          <Box className={styles.tabPanel}>
+            {activeTab === 0 ? (
+              <List dense disablePadding className={styles.sectionList}>
+                {capturedReps.length > 0 ? (
+                  capturedReps.map((rep, index) => (
+                    <ListItem
+                      key={`${index}-${rep.repCount}`}
+                      disableGutters
+                      className={styles.listItem}
+                    >
+                      <ListItemText
+                        primary={renderTextBlock(
+                          `Rep ${index + 1}`,
+                          formatRepAngles(rep),
+                        )}
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <ListItem disableGutters className={styles.listItem}>
+                    <ListItemText
+                      primary={renderTextBlock(
+                        "No reps captured yet",
+                        "Hold the target pose, then press Capture Rep.",
+                      )}
+                    />
+                  </ListItem>
+                )}
+              </List>
+            ) : (
+              <List dense disablePadding className={styles.sectionList}>
+                <ListItem disableGutters className={styles.listItem}>
+                  <ListItemText
+                    primary={renderTextBlock(
+                      "Preview surface",
+                      "Viewport bounds are synchronized to the desktop bridge.",
+                    )}
+                  />
+                </ListItem>
+                <ListItem disableGutters className={styles.listItem}>
+                  <ListItemText
+                    primary={renderTextBlock(
+                      "Aspect ratio",
+                      previewAspectRatio.toFixed(2),
+                    )}
+                  />
+                </ListItem>
+                <ListItem disableGutters className={styles.listItem}>
+                  <ListItemText
+                    primary={renderTextBlock(
+                      "Ownership",
+                      isLive
+                        ? "Calibration bridge currently owns the shared camera."
+                        : "Camera ownership is released.",
+                    )}
+                  />
+                </ListItem>
+              </List>
+            )}
+          </Box>
+        </Box>
+      </Box>
+
+      <Divider />
+
+      <Box className={styles.footer}>
+        <Button onClick={onNavigateBack} className={styles.backButton}>
+          Back to Session
+        </Button>
+      </Box>
+    </Paper>
+  );
+};
+
 const Calibrate = () => {
   const navigate = useNavigate();
   const [calibrateState, setCalibrateState] = useState<CalibrateState>("idle");
-  const [elapsed, setElapsed] = useState(0);
   const [errorEvent, setErrorEvent] = useState<CalibrateStatusEvent | null>(null);
-  const [previewAspectRatio, setPreviewAspectRatio] = useState(4 / 3);
   const [gestureName, setGestureName] = useState("");
   const [repCount, setRepCount] = useState(0);
   const [capturedReps, setCapturedReps] = useState<CapturedRep[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const previewViewportRef = useRef<HTMLDivElement | null>(null);
   const isLive = calibrateState === "live";
-  const currentStep = isLive ? 3 : 2;
-  const checklist = isLive ? LIVE_CHECKLIST : IDLE_CHECKLIST;
-
-  useEffect(() => {
-    if (!isLive) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setElapsed((current) => Number((current + 0.1).toFixed(1)));
-    }, 100);
-
-    return () => window.clearInterval(intervalId);
-  }, [isLive]);
-
-  useEffect(() => {
-    const panel = previewViewportRef.current;
-
-    if (!panel) {
-      return;
-    }
-
-    let frameId = 0;
-
-    const syncPreviewBounds = () => {
-      frameId = 0;
-
-      const rect = panel.getBoundingClientRect();
-
-      void calibrateBridge.updatePreviewBounds({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-        devicePixelRatio: window.devicePixelRatio,
-      });
-    };
-
-    const scheduleSync = () => {
-      if (frameId !== 0) {
-        return;
-      }
-
-      frameId = window.requestAnimationFrame(syncPreviewBounds);
-    };
-
-    scheduleSync();
-
-    const resizeObserver = new ResizeObserver(() => {
-      scheduleSync();
+  const { elapsed, previewAspectRatio, previewViewportRef, setElapsed } =
+    useDesktopCameraPreview({
+      bridge: calibrateBridge,
+      isLive,
     });
-
-    resizeObserver.observe(panel);
-    window.addEventListener("resize", scheduleSync);
-    window.addEventListener("scroll", scheduleSync, true);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", scheduleSync);
-      window.removeEventListener("scroll", scheduleSync, true);
-
-      if (frameId !== 0) {
-        window.cancelAnimationFrame(frameId);
-      }
-
-      void calibrateBridge.updatePreviewBounds({
-        left: 0,
-        top: 0,
-        width: 0,
-        height: 0,
-        devicePixelRatio: window.devicePixelRatio,
-      });
-    };
-  }, [isLive, previewAspectRatio]);
-
+  const currentStep = isLive ? 3 : 2;
   useEffect(() => {
+    // Keep this bridge listener. The desktop app is the source of camera state.
     const unsubscribe = calibrateBridge.onCalibrateStatus((event) => {
       if (event.state === "error") {
         setElapsed(0);
@@ -164,14 +385,7 @@ const Calibrate = () => {
   }, []);
 
   useEffect(() => {
-    return calibrateBridge.onPreviewAspectRatio((aspectRatio) => {
-      if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
-        setPreviewAspectRatio(aspectRatio);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
+    // Keep this bridge listener. Rep updates come from the desktop app.
     return calibrateBridge.onCalibrationUpdated((event) => {
       setRepCount(event.repCount);
       if (event.repCount === 0) {
@@ -182,9 +396,19 @@ const Calibrate = () => {
 
   useEffect(() => {
     return () => {
+      // Keep this cleanup. It releases the shared desktop camera.
       void calibrateBridge.stopCalibrate().catch(() => {});
     };
   }, []);
+
+  useEffect(() => {
+    if (previewViewportRef.current) {
+      previewViewportRef.current.style.setProperty(
+        "--preview-aspect-ratio",
+        String(previewAspectRatio),
+      );
+    }
+  }, [previewAspectRatio, previewViewportRef]);
 
   const handleStartCalibration = async () => {
     setErrorEvent(null);
@@ -320,20 +544,10 @@ const Calibrate = () => {
 
   return (
     <>
-      <Box
-        sx={{
-          p: { xs: 2, md: 3 },
-          maxWidth: 1280,
-          mx: "auto",
-          height: "100%",
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Stack spacing={1.5} sx={{ mb: 2, flexShrink: 0 }}>
+      <Box className={styles.page}>
+        <Stack spacing={1.5} className={styles.header}>
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-            <Typography variant="h4" component="h1" sx={{ flexGrow: 1, minWidth: 220 }}>
+            <Typography variant="h4" component="h1" className={styles.title}>
               Calibration Workspace
             </Typography>
             <Chip
@@ -349,318 +563,39 @@ const Calibrate = () => {
             />
           </Stack>
 
-          <Typography color="text.secondary">
-            Demo branch layout, current branch camera lifecycle. The preview,
-            ownership, and cleanup are still managed by the desktop calibration
-            bridge.
-          </Typography>
-
-          <Typography sx={{ color: "#3b6df6", fontWeight: 700 }}>
+          <Typography className={styles.stepLabel}>
             Step {currentStep} of 4: {CALIBRATION_STEPS[currentStep - 1]}
           </Typography>
           <CalibrationProgress currentStep={currentStep} totalSteps={4} />
         </Stack>
 
-        <Box
-          sx={{
-            display: "flex",
-            gap: 2,
-            flex: 1,
-            minHeight: 0,
-            flexDirection: { xs: "column", lg: "row" },
-          }}
-        >
-          <Box
-            sx={{
-              flex: { lg: "1 1 58%" },
-              minWidth: 0,
-              minHeight: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Box
-              ref={previewViewportRef}
-              sx={{
-                position: "relative",
-                width: "100%",
-                maxHeight: "100%",
-                aspectRatio: String(previewAspectRatio),
-                borderRadius: 3,
-                overflow: "hidden",
-                bgcolor: "#000",
-                boxShadow: "0 20px 50px rgba(15, 23, 42, 0.16)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {!isLive ? (
-                <Stack spacing={1} alignItems="center" sx={{ px: 3, textAlign: "center" }}>
-                  <Typography variant="h6" sx={{ color: "#f8fafc", fontWeight: 700 }}>
-                    Camera preview waiting
-                  </Typography>
-                  <Typography sx={{ color: "rgba(248, 250, 252, 0.76)", maxWidth: 360 }}>
-                    Start calibration to hand camera ownership to the calibration
-                    bridge and render the desktop overlay in this viewport.
-                  </Typography>
-                </Stack>
-              ) : null}
-
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: 16,
-                  left: 16,
-                  right: 16,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 1,
-                  pointerEvents: "none",
-                }}
-              >
-                <Chip
-                  label={isLive ? "REC" : "Preview idle"}
-                  color={isLive ? "error" : "default"}
-                  size="small"
-                  sx={{
-                    bgcolor: isLive ? "rgba(211, 47, 47, 0.92)" : "rgba(15, 23, 42, 0.72)",
-                    color: "#fff",
-                    fontWeight: 700,
-                  }}
-                />
-                <Chip
-                  label={
-                    isLive
-                      ? `${elapsed.toFixed(1)}s elapsed`
-                      : `aspect ${previewAspectRatio.toFixed(2)}`
-                  }
-                  size="small"
-                  sx={{
-                    bgcolor: "rgba(15, 23, 42, 0.72)",
-                    color: "#fff",
-                    fontWeight: 700,
-                  }}
-                />
-              </Box>
-            </Box>
-          </Box>
-
-          <Paper
-            variant="outlined"
-            sx={{
-              flex: { lg: "1 1 42%" },
-              maxWidth: { lg: 420 },
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0,
-              overflow: "hidden",
-              borderRadius: 3,
-            }}
-          >
-            <Box sx={{ overflowY: "auto", flex: 1, px: 2, py: 1.5 }}>
-              <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
-                <Button
-                  size="small"
-                  variant={isLive ? "outlined" : "contained"}
-                  onClick={handleStartCalibration}
-                  disabled={isLive}
-                  sx={{ flex: 1, minWidth: 0, py: 0.75 }}
-                >
-                  Start
-                </Button>
-                <Button
-                  size="small"
-                  variant={isLive ? "contained" : "outlined"}
-                  color={isLive ? "error" : "inherit"}
-                  onClick={handleStopCalibration}
-                  disabled={!isLive}
-                  sx={{ flex: 1, minWidth: 0, py: 0.75 }}
-                >
-                  Stop
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={handleConfigure}
-                  sx={{ flex: 1, minWidth: 0, py: 0.75, fontSize: 11 }}
-                >
-                  Camera
-                </Button>
-              </Stack>
-
-              <Typography variant="subtitle2" sx={{ mb: 0.75, fontSize: 12 }}>
-                Calibration status
-              </Typography>
-              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-                <Chip
-                  label={`state: ${calibrateState}`}
-                  size="small"
-                  color={isLive ? "success" : "default"}
-                  variant={isLive ? "filled" : "outlined"}
-                />
-                <Chip
-                  label={`step: ${CALIBRATION_STEPS[currentStep - 1]}`}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`timer: ${elapsed.toFixed(1)}s`}
-                  size="small"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`reps: ${repCount}`}
-                  size="small"
-                  variant="outlined"
-                />
-              </Stack>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              <Typography variant="subtitle2" sx={{ mb: 0.75, fontSize: 12 }}>
-                Gesture capture
-              </Typography>
-              <Stack spacing={1} sx={{ mb: 1.5 }}>
-                <TextField
-                  size="small"
-                  label="Gesture name"
-                  value={gestureName}
-                  onChange={(event) => setGestureName(event.target.value)}
-                  disabled={isSubmitting}
-                />
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handleCaptureRep}
-                    disabled={!isLive || isSubmitting}
-                    sx={{ flex: 1 }}
-                  >
-                    Capture Rep
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={handleResetReps}
-                    disabled={repCount === 0 || isSubmitting}
-                    sx={{ flex: 1 }}
-                  >
-                    Clear Reps
-                  </Button>
-                </Stack>
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="success"
-                  onClick={handleSaveRep}
-                  disabled={!gestureName.trim() || repCount === 0 || isSubmitting}
-                >
-                  Save Gesture
-                </Button>
-                {saveMessage ? (
-                  <Typography sx={{ fontSize: 12, color: "success.main" }}>
-                    {saveMessage}
-                  </Typography>
-                ) : null}
-              </Stack>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              <Typography variant="subtitle2" sx={{ mb: 0.75, fontSize: 12 }}>
-                Session notes
-              </Typography>
-              <List dense disablePadding sx={{ mb: 1.5 }}>
-                {checklist.map((item) => (
-                  <ListItem key={item} disableGutters sx={{ alignItems: "flex-start", py: 0.25 }}>
-                    <ListItemText
-                      primary={item}
-                      primaryTypographyProps={{
-                        fontSize: 13,
-                        color: "text.secondary",
-                        lineHeight: 1.45,
-                      }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              <Typography variant="subtitle2" sx={{ mb: 0.75, fontSize: 12 }}>
-                Captured reps
-              </Typography>
-              <List dense disablePadding sx={{ mb: 1.5 }}>
-                {capturedReps.length > 0 ? (
-                  capturedReps.map((rep, index) => (
-                    <ListItem key={`${index}-${rep.repCount}`} disableGutters sx={{ py: 0.35 }}>
-                      <ListItemText
-                        primary={`Rep ${index + 1}`}
-                        secondary={formatRepAngles(rep)}
-                        primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
-                        secondaryTypographyProps={{ fontSize: 11 }}
-                      />
-                    </ListItem>
-                  ))
-                ) : (
-                  <ListItem disableGutters sx={{ py: 0.35 }}>
-                    <ListItemText
-                      primary="No reps captured yet"
-                      secondary="Hold the target pose, then press Capture Rep."
-                      primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
-                      secondaryTypographyProps={{ fontSize: 11 }}
-                    />
-                  </ListItem>
-                )}
-              </List>
-
-              <Divider sx={{ my: 1.5 }} />
-
-              <Typography variant="subtitle2" sx={{ mb: 0.75, fontSize: 12 }}>
-                Bridge telemetry
-              </Typography>
-              <List dense disablePadding>
-                <ListItem disableGutters sx={{ py: 0.35 }}>
-                  <ListItemText
-                    primary="Preview surface"
-                    secondary="Viewport bounds are synchronized to the desktop bridge."
-                    primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
-                    secondaryTypographyProps={{ fontSize: 11 }}
-                  />
-                </ListItem>
-                <ListItem disableGutters sx={{ py: 0.35 }}>
-                  <ListItemText
-                    primary="Aspect ratio"
-                    secondary={previewAspectRatio.toFixed(2)}
-                    primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
-                    secondaryTypographyProps={{ fontSize: 11 }}
-                  />
-                </ListItem>
-                <ListItem disableGutters sx={{ py: 0.35 }}>
-                  <ListItemText
-                    primary="Ownership"
-                    secondary={
-                      isLive
-                        ? "Calibration bridge currently owns the shared camera."
-                        : "Camera ownership is released."
-                    }
-                    primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
-                    secondaryTypographyProps={{ fontSize: 11 }}
-                  />
-                </ListItem>
-              </List>
-            </Box>
-
-            <Divider />
-
-            <Box sx={{ p: 1.5, display: "flex", justifyContent: "flex-end" }}>
-              <Button onClick={() => navigate(ROUTES.session)} sx={{ fontWeight: 700 }}>
-                Back to Session
-              </Button>
-            </Box>
-          </Paper>
+        <Box className={styles.layout}>
+          <CameraPreview
+            elapsed={elapsed}
+            isLive={isLive}
+            previewAspectRatio={previewAspectRatio}
+            previewViewportRef={previewViewportRef}
+          />
+          <CalibrationPanel
+            calibrateState={calibrateState}
+            capturedReps={capturedReps}
+            currentStep={currentStep}
+            elapsed={elapsed}
+            gestureName={gestureName}
+            isLive={isLive}
+            isSubmitting={isSubmitting}
+            previewAspectRatio={previewAspectRatio}
+            repCount={repCount}
+            saveMessage={saveMessage}
+            onCaptureRep={handleCaptureRep}
+            onConfigure={handleConfigure}
+            onGestureNameChange={setGestureName}
+            onNavigateBack={() => navigate(ROUTES.session)}
+            onResetReps={handleResetReps}
+            onSaveRep={handleSaveRep}
+            onStartCalibration={handleStartCalibration}
+            onStopCalibration={handleStopCalibration}
+          />
         </Box>
       </Box>
 

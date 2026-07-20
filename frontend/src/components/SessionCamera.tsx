@@ -1,5 +1,6 @@
 import { Button, Paper, Typography } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import useDesktopCameraPreview from "../hooks/useDesktopCameraPreview";
 import SessionCameraErrorModal from "./modals/SessionCameraErrorModal";
 import sessionBridge from "../services/sessionBridge";
 import styles from "../styles/session.module.css";
@@ -7,83 +8,13 @@ import type { SessionStatusEvent, SessionState } from "../types/session";
 
 const SessionCamera = () => {
   const [sessionState, setSessionState] = useState<SessionState>("idle");
-  const [elapsed, setElapsed] = useState(0);
   const [errorEvent, setErrorEvent] = useState<SessionStatusEvent | null>(null);
-  const [previewAspectRatio, setPreviewAspectRatio] = useState(4 / 3);
-  const previewViewportRef = useRef<HTMLDivElement | null>(null);
   const isLive = sessionState === "live";
-
-  useEffect(() => {
-    if (!isLive) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setElapsed((current) => Number((current + 0.1).toFixed(1)));
-    }, 100);
-
-    return () => window.clearInterval(intervalId);
-  }, [isLive]);
-
-  useEffect(() => {
-    const panel = previewViewportRef.current;
-
-    if (!panel) {
-      return;
-    }
-
-    let frameId = 0;
-
-    const syncPreviewBounds = () => {
-      frameId = 0;
-
-      const rect = panel.getBoundingClientRect();
-
-      void sessionBridge.updatePreviewBounds({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-        devicePixelRatio: window.devicePixelRatio,
-      });
-    };
-
-    const scheduleSync = () => {
-      if (frameId !== 0) {
-        return;
-      }
-
-      frameId = window.requestAnimationFrame(syncPreviewBounds);
-    };
-
-    scheduleSync();
-
-    const resizeObserver = new ResizeObserver(() => {
-      scheduleSync();
+  const { elapsed, previewAspectRatio, previewViewportRef, setElapsed } =
+    useDesktopCameraPreview({
+      bridge: sessionBridge,
+      isLive,
     });
-
-    resizeObserver.observe(panel);
-    window.addEventListener("resize", scheduleSync);
-    window.addEventListener("scroll", scheduleSync, true);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", scheduleSync);
-      window.removeEventListener("scroll", scheduleSync, true);
-
-      if (frameId !== 0) {
-        window.cancelAnimationFrame(frameId);
-      }
-
-      void sessionBridge.updatePreviewBounds({
-        left: 0,
-        top: 0,
-        width: 0,
-        height: 0,
-        devicePixelRatio: window.devicePixelRatio,
-      });
-    };
-  }, [isLive, previewAspectRatio]);
 
   useEffect(() => {
     const unsubscribe = sessionBridge.onSessionStatus((event) => {
@@ -102,14 +33,6 @@ const SessionCamera = () => {
     });
 
     return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    return sessionBridge.onPreviewAspectRatio((aspectRatio) => {
-      if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
-        setPreviewAspectRatio(aspectRatio);
-      }
-    });
   }, []);
 
   const handleStartSession = async () => {
