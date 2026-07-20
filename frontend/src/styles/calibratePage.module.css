@@ -185,6 +185,10 @@
   color: #2e7d32;
 }
 
+.loadedGestureRow {
+  padding-top: 4px;
+}
+
 .listItemTop {
   align-items: flex-start;
   padding: 2px 0;

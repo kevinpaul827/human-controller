@@ -1,13 +1,52 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
 
 CURRENT_ACTION_SCHEMA_VERSION = 1
-DEFAULT_GESTURES_DIR = Path(__file__).resolve().parent / "data" / "gestures"
+GESTURES_DIR_ENV = "HUMAN_CONTROLLER_GESTURES_DIR"
+PROJECT_ROOT_ENV = "HUMAN_CONTROLLER_PROJECT_ROOT"
+APP_SUPPORT_DIR_NAME = "Human Controller"
+
+
+def _production_app_data_dir() -> Path:
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / APP_SUPPORT_DIR_NAME
+
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA", "").strip()
+        if appdata:
+            return Path(appdata) / APP_SUPPORT_DIR_NAME
+        return Path.home() / "AppData" / "Roaming" / APP_SUPPORT_DIR_NAME
+
+    xdg_data_home = os.environ.get("XDG_DATA_HOME", "").strip()
+    if xdg_data_home:
+        return Path(xdg_data_home) / "human-controller"
+
+    return Path.home() / ".local" / "share" / "human-controller"
+
+
+def resolve_default_gestures_dir() -> Path:
+    explicit_dir = os.environ.get(GESTURES_DIR_ENV, "").strip()
+    if explicit_dir:
+        return Path(explicit_dir).expanduser().resolve()
+
+    project_root = os.environ.get(PROJECT_ROOT_ENV, "").strip()
+    if project_root:
+        return Path(project_root).expanduser().resolve() / "app" / "data" / "gestures"
+
+    if getattr(sys, "frozen", False):
+        return _production_app_data_dir() / "gestures"
+
+    return Path(__file__).resolve().parent / "data" / "gestures"
+
+
+DEFAULT_GESTURES_DIR = resolve_default_gestures_dir()
 
 
 @dataclass
@@ -51,6 +90,12 @@ class SavedGesture:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+    def to_summary(self) -> dict[str, str]:
+        return {
+            "gestureId": self.gesture_id,
+            "name": self.name,
+        }
 
     def to_template(self):
         from backend.matching_engine.core.angles import AngleKey
@@ -127,3 +172,6 @@ class GestureStore:
             except (json.JSONDecodeError, OSError, ValueError):
                 continue
         return sorted(gestures, key=lambda gesture: gesture.name.lower())
+
+    def list_gestures(self) -> list[dict[str, str]]:
+        return [gesture.to_summary() for gesture in self.load_all()]

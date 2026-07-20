@@ -5,7 +5,9 @@ import type {
   CalibratePreviewBounds,
   CalibrateStatusEvent,
   CapturedRep,
+  LoadSavedGestureResult,
   SavedRepResult,
+  SavedGestureSummary,
 } from "../types/calibrate";
 
 import { getQtWebChannel } from "./qtWebChannel";
@@ -25,6 +27,13 @@ type QtCalibrateBridgeObject = {
   captureRep?: () => QtCapturedRepResult | Promise<QtCapturedRepResult>;
   resetRep?: () => void | Promise<void>;
   saveRep?: (name: string) => QtSavedRepResult | Promise<QtSavedRepResult>;
+  listSavedGestures?: () => SavedGestureSummary[] | Promise<SavedGestureSummary[]>;
+  getLoadedSessionGestures?: () =>
+    | SavedGestureSummary[]
+    | Promise<SavedGestureSummary[]>;
+  loadSavedGesture?: (
+    gestureId: string,
+  ) => QtLoadSavedGestureResult | Promise<QtLoadSavedGestureResult>;
   getCalibrateState?: () => CalibrateStatusEvent["state"];
   updatePreviewBounds: (
     left: number,
@@ -48,6 +57,7 @@ type QtBridgeErrorResult = {
 
 type QtCapturedRepResult = CapturedRep & QtBridgeErrorResult;
 type QtSavedRepResult = SavedRepResult & QtBridgeErrorResult;
+type QtLoadSavedGestureResult = LoadSavedGestureResult & QtBridgeErrorResult;
 
 const BRIDGE_NAME = "calibrateBridge";
 const BRIDGE_ERROR = "Qt WebChannel calibrate bridge is unavailable.";
@@ -163,6 +173,39 @@ const calibrateBridge: CalibrateBridge = {
     return unwrapBridgeResult(
       await bridge.saveRep(name),
       "Unable to save the captured gesture reps.",
+    );
+  },
+
+  async listSavedGestures() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.listSavedGestures) {
+      throw new Error("Saved gesture listing is unavailable in this build.");
+    }
+
+    return (await bridge.listSavedGestures()) ?? [];
+  },
+
+  async getLoadedSessionGestures() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.getLoadedSessionGestures) {
+      throw new Error("Loaded session gestures are unavailable in this build.");
+    }
+
+    return (await bridge.getLoadedSessionGestures()) ?? [];
+  },
+
+  async loadSavedGesture(gestureId: string) {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.loadSavedGesture) {
+      throw new Error("Saved gesture loading is unavailable in this build.");
+    }
+
+    return unwrapBridgeResult(
+      await bridge.loadSavedGesture(gestureId),
+      "Unable to load the selected saved gesture.",
     );
   },
 

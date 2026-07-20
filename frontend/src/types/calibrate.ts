@@ -23,10 +23,21 @@ export type CapturedRep = {
   angles: Record<string, number>;
 };
 
+export type SavedGestureSummary = {
+  gestureId: string;
+  name: string;
+};
+
 export type SavedRepResult = {
   gestureId: string;
   name: string;
   repCount: number;
+  loadedGestures?: SavedGestureSummary[];
+};
+
+export type LoadSavedGestureResult = {
+  gesture: SavedGestureSummary;
+  loadedGestures: SavedGestureSummary[];
 };
 
 export type CalibratePreviewBounds = {
@@ -44,6 +55,9 @@ export interface CalibrateBridge {
   captureRep(): Promise<CapturedRep>;
   resetRep(): Promise<void>;
   saveRep(name: string): Promise<SavedRepResult>;
+  listSavedGestures(): Promise<SavedGestureSummary[]>;
+  getLoadedSessionGestures(): Promise<SavedGestureSummary[]>;
+  loadSavedGesture(gestureId: string): Promise<LoadSavedGestureResult>;
   updatePreviewBounds(bounds: CalibratePreviewBounds): Promise<void>;
   openCameraSettings(): Promise<void>;
   onCalibrateStatus(listener: CalibrateStatusListener): () => void;

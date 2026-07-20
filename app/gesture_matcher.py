@@ -50,6 +50,9 @@ class GestureMatcher:
 
     def reload_templates(self) -> None:
         saved_gestures = self.store.load_all()
+        self.set_saved_gestures(saved_gestures)
+
+    def set_saved_gestures(self, saved_gestures) -> None:
         self._templates = [gesture.to_template() for gesture in saved_gestures]
         self._templates_by_id = {
             gesture.gesture_id: gesture.name for gesture in saved_gestures
