@@ -1,3 +1,6 @@
+import pyautogui
+import time
+
 from enum import Enum
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -26,6 +29,8 @@ class SessionBridge(QObject):
         self.preview_bounds = (0, 0, 0, 0)
         self.camera: CameraManager = camera_manager
         self.detected_gesture = None
+        self.last_input_time = 0.0
+        self.input_cooldown = 1.0
 
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
@@ -118,9 +123,14 @@ class SessionBridge(QObject):
         gesture = payload.get("name")
 
         if matched and gesture:
-            if self.detected_gesture != gesture:
+            current_time = time.monotonic()
+            if self.detected_gesture != gesture and current_time - self.last_input_time >= self.input_cooldown:
                 self.detected_gesture = gesture
-                print(f"gesture: {gesture}")
+                self.last_input_time = current_time
+                if gesture == "A":
+                    pyautogui.press("left")
+                elif gesture == "E":
+                    pyautogui.press("right")
             else:
                 self.detected_gesture = None
 
