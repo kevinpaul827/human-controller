@@ -1,3 +1,5 @@
+import type { SavedGestureSummary } from "./calibrate";
+
 export type SessionState = "idle" | "live" | "error";
 
 /**
@@ -24,6 +26,7 @@ export type SessionPreviewBounds = {
 export interface SessionBridge {
   startSession(): Promise<void>;
   stopSession(): Promise<void>;
+  getLoadedSessionGestures(): Promise<SavedGestureSummary[]>
   updatePreviewBounds(bounds: SessionPreviewBounds): Promise<void>;
   openCameraSettings(): Promise<void>;
   onSessionStatus(listener: SessionStatusListener): () => void;

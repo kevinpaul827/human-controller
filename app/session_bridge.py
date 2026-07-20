@@ -126,6 +126,10 @@ class SessionBridge(QObject):
     @Slot(result=str)
     def getSessionState(self):
         return self.state.value
+    
+    @Slot(result="QVariantList")
+    def getLoadedSessionGestures(self):
+        return self.camera.loaded_session_gestures()
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
