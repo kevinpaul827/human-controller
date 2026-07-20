@@ -44,7 +44,9 @@ const SessionCameraErrorModal = ({
       {title}
     </DialogTitle>
     <DialogContent>
-      <Typography sx={{ color: "#334155" }}>{message ?? defaultMessage}</Typography>
+      <Typography sx={{ color: "#334155" }}>
+        {message ?? defaultMessage}
+      </Typography>
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
       <Button onClick={onCancel} sx={{ color: "#334155", fontWeight: 700 }}>

@@ -27,7 +27,8 @@ const useDesktopCameraPreview = ({
   defaultAspectRatio = DEFAULT_ASPECT_RATIO,
 }: UseDesktopCameraPreviewOptions) => {
   const [elapsed, setElapsed] = useState(0);
-  const [previewAspectRatio, setPreviewAspectRatio] = useState(defaultAspectRatio);
+  const [previewAspectRatio, setPreviewAspectRatio] =
+    useState(defaultAspectRatio);
   const previewViewportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {

@@ -25,10 +25,7 @@ import type {
   CalibrateStatusEvent,
   CapturedRep,
 } from "../types/calibrate";
-import {
-  ROUTES,
-  CALIBRATION_STEPS,
-} from "../utils/constants";
+import { ROUTES, CALIBRATION_STEPS } from "../utils/constants";
 
 const formatRepAngles = (rep: CapturedRep) => {
   const joints = Object.entries(rep.angles);
@@ -75,8 +72,8 @@ const CameraPreview = ({
             Camera preview waiting
           </Typography>
           <Typography className={styles.previewIdleText}>
-            Start calibration to hand camera ownership to the calibration
-            bridge and render the desktop overlay in this viewport.
+            Start calibration to hand camera ownership to the calibration bridge
+            and render the desktop overlay in this viewport.
           </Typography>
         </Stack>
       ) : null}
@@ -254,7 +251,9 @@ const CalibrationPanel = ({
               Save Gesture
             </Button>
             {saveMessage ? (
-              <Typography className={styles.saveMessage}>{saveMessage}</Typography>
+              <Typography className={styles.saveMessage}>
+                {saveMessage}
+              </Typography>
             ) : null}
           </Stack>
         </Box>
@@ -348,7 +347,9 @@ const CalibrationPanel = ({
 const Calibrate = () => {
   const navigate = useNavigate();
   const [calibrateState, setCalibrateState] = useState<CalibrateState>("idle");
-  const [errorEvent, setErrorEvent] = useState<CalibrateStatusEvent | null>(null);
+  const [errorEvent, setErrorEvent] = useState<CalibrateStatusEvent | null>(
+    null,
+  );
   const [gestureName, setGestureName] = useState("");
   const [repCount, setRepCount] = useState(0);
   const [capturedReps, setCapturedReps] = useState<CapturedRep[]>([]);
@@ -546,7 +547,12 @@ const Calibrate = () => {
     <>
       <Box className={styles.page}>
         <Stack spacing={1.5} className={styles.header}>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            flexWrap="wrap"
+          >
             <Typography variant="h4" component="h1" className={styles.title}>
               Calibration Workspace
             </Typography>
