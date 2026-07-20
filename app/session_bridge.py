@@ -17,6 +17,7 @@ class SessionBridge(QObject):
     previewBoundsChanged = Signal(int, int, int, int)
     previewAspectRatioChanged = Signal(float)
     poseEstimated = Signal(dict)
+    gestureMatchUpdated = Signal(dict)
 
     def __init__(self, camera_manager):
         super().__init__()
@@ -29,6 +30,7 @@ class SessionBridge(QObject):
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
         self.camera.errorOccurred.connect(self.handle_camera_error)
         self.camera.frameProcessed.connect(self.handle_frame_processed)
+        self.camera.gestureMatchUpdated.connect(self.handle_gesture_match_updated)
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
     
     def check_camera_ownership(self):
@@ -103,6 +105,15 @@ class SessionBridge(QObject):
             return
         
         self.previewAspectRatioChanged.emit(aspect_ratio)
+
+    def handle_gesture_match_updated(self, payload):
+        if not self.check_camera_ownership():
+            return
+
+        if self.state != SessionState.LIVE:
+            return
+
+        self.gestureMatchUpdated.emit(payload)
 
     @Slot()
     def startSession(self):

@@ -1,441 +1,327 @@
 .page {
-  padding: 32px 40px 48px;
-  background-color: #f3f4f6;
   min-height: 100%;
+  padding: 40px 32px 48px;
   box-sizing: border-box;
+  background:
+    radial-gradient(circle at top left, rgba(64, 115, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #eef3f9 100%);
+}
+
+.header {
+  max-width: 860px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: #2d5ddd;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .heading {
-  margin: 0 0 8px;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #111827;
+  margin: 0;
+  color: #10243f;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.1;
+}
+
+.subheading {
+  max-width: 760px;
+  margin: 14px 0 0;
+  color: #4b5d78;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .stepLabel {
-  margin: 0 0 14px;
+  margin: 20px 0 14px;
+  color: #2d5ddd;
   font-size: 1rem;
-  font-weight: 600;
-  color: #3b6df6;
+  font-weight: 700;
 }
 
-.card {
-  margin-top: 24px;
-  max-width: 720px;
-  padding: 28px;
-  border-radius: 12px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.prompt {
-  margin: 0 0 20px;
-  font-size: 1rem;
-  color: #111827;
-}
-
-.keyRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.selectionFeedback {
-  margin: 0 0 20px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #3b6df6;
-}
-
-.customRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 28px;
-}
-
-.customInput {
-  flex: 1;
-  min-width: 180px;
-  padding: 10px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-family: inherit;
-}
-
-.customInput:focus {
-  outline: 2px solid rgba(59, 109, 246, 0.35);
-  border-color: #3b6df6;
-}
-
-.navRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.secondaryButton {
-  padding: 10px 20px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background-color: #ffffff;
-  color: #111827;
-  font-size: 0.9rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: center;
-}
-
-.secondaryButton:hover {
-  background-color: #f9fafb;
-}
-
-.primaryButton {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  background-color: #3b6df6;
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: center;
-}
-
-.primaryButton:hover {
-  background-color: #2f5bd4;
-}
-
-.primaryButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.recordGrid {
-  margin-top: 24px;
+.layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.8fr);
   gap: 24px;
+  margin-top: 28px;
   align-items: stretch;
+}
+
+.cameraSection {
+  min-width: 0;
 }
 
 .cameraPanel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 420px;
-  padding: 12px 14px 16px;
-  border: 3px solid #ef4444;
-  border-radius: 14px;
-  background: #1d232d;
-  color: #f9fafb;
-  box-sizing: border-box;
+  gap: 18px;
+  height: 100%;
+  min-height: 620px;
+  padding: 20px;
+  border: 1px solid rgba(27, 47, 74, 0.08);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(11, 25, 44, 0.94), rgba(17, 24, 39, 0.98)),
+    #0b1320;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+  color: #f8fafc;
 }
 
 .cameraHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 16px;
+}
+
+.cameraTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .cameraStatus {
-  color: #22c55e;
-  font-size: 0.9rem;
-  font-weight: 700;
+  margin: 6px 0 0;
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
-.recBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+.livePill {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 999px;
-  background-color: #ef4444;
-  color: #ffffff;
+  color: #cbd5e1;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
-.recDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #ffffff;
+.livePillActive {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(20, 164, 77, 0.18);
+  color: #9ff0be;
 }
 
-.cameraFeed {
-  position: relative;
+.cameraViewportShell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(2, 6, 23, 0.92)),
+    #000000;
+}
+
+.cameraViewport {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  min-height: 340px;
+  width: min(100%, 880px);
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
-  border-radius: 8px;
-  background-color: #111827;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(31, 41, 55, 0.86), rgba(15, 23, 42, 0.94)),
+    #000000;
 }
 
-.video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
+.cameraIdleState {
+  max-width: 380px;
+  padding: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.68);
+  text-align: center;
 }
 
-.videoLive {
-  opacity: 1;
+.idleTitle {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
-.skeletonOverlay {
-  position: relative;
-  z-index: 2;
-  width: 42%;
-  height: auto;
-  color: #22c55e;
-  pointer-events: none;
+.idleCopy {
+  margin: 10px 0 0;
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
-.instructionsPanel {
+.cameraFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 0.88rem;
+}
+
+.sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-  border: 1px solid #dbe3f0;
-  border-radius: 16px;
-  background-color: #ffffff;
+  gap: 18px;
 }
 
-.instructionsTitle {
+.infoCard,
+.actionsCard {
+  padding: 22px;
+  border: 1px solid rgba(147, 197, 253, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.cardLabel {
+  margin: 0 0 10px;
+  color: #4073ff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardTitle {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #111827;
+  color: #10243f;
+  font-size: 1.15rem;
+  line-height: 1.35;
 }
 
 .instructionsList {
-  margin: 0;
-  padding-left: 20px;
-  color: #334155;
-  line-height: 1.6;
+  margin: 16px 0 0;
+  padding-left: 18px;
+  color: #42556f;
+  line-height: 1.7;
 }
 
-.selectedKeyLine {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #3b6df6;
-}
-
-.recordingBox {
-  padding: 14px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background-color: #f9fafb;
-}
-
-.recordingBoxActive {
-  border-color: #fecaca;
-  background-color: #fef2f2;
-}
-
-.recordingTitle {
-  margin: 0 0 6px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #ef4444;
-}
-
-.recordingCaption {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.recordActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.stopButton {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  background-color: #ef4444;
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.stopButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.backLink {
-  align-self: flex-start;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #6b7280;
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.backLink:hover {
-  color: #111827;
-}
-
-.reviewGrid {
-  margin-top: 24px;
+.statusGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.poseCard,
-.scoreCard {
-  display: flex;
-  flex-direction: column;
   gap: 12px;
-  padding: 18px;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  margin-top: 18px;
 }
 
-.poseLabel {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.posePreview {
+.statusItem {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 340px;
-  border-radius: 8px;
-  background-color: #111827;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f8fbff;
 }
 
-.poseSkeleton {
-  width: 55%;
-  height: auto;
-  color: #22c55e;
-}
-
-.scoreTitle {
-  margin: 0;
-  font-size: 1rem;
+.statusKey {
+  color: #607089;
+  font-size: 0.88rem;
   font-weight: 700;
-  color: #111827;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.scoreValue {
-  margin: 0;
-  font-size: 2.5rem;
+.statusValue {
+  color: #10243f;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #16a34a;
+  text-transform: capitalize;
 }
 
-.scoreProgressTrack {
-  --fill-percent: 0%;
-  height: 10px;
-  border-radius: 999px;
-  background-color: #e5e7eb;
-  overflow: hidden;
-}
-
-.scoreProgressFill {
-  width: var(--fill-percent);
-  height: 100%;
-  border-radius: 999px;
-  background-color: #22c55e;
-}
-
-.scoreMeta {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.scoreStatus {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #16a34a;
-}
-
-.scoreBinding {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #3b6df6;
-}
-
-.reviewActions {
+.actionsCard {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: auto;
+  gap: 12px;
 }
 
-.completeCard {
-  margin-top: 24px;
-  max-width: 640px;
-  padding: 32px;
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  width: 100%;
+  padding: 14px 18px;
   border-radius: 14px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.completeTitle {
-  margin: 0 0 12px;
-  font-size: 1.5rem;
+  font-family: inherit;
+  font-size: 0.96rem;
   font-weight: 700;
-  color: #111827;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
 }
 
-.completeMessage {
-  margin: 0 0 24px;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: #4b5563;
+.primaryButton {
+  border: none;
+  background: linear-gradient(135deg, #4073ff, #2d5ddd);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(64, 115, 255, 0.24);
 }
 
-@media (max-width: 1100px) {
-  .reviewGrid {
+.primaryButton:hover {
+  transform: translateY(-1px);
+}
+
+.secondaryButton {
+  border: 1px solid #cfe0ff;
+  background: #eef4ff;
+  color: #2146b8;
+}
+
+.secondaryButton:hover,
+.ghostButton:hover {
+  border-color: #b8cbf4;
+  background: #f8fbff;
+}
+
+.ghostButton {
+  border: 1px solid #d6deeb;
+  background: #ffffff;
+  color: #42556f;
+}
+
+@media (max-width: 1199px) {
+  .layout {
     grid-template-columns: 1fr;
+  }
+
+  .cameraPanel {
+    min-height: 520px;
   }
 }
 
-@media (max-width: 900px) {
-  .recordGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 700px) {
+@media (max-width: 767px) {
   .page {
-    padding: 24px 20px 40px;
+    padding: 24px 18px 32px;
   }
 
-  .card,
-  .instructionsPanel,
-  .completeCard {
+  .cameraPanel,
+  .infoCard,
+  .actionsCard {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .cameraHeader,
+  .cameraFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cameraViewportShell {
+    padding: 8px;
+  }
+
+  .cameraIdleState {
     padding: 20px;
   }
 }

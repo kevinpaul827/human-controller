@@ -12,6 +12,8 @@ type SessionCameraErrorModalProps = {
   open: boolean;
   onCancel: () => void;
   onConfigure: () => void;
+  title?: string;
+  defaultMessage?: string;
 };
 
 const SessionCameraErrorModal = ({
@@ -19,6 +21,8 @@ const SessionCameraErrorModal = ({
   open,
   onCancel,
   onConfigure,
+  title = "Session camera error",
+  defaultMessage = "The desktop app reported a camera error while opening the session camera.",
 }: SessionCameraErrorModalProps) => (
   <Dialog
     open={open}
@@ -37,13 +41,10 @@ const SessionCameraErrorModal = ({
       id="session-camera-error-title"
       sx={{ color: "#1f2937", fontWeight: 700 }}
     >
-      Session camera error
+      {title}
     </DialogTitle>
     <DialogContent>
-      <Typography sx={{ color: "#334155" }}>
-        {message ??
-          "The desktop app reported a camera error while opening the session camera."}
-      </Typography>
+      <Typography sx={{ color: "#334155" }}>{message ?? defaultMessage}</Typography>
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
       <Button onClick={onCancel} sx={{ color: "#334155", fontWeight: 700 }}>

@@ -14,6 +14,7 @@ class CalibrateBridge(QObject):
     BRIDGE = "calibrate"
 
     calibrateStatusChanged = Signal(dict)
+    calibrationUpdated = Signal(dict)
     previewBoundsChanged = Signal(int, int, int, int)
     previewAspectRatioChanged = Signal(float)
     poseEstimated = Signal(dict)
@@ -29,6 +30,7 @@ class CalibrateBridge(QObject):
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
         self.camera.errorOccurred.connect(self.handle_camera_error)
         self.camera.frameProcessed.connect(self.handle_frame_processed)
+        self.camera.calibrationUpdated.connect(self.handle_calibration_updated)
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
     
     def check_camera_ownership(self):
@@ -104,6 +106,12 @@ class CalibrateBridge(QObject):
         
         self.previewAspectRatioChanged.emit(aspect_ratio)
 
+    def handle_calibration_updated(self, payload):
+        if not self.check_camera_ownership():
+            return
+
+        self.calibrationUpdated.emit(payload)
+
     @Slot()
     def startCalibrate(self):
         self.camera.start(self.BRIDGE)
@@ -129,3 +137,29 @@ class CalibrateBridge(QObject):
     @Slot()
     def openCameraSettings(self):
         self.camera.openCameraSettings()
+
+    @Slot()
+    def startCalibration(self):
+        """Tell the camera manager to begin calibration mode."""
+        self.camera.start_calibration()
+
+    @Slot(result="QVariantMap")
+    def captureRep(self):
+        """Ask the camera manager to save the current held pose as one rep."""
+        try:
+            return self.camera.capture_rep()
+        except ValueError as error:
+            return {"error": str(error)}
+
+    @Slot()
+    def resetRep(self):
+        """Clear the current calibration data so the user can start over."""
+        self.camera.reset_rep()
+
+    @Slot(str, result="QVariantMap")
+    def saveRep(self, name):
+        """Save the captured reps as a new gesture template with the given name."""
+        try:
+            return self.camera.save_rep(name)
+        except ValueError as error:
+            return {"error": str(error)}
