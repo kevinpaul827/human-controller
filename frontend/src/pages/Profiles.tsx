@@ -1,7 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import CreateProfileDialog from "../components/CreateProfileDialog";
 import PatientCard from "../components/PatientCard";
-import { SAMPLE_PROFILES } from "../data/sampleProfiles";
-import type { PatientProfile } from "../types/profile";
+import { SAMPLE_GESTURES, SAMPLE_PROFILES } from "../data/sampleProfiles";
+import profileBridge, {
+  isProfileDesktopRuntime,
+} from "../services/profileBridge";
+import type { GestureSummary, PatientProfile } from "../types/profile";
 import styles from "../styles/profiles.module.css";
 
 const slugifyPatientId = (name: string) => {
@@ -13,27 +17,67 @@ const slugifyPatientId = (name: string) => {
   return slug || "patient";
 };
 
-type NewProfileForm = {
-  patientName: string;
-  patientId: string;
-  gameName: string;
-  gestureName: string;
-  gestureKey: string;
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "The profile operation failed.";
+
+const createPatientId = (patientName: string, profiles: PatientProfile[]) => {
+  const baseId = slugifyPatientId(patientName);
+  let patientId = baseId;
+  let suffix = 2;
+  while (profiles.some((profile) => profile.patientId === patientId)) {
+    patientId = `${baseId}-${suffix}`;
+    suffix += 1;
+  }
+  return patientId;
 };
 
 const Profiles = () => {
-  const [profiles, setProfiles] = useState<PatientProfile[]>(SAMPLE_PROFILES);
+  const desktopRuntime = isProfileDesktopRuntime();
+  const [profiles, setProfiles] = useState<PatientProfile[]>(
+    desktopRuntime ? [] : SAMPLE_PROFILES,
+  );
+  const [gestures, setGestures] = useState<GestureSummary[]>(
+    desktopRuntime ? [] : SAMPLE_GESTURES,
+  );
   const [expandedPatientId, setExpandedPatientId] = useState<string | null>(
-    SAMPLE_PROFILES[0]?.patientId ?? null,
+    null,
   );
   const [showNewDialog, setShowNewDialog] = useState(false);
-  const [form, setForm] = useState<NewProfileForm>({
-    patientName: "",
-    patientId: "",
-    gameName: "",
-    gestureName: "",
-    gestureKey: "",
-  });
+  const [loading, setLoading] = useState(desktopRuntime);
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!desktopRuntime) {
+      return;
+    }
+
+    let active = true;
+    void Promise.all([
+      profileBridge.listProfiles(),
+      profileBridge.listGestures(),
+    ])
+      .then(([loadedProfiles, loadedGestures]) => {
+        if (!active) {
+          return;
+        }
+        setProfiles(loadedProfiles);
+        setGestures(loadedGestures);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setPageError(getErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [desktopRuntime]);
 
   const sortedProfiles = useMemo(
     () =>
@@ -41,277 +85,173 @@ const Profiles = () => {
     [profiles],
   );
 
-  const resetForm = () => {
-    setForm({
-      patientName: "",
-      patientId: "",
-      gameName: "",
-      gestureName: "",
-      gestureKey: "",
-    });
-  };
-
-  const handlePatientNameChange = (patientName: string) => {
-    setForm((current) => ({
-      ...current,
-      patientName,
-      patientId: current.patientId || slugifyPatientId(patientName),
-    }));
-  };
-
-  const handleCreateProfile = () => {
-    const patientName = form.patientName.trim();
-    const patientId = form.patientId.trim() || slugifyPatientId(patientName);
-    const gameName = form.gameName.trim() || "New Game";
-    const gestureName = form.gestureName.trim() || "Wave";
-    const gestureKey = form.gestureKey.trim() || "Space";
-
-    if (!patientName || !patientId) {
-      return;
-    }
-
-    if (profiles.some((profile) => profile.patientId === patientId)) {
-      window.alert(`Profile already exists: ${patientId}`);
-      return;
-    }
-
-    const newProfile: PatientProfile = {
-      schemaVersion: 1,
-      patientId,
-      patientName,
-      gameProfiles: [
-        {
-          gameName,
-          gestures: [{ name: gestureName, key: gestureKey, threshold: 0.75 }],
-        },
-      ],
-    };
-
-    setProfiles((current) => [...current, newProfile]);
-    setExpandedPatientId(patientId);
-    setShowNewDialog(false);
-    resetForm();
-  };
-
-  const handleExpandChange = (patientId: string, expanded: boolean) => {
-    setExpandedPatientId(expanded ? patientId : null);
-  };
-
-  const handleLoadLastSession = (profile: PatientProfile) => {
-    const gameName = profile.lastSessionGame;
-    if (!gameName) {
-      window.alert("No last session recorded for this patient.");
-      return;
-    }
-    window.alert(`Load last session: ${profile.patientName} → ${gameName}`);
-  };
-
-  const handleGameAction = (
-    profile: PatientProfile,
-    gameName: string,
-    action: "load" | "edit",
-  ) => {
-    window.alert(
-      `${action === "load" ? "Load" : "Edit"} game profile: ${profile.patientName} → ${gameName}`,
+  const replaceProfile = (updatedProfile: PatientProfile) => {
+    setProfiles((current) =>
+      current.map((profile) =>
+        profile.patientId === updatedProfile.patientId
+          ? updatedProfile
+          : profile,
+      ),
     );
   };
 
-  const handleDeleteProfile = (profile: PatientProfile) => {
+  const handleCreateProfile = async (patientName: string, notes: string) => {
+    const patientId = createPatientId(patientName, profiles);
+    try {
+      const createdProfile = desktopRuntime
+        ? await profileBridge.createProfile(patientId, patientName, notes)
+        : {
+            schemaVersion: 2 as const,
+            patientId,
+            patientName,
+            notes,
+            updatedAt: new Date().toISOString(),
+            keyBindings: {},
+          };
+      setProfiles((current) => [...current, createdProfile]);
+      setExpandedPatientId(patientId);
+      setShowNewDialog(false);
+      setPageError(null);
+      return null;
+    } catch (error) {
+      return getErrorMessage(error);
+    }
+  };
+
+  const handleSetBinding = async (
+    profile: PatientProfile,
+    gestureId: string,
+    key: string,
+  ) => {
+    try {
+      const updatedProfile = desktopRuntime
+        ? await profileBridge.setKeyBinding(profile.patientId, gestureId, key)
+        : {
+            ...profile,
+            updatedAt: new Date().toISOString(),
+            keyBindings: { ...profile.keyBindings, [gestureId]: key },
+          };
+      replaceProfile(updatedProfile);
+      setPageError(null);
+      return null;
+    } catch (error) {
+      return getErrorMessage(error);
+    }
+  };
+
+  const handleRemoveBinding = async (
+    profile: PatientProfile,
+    gestureId: string,
+  ) => {
+    try {
+      const updatedProfile = desktopRuntime
+        ? await profileBridge.removeKeyBinding(profile.patientId, gestureId)
+        : (() => {
+            const keyBindings = { ...profile.keyBindings };
+            delete keyBindings[gestureId];
+            return {
+              ...profile,
+              updatedAt: new Date().toISOString(),
+              keyBindings,
+            };
+          })();
+      replaceProfile(updatedProfile);
+      setPageError(null);
+      return null;
+    } catch (error) {
+      return getErrorMessage(error);
+    }
+  };
+
+  const handleDeleteProfile = async (profile: PatientProfile) => {
     const confirmed = window.confirm(
-      `Delete profile "${profile.patientName}" (${profile.patientId})? This cannot be undone.`,
+      `Delete the profile for ${profile.patientName}? This cannot be undone.`,
     );
     if (!confirmed) {
       return;
     }
 
-    setProfiles((current) =>
-      current.filter((item) => item.patientId !== profile.patientId),
-    );
-    if (expandedPatientId === profile.patientId) {
-      setExpandedPatientId(null);
+    try {
+      if (desktopRuntime) {
+        await profileBridge.deleteProfile(profile.patientId);
+      }
+      setProfiles((current) =>
+        current.filter((item) => item.patientId !== profile.patientId),
+      );
+      if (expandedPatientId === profile.patientId) {
+        setExpandedPatientId(null);
+      }
+      setPageError(null);
+    } catch (error) {
+      setPageError(getErrorMessage(error));
     }
-  };
-
-  const handleAddGameProfile = (profile: PatientProfile) => {
-    const gameName = window.prompt("Game profile name:", "New Game");
-    if (!gameName?.trim()) {
-      return;
-    }
-
-    setProfiles((current) =>
-      current.map((item) =>
-        item.patientId === profile.patientId
-          ? {
-              ...item,
-              gameProfiles: [
-                ...item.gameProfiles,
-                {
-                  gameName: gameName.trim(),
-                  gestures: [{ name: "Wave", key: "Space", threshold: 0.75 }],
-                },
-              ],
-            }
-          : item,
-      ),
-    );
   };
 
   return (
     <div className={styles.page}>
-      <header>
-        <h1 className={styles.heading}>Patient &amp; Game Profiles</h1>
-        <p className={styles.subheading}>
-          One patient profile may contain multiple game mapping profiles. Each
-          game profile holds all gesture-to-key bindings for that title.
-        </p>
+      <header className={styles.pageHeader}>
+        <div>
+          <h1 className={styles.heading}>Patient Profiles</h1>
+          <p className={styles.subheading}>
+            Keep each patient&apos;s calibrated movements and game controls in
+            one place.
+          </p>
+        </div>
+        <button
+          type="button"
+          className={styles.addNewButton}
+          onClick={() => setShowNewDialog(true)}
+        >
+          + New profile
+        </button>
       </header>
 
-      <div className={styles.list}>
-        {sortedProfiles.length === 0 ? (
-          <p className={styles.empty}>
-            No profiles yet. Use ADD NEW to create one.
-          </p>
-        ) : (
-          sortedProfiles.map((profile) => (
-            <PatientCard
-              key={profile.patientId}
-              profile={profile}
-              expanded={expandedPatientId === profile.patientId}
-              onExpandChange={(expanded) =>
-                handleExpandChange(profile.patientId, expanded)
-              }
-              onLoadLastSession={() => handleLoadLastSession(profile)}
-              onGameLoad={(gameName) =>
-                handleGameAction(profile, gameName, "load")
-              }
-              onGameEdit={(gameName) =>
-                handleGameAction(profile, gameName, "edit")
-              }
-              onAddGameProfile={() => handleAddGameProfile(profile)}
-              onDelete={() => handleDeleteProfile(profile)}
-            />
-          ))
-        )}
-      </div>
+      <p className={styles.saveNotice}>
+        Changes to profiles and key bindings are saved automatically.
+      </p>
 
-      <button
-        type="button"
-        className={styles.addNewButton}
-        onClick={() => setShowNewDialog(true)}
-      >
-        ADD NEW
-      </button>
+      {pageError ? (
+        <p className={styles.pageError} role="alert">
+          {pageError}
+        </p>
+      ) : null}
+
+      {loading ? (
+        <p className={styles.empty}>Loading patient profiles…</p>
+      ) : (
+        <div className={styles.list}>
+          {sortedProfiles.length === 0 ? (
+            <p className={styles.empty}>
+              No patient profiles yet. Create one to begin calibration.
+            </p>
+          ) : (
+            sortedProfiles.map((profile) => (
+              <PatientCard
+                key={profile.patientId}
+                profile={profile}
+                gestures={gestures}
+                expanded={expandedPatientId === profile.patientId}
+                onExpandChange={(expanded) =>
+                  setExpandedPatientId(expanded ? profile.patientId : null)
+                }
+                onSetBinding={(gestureId, key) =>
+                  handleSetBinding(profile, gestureId, key)
+                }
+                onRemoveBinding={(gestureId) =>
+                  handleRemoveBinding(profile, gestureId)
+                }
+                onDelete={() => handleDeleteProfile(profile)}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {showNewDialog ? (
-        <div
-          className={styles.dialogBackdrop}
-          role="presentation"
-          onClick={() => setShowNewDialog(false)}
-        >
-          <div
-            className={styles.dialog}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-profile-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="new-profile-title" className={styles.dialogTitle}>
-              Create New Profile
-            </h2>
-
-            <div className={styles.field}>
-              <label htmlFor="patient-name">Patient name</label>
-              <input
-                id="patient-name"
-                value={form.patientName}
-                onChange={(event) =>
-                  handlePatientNameChange(event.target.value)
-                }
-                placeholder="e.g. Patient C"
-              />
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="patient-id">Profile ID</label>
-              <input
-                id="patient-id"
-                value={form.patientId}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    patientId: event.target.value,
-                  }))
-                }
-                placeholder="e.g. patient-c"
-              />
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="game-name">First game name</label>
-              <input
-                id="game-name"
-                value={form.gameName}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    gameName: event.target.value,
-                  }))
-                }
-                placeholder="e.g. Celeste — Rehab Mode"
-              />
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="gesture-name">Gesture name</label>
-              <input
-                id="gesture-name"
-                value={form.gestureName}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    gestureName: event.target.value,
-                  }))
-                }
-                placeholder="e.g. Right Arm Raise"
-              />
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="gesture-key">Key</label>
-              <input
-                id="gesture-key"
-                value={form.gestureKey}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    gestureKey: event.target.value,
-                  }))
-                }
-                placeholder="e.g. ArrowUp"
-              />
-            </div>
-
-            <div className={styles.dialogActions}>
-              <button
-                type="button"
-                className={styles.dialogCancel}
-                onClick={() => {
-                  setShowNewDialog(false);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.dialogSubmit}
-                onClick={handleCreateProfile}
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
+        <CreateProfileDialog
+          onClose={() => setShowNewDialog(false)}
+          onCreate={handleCreateProfile}
+        />
       ) : null}
     </div>
   );
