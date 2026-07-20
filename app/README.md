@@ -56,9 +56,12 @@ Plain English:
 
 ## Profile Manager
 
-Patient profiles are stored as versioned JSON files (`schemaVersion: 1`) under `app/data/profiles/`.
+Patient profiles are stored as versioned JSON files (`schemaVersion: 2`) under
+`app/data/profiles/`.
 
-Each profile contains one or more game profiles; each game profile maps gesture names to keyboard keys and thresholds.
+Each profile stores a `keyBindings` map from calibrated `gesture_id` values to
+keyboard keys. Gesture recognition data remains separate under
+`app/data/gestures/`.
 
 ### Run tests
 

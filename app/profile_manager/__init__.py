@@ -6,12 +6,10 @@ from .exceptions import (
     ProfileValidationError,
 )
 from .manager import ProfileManager
-from .models import CURRENT_SCHEMA_VERSION, GameProfile, GestureBinding, PatientProfile
+from .models import CURRENT_SCHEMA_VERSION, PatientProfile
 
 __all__ = [
     "CURRENT_SCHEMA_VERSION",
-    "GameProfile",
-    "GestureBinding",
     "PatientProfile",
     "ProfileAlreadyExistsError",
     "ProfileConflictError",
