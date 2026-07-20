@@ -25,6 +25,7 @@ class SessionBridge(QObject):
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
         self.camera: CameraManager = camera_manager
+        self.detected_gesture = None
 
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
@@ -112,6 +113,16 @@ class SessionBridge(QObject):
 
         if self.state != SessionState.LIVE:
             return
+
+        matched = bool(payload.get("matched", False))
+        gesture = payload.get("name")
+
+        if matched and gesture:
+            if self.detected_gesture != gesture:
+                self.detected_gesture = gesture
+                print(f"gesture: {gesture}")
+            else:
+                self.detected_gesture = None
 
         self.gestureMatchUpdated.emit(payload)
 
