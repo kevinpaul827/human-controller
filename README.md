@@ -112,12 +112,6 @@ Notes:
   - frontend changes: prompt/live
   - backend changes: auto-restart after save
   - desktop Python changes: still need `make macos-app` on macOS
-- Optional preview logs:
-
-```bash
-make preview-local ARGS="--log-all"
-make preview-local ARGS="--log-fe --log-be"
-```
 
 - Desktop app log verbosity can also be controlled with `HUMAN_CONTROLLER_LOG_LEVEL`:
 

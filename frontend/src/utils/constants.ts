@@ -13,3 +13,10 @@ export const NAV_ITEMS = [
   { label: "Session", path: ROUTES.session },
   { label: "Settings", path: ROUTES.settings },
 ];
+
+export const CALIBRATION_STEPS = [
+  "Choose movement",
+  "Align camera",
+  "Record gesture",
+  "Save mapping",
+];

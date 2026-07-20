@@ -1,8 +1,11 @@
 import type {
   CalibrateAspectRatioListener,
   CalibrateBridge,
+  CalibrationUpdateListener,
   CalibratePreviewBounds,
   CalibrateStatusEvent,
+  CapturedRep,
+  SavedRepResult,
 } from "../types/calibrate";
 
 import { getQtWebChannel } from "./qtWebChannel";
@@ -18,6 +21,10 @@ type QtSignal<T> = {
 type QtCalibrateBridgeObject = {
   startCalibrate: () => void | Promise<void>;
   stopCalibrate: () => void | Promise<void>;
+  startCalibration?: () => void | Promise<void>;
+  captureRep?: () => QtCapturedRepResult | Promise<QtCapturedRepResult>;
+  resetRep?: () => void | Promise<void>;
+  saveRep?: (name: string) => QtSavedRepResult | Promise<QtSavedRepResult>;
   getCalibrateState?: () => CalibrateStatusEvent["state"];
   updatePreviewBounds: (
     left: number,
@@ -28,8 +35,19 @@ type QtCalibrateBridgeObject = {
   ) => void | Promise<void>;
   openCameraSettings?: () => void | Promise<void>;
   calibrateStatusChanged?: QtSignal<CalibrateStatusEvent>;
+  calibrationUpdated?: QtSignal<{
+    repCount: number;
+    capturing: boolean;
+  }>;
   previewAspectRatioChanged?: QtSignal<number>;
 };
+
+type QtBridgeErrorResult = {
+  error?: string;
+};
+
+type QtCapturedRepResult = CapturedRep & QtBridgeErrorResult;
+type QtSavedRepResult = SavedRepResult & QtBridgeErrorResult;
 
 const BRIDGE_NAME = "calibrateBridge";
 const BRIDGE_ERROR = "Qt WebChannel calibrate bridge is unavailable.";
@@ -53,6 +71,21 @@ const getCalibrateBridgeOrThrow = () => {
   });
 
   return bridgePromise;
+};
+
+const unwrapBridgeResult = <T extends object>(
+  result: (T & QtBridgeErrorResult) | null | undefined,
+  fallbackMessage: string,
+): T => {
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+
+  if (!result || typeof result !== "object") {
+    throw new Error(fallbackMessage);
+  }
+
+  return result;
 };
 
 const calibrateBridge: CalibrateBridge = {
@@ -85,6 +118,52 @@ const calibrateBridge: CalibrateBridge = {
     }
 
     await bridge.openCameraSettings();
+  },
+
+  async startCalibration() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.startCalibration) {
+      throw new Error("Calibration controls are unavailable in this build.");
+    }
+
+    await bridge.startCalibration();
+  },
+
+  async captureRep() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.captureRep) {
+      throw new Error("Calibration capture is unavailable in this build.");
+    }
+
+    return unwrapBridgeResult(
+      await bridge.captureRep(),
+      "Unable to capture the current gesture rep.",
+    );
+  },
+
+  async resetRep() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.resetRep) {
+      throw new Error("Calibration reset is unavailable in this build.");
+    }
+
+    await bridge.resetRep();
+  },
+
+  async saveRep(name: string) {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.saveRep) {
+      throw new Error("Calibration save is unavailable in this build.");
+    }
+
+    return unwrapBridgeResult(
+      await bridge.saveRep(name),
+      "Unable to save the captured gesture reps.",
+    );
   },
 
   onCalibrateStatus(listener) {
@@ -141,6 +220,33 @@ const calibrateBridge: CalibrateBridge = {
         bridge.previewAspectRatioChanged.connect(listener);
         unsubscribe = () => {
           bridge.previewAspectRatioChanged?.disconnect?.(listener);
+        };
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  },
+
+  onCalibrationUpdated(listener: CalibrationUpdateListener) {
+    let active = true;
+    let unsubscribe = () => {};
+
+    void getCalibrateBridgeOrThrow()
+      .then((bridge) => {
+        if (!active) {
+          return;
+        }
+
+        if (!bridge.calibrationUpdated) {
+          return;
+        }
+
+        bridge.calibrationUpdated.connect(listener);
+        unsubscribe = () => {
+          bridge.calibrationUpdated?.disconnect?.(listener);
         };
       })
       .catch(() => {});
