@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional, Set
 
 import numpy as np
 
-from backend.pose_types import ALL_BODY_REGIONS, MEASURABLE_REGIONS, BlazePose33, BodyRegion, PoseLandmarks
+from backend.pose_types import MEASURABLE_REGIONS, BlazePose33, BodyRegion, PoseLandmarks
 
 VIS_FLOOR = 0.5
 
@@ -108,9 +108,18 @@ class FeatureExtractor:
     def __init__(self, vis_floor: float = VIS_FLOOR) -> None:
         self.vis_floor = vis_floor
 
-    def to_angles(self, lm: PoseLandmarks) -> AngleVector:
+    def to_angles(
+        self,
+        lm: PoseLandmarks,
+        keys: Optional[Iterable[AngleKey]] = None,
+    ) -> AngleVector:
+        """Extract joint angles. If ``keys`` is set, only those joints are computed."""
+        active: Optional[Set[AngleKey]] = set(keys) if keys is not None else None
         angles: AngleVector = {}
         for key, (a, b, c) in ANGLE_TRIPLETS.items():
+            if active is not None and key not in active:
+                angles[key] = None
+                continue
             idx = (int(a), int(b), int(c))
             if np.any(lm.visibility[list(idx)] < self.vis_floor):
                 angles[key] = None

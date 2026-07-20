@@ -55,3 +55,11 @@ def test_feature_extractor_low_visibility():
     angles = fe.to_angles(lm)
     assert angles[AngleKey.L_ELBOW] is None
 
+
+def test_feature_extractor_keys_isolates_joints():
+    lm = _straight_arm_landmarks()
+    angles = FeatureExtractor().to_angles(lm, keys=[AngleKey.L_ELBOW])
+    assert angles[AngleKey.L_ELBOW] == pytest.approx(180.0)
+    assert angles[AngleKey.R_ELBOW] is None
+    assert angles[AngleKey.L_KNEE] is None
+
