@@ -452,10 +452,6 @@ class CameraManager(QObject):
         stored for later matching.
         """
         resolved_name = str(name or "").strip()
-        log_debug(
-            f"[camera_manager.save_rep] requested save name={resolved_name!r} "
-            f"captured_reps={len(self._calibration_reps)} pending_frames={len(self._calibration_frames)}"
-        )
         if not resolved_name:
             log_info("[camera_manager.save_rep] aborted: empty gesture name")
             raise ValueError("Gesture name is required.")
@@ -468,20 +464,10 @@ class CameraManager(QObject):
             for joint in AngleKey
             if any(rep.get(joint) is not None for rep in self._calibration_reps)
         ]
-        log_debug(
-            "[camera_manager.save_rep] active joints from reps: "
-            f"{[joint.value for joint in active_joints]}"
-        )
         template = self.template_builder.build(
             [[rep] for rep in self._calibration_reps],
             name=resolved_name,
             active_joints=active_joints or None,
-        )
-        log_debug(
-            f"[camera_manager.save_rep] template built gesture_id={template.gesture_id!r} "
-            f"type={template.type!r} active_joints={[joint.value for joint in template.active_joints]} "
-            f"target_angles={{{', '.join(f'{joint.value}: {float(value):.2f}' for joint, value in template.target_angles.items())}}} "
-            f"trajectory_frames={len(template.trajectory)} fps={template.fps}"
         )
         saved = SavedGesture(
             gesture_id=template.gesture_id,
@@ -494,23 +480,12 @@ class CameraManager(QObject):
             trajectory=list(template.trajectory),
             fps=int(template.fps),
         )
-        log_debug(
-            f"[camera_manager.save_rep] saving gesture payload regions={saved.regions} "
-            f"active_joints={saved.active_joints} target_angle_keys={list(saved.target_angles.keys())}"
-        )
-        saved_path = self.gesture_matcher.store.save(saved)
-        log_info(
-            f"[camera_manager.save_rep] saved gesture_id={saved.gesture_id!r} "
-            f"name={saved.name!r} path={saved_path}"
-        )
         if self._use_session_gesture_subset and saved.gesture_id not in self._loaded_session_gesture_ids:
             self._loaded_session_gesture_ids.append(saved.gesture_id)
         self._refresh_gesture_matcher_templates()
-        log_debug("[camera_manager.save_rep] gesture templates reloaded")
         self._calibration_frames = []
         self._calibration_reps = []
         self._emit_calibration_updated()
-        log_debug("[camera_manager.save_rep] calibration buffers cleared after save")
         return {
             "gestureId": saved.gesture_id,
             "name": saved.name,
