@@ -8,9 +8,9 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
 
 from .backend_process import BackendProcessManager
+from .calibrate_bridge import CalibrateBridge
 from .camera_manager import CameraManager
 from .camera_overlay_widget import CameraOverlayWidget
-from .logging_utils import log_info
 from .session_bridge import SessionBridge
 
 
@@ -60,19 +60,24 @@ class MainWindow(QMainWindow):
 
         self.frontend = QWebEngineView()
         self.camera_manager = CameraManager()
-        self.session_bridge = SessionBridge(self.camera_manager)
         self.preview = CameraOverlayWidget(self.frontend)
         self.channel = QWebChannel()
-        self.channel.registerObject("sessionBridge", self.session_bridge)
 
         self.preview.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.preview.setAutoFillBackground(True)
         self.preview.hide()
 
+        self.session_bridge = SessionBridge(self.camera_manager)
+        self.channel.registerObject("sessionBridge", self.session_bridge)
         self.session_bridge.attach_preview_widget(self.preview)
         self.session_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
         self.session_bridge.poseEstimated.connect(self.preview.set_pose)
-        self.session_bridge.sessionStatusChanged.connect(self.handle_session_status_changed)
+    
+        self.calibrate_bridge = CalibrateBridge(self.camera_manager)
+        self.channel.registerObject("calibrateBridge", self.calibrate_bridge)
+        self.calibrate_bridge.attach_preview_widget(self.preview)
+        self.calibrate_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
+        self.calibrate_bridge.poseEstimated.connect(self.preview.set_pose)
 
         if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") == "1":
             self.backend_manager = BackendProcessManager()
@@ -85,17 +90,6 @@ class MainWindow(QMainWindow):
     def handle_preview_bounds_changed(self, left, top, width, height):
         self.preview.setGeometry(left, top, width, height)
         self.preview.raise_()
-
-    def handle_session_status_changed(self, payload):
-        log_info(f"[main_window] session status changed: {payload}")
-        if payload.get("state") == "live":
-            self.preview.show()
-            self.preview.raise_()
-            return
-
-        self.preview.hide()
-        self.preview.clear_pose()
-        self.preview.clear_frame()
 
     def closeEvent(self, event):
         self.camera_manager.shutdown()
