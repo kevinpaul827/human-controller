@@ -1,3 +1,4 @@
+import { SavedGestureSummary } from "../types/calibrate";
 import type {
   SessionAspectRatioListener,
   SessionBridge,
@@ -19,6 +20,9 @@ type QtSessionBridgeObject = {
   startSession: () => void | Promise<void>;
   stopSession: () => void | Promise<void>;
   getSessionState?: () => SessionStatusEvent["state"];
+  getLoadedSessionGestures?: () =>
+    | SavedGestureSummary[]
+    | Promise<SavedGestureSummary[]>;
   updatePreviewBounds: (
     left: number,
     top: number,
@@ -64,6 +68,15 @@ const sessionBridge: SessionBridge = {
   async stopSession() {
     const bridge = await getSessionBridgeOrThrow();
     await bridge.stopSession();
+  },
+
+  async getLoadedSessionGestures() {
+    const bridge = await getSessionBridgeOrThrow();
+    if (!bridge.getLoadedSessionGestures) {
+      throw new Error("Loaded session gestures unavailable in this build.");
+    }
+
+    return (await bridge.getLoadedSessionGestures()) ?? [];
   },
 
   async updatePreviewBounds(bounds: SessionPreviewBounds) {

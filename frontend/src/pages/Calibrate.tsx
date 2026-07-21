@@ -553,9 +553,7 @@ const Calibrate = () => {
       setGestureName("");
       setRepCount(result.repCount);
       setCapturedReps([]);
-      if (result.loadedGestures) {
-        void refreshSavedGestures();
-      }
+      await refreshSavedGestures();
       setSaveMessage(`Saved "${result.name}" successfully.`);
     } catch (error) {
       setErrorEvent({

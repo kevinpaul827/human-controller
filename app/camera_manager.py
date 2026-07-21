@@ -480,6 +480,7 @@ class CameraManager(QObject):
             trajectory=list(template.trajectory),
             fps=int(template.fps),
         )
+        self.gesture_matcher.store.save(saved)
         if self._use_session_gesture_subset and saved.gesture_id not in self._loaded_session_gesture_ids:
             self._loaded_session_gesture_ids.append(saved.gesture_id)
         self._refresh_gesture_matcher_templates()
