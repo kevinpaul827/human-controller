@@ -1,9 +1,12 @@
 import { HashRouter } from "react-router-dom";
+import ActiveProfileProvider from "./context/ActiveProfileProvider";
 import AppRoutes from "./routes/AppRoutes";
 
 const App = () => (
   <HashRouter>
-    <AppRoutes />
+    <ActiveProfileProvider>
+      <AppRoutes />
+    </ActiveProfileProvider>
   </HashRouter>
 );
 

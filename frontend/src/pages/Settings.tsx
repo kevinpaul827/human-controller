@@ -1,5 +1,6 @@
 import { useState } from "react";
 import SettingSlider from "../components/SettingSlider";
+import useActiveProfile from "../hooks/useActiveProfile";
 import styles from "../styles/settings.module.css";
 
 const SMOOTHING_LABELS = ["Low", "Low-Med", "Medium", "Med-High", "High"];
@@ -12,6 +13,7 @@ const DEFAULTS = {
 };
 
 const Settings = () => {
+  const { activeProfile } = useActiveProfile();
   const [matchThreshold, setMatchThreshold] = useState(DEFAULTS.matchThreshold);
   const [holdDuration, setHoldDuration] = useState(DEFAULTS.holdDuration);
   const [cooldown, setCooldown] = useState(DEFAULTS.cooldown);
@@ -27,7 +29,10 @@ const Settings = () => {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.heading}>Sensitivity Settings — Patient A</h1>
+        <h1 className={styles.heading}>
+          Sensitivity Settings
+          {activeProfile ? ` — ${activeProfile.patientName}` : ""}
+        </h1>
         <p className={styles.subheading}>
           Adjust thresholds for patients with different mobility levels
         </p>

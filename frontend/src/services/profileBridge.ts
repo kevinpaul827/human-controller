@@ -7,7 +7,6 @@ type QtProfileBridgeObject = {
   listProfiles: (callback: BridgeCallback) => void;
   listGestures: (callback: BridgeCallback) => void;
   createProfile: (
-    patientId: string,
     patientName: string,
     notes: string,
     callback: BridgeCallback,
@@ -91,9 +90,9 @@ const profileBridge = {
       bridge.listGestures(callback),
     ),
 
-  createProfile: (patientId: string, patientName: string, notes: string) =>
+  createProfile: (patientName: string, notes: string) =>
     callBridge<PatientProfile>((bridge, callback) =>
-      bridge.createProfile(patientId, patientName, notes, callback),
+      bridge.createProfile(patientName, notes, callback),
     ),
 
   deleteProfile: (patientId: string) =>

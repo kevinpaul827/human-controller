@@ -33,6 +33,24 @@
   font-weight: 700;
 }
 
+.profileHint {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  max-width: 42rem;
+}
+
+.profileHintLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #3b6df6;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .progressTrack {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 132px));

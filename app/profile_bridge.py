@@ -59,20 +59,14 @@ class ProfileBridge(QObject):
         except OSError as error:
             return self._failure(error)
 
-    @Slot(str, str, str, result=str)
+    @Slot(str, str, result=str)
     def createProfile(
         self,
-        patient_id: str,
         patient_name: str,
         notes: str,
     ) -> str:
         try:
-            profile = PatientProfile(
-                patient_id=patient_id,
-                patient_name=patient_name,
-                notes=notes,
-            )
-            created = self.profile_manager.create(profile)
+            created = self.profile_manager.create_new(patient_name, notes)
             return self._success(self._profile_data(created))
         except (OSError, ProfileError, ValidationError) as error:
             return self._failure(error)
