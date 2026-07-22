@@ -11,7 +11,8 @@ from .backend_process import BackendProcessManager
 from .calibrate_bridge import CalibrateBridge
 from .camera_manager import CameraManager
 from .camera_overlay_widget import CameraOverlayWidget
-from .profile_bridge import ProfileBridge
+from .profile_bridge import DEFAULT_PROFILES_DIR, ProfileBridge
+from .profile_manager import ProfileManager
 from .session_bridge import SessionBridge
 
 
@@ -61,6 +62,7 @@ class MainWindow(QMainWindow):
 
         self.frontend = QWebEngineView()
         self.camera_manager = CameraManager()
+        self.profile_manager = ProfileManager(DEFAULT_PROFILES_DIR)
         self.preview = CameraOverlayWidget(self.frontend)
         self.channel = QWebChannel()
 
@@ -68,7 +70,10 @@ class MainWindow(QMainWindow):
         self.preview.setAutoFillBackground(True)
         self.preview.hide()
 
-        self.session_bridge = SessionBridge(self.camera_manager)
+        self.session_bridge = SessionBridge(
+            self.camera_manager,
+            self.profile_manager,
+        )
         self.channel.registerObject("sessionBridge", self.session_bridge)
         self.session_bridge.attach_preview_widget(self.preview)
         self.session_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
@@ -80,7 +85,7 @@ class MainWindow(QMainWindow):
         self.calibrate_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
         self.calibrate_bridge.poseEstimated.connect(self.preview.set_pose)
 
-        self.profile_bridge = ProfileBridge()
+        self.profile_bridge = ProfileBridge(self.profile_manager)
         self.channel.registerObject("profileBridge", self.profile_bridge)
 
         if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") == "1":

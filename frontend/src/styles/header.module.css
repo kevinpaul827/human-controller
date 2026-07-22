@@ -15,6 +15,11 @@
   color: #111827;
 }
 
+.profile {
+  color: #374151;
+  font-size: 0.95rem;
+}
+
 .profileSelector {
   display: inline-flex;
   align-items: center;

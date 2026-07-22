@@ -1,37 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CreateProfileDialog from "../components/CreateProfileDialog";
 import PatientCard from "../components/PatientCard";
 import { SAMPLE_GESTURES, SAMPLE_PROFILES } from "../data/sampleProfiles";
+import useActiveProfile from "../hooks/useActiveProfile";
 import profileBridge, {
   isProfileDesktopRuntime,
 } from "../services/profileBridge";
 import type { GestureSummary, PatientProfile } from "../types/profile";
+import { ROUTES } from "../utils/constants";
 import styles from "../styles/profiles.module.css";
-
-const slugifyPatientId = (name: string) => {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || "patient";
-};
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "The profile operation failed.";
 
-const createPatientId = (patientName: string, profiles: PatientProfile[]) => {
-  const baseId = slugifyPatientId(patientName);
-  let patientId = baseId;
-  let suffix = 2;
-  while (profiles.some((profile) => profile.patientId === patientId)) {
-    patientId = `${baseId}-${suffix}`;
-    suffix += 1;
-  }
-  return patientId;
-};
-
 const Profiles = () => {
+  const navigate = useNavigate();
+  const { activeProfile, clearActiveProfile, setActiveProfile } =
+    useActiveProfile();
   const desktopRuntime = isProfileDesktopRuntime();
   const [profiles, setProfiles] = useState<PatientProfile[]>(
     desktopRuntime ? [] : SAMPLE_PROFILES,
@@ -96,20 +82,19 @@ const Profiles = () => {
   };
 
   const handleCreateProfile = async (patientName: string, notes: string) => {
-    const patientId = createPatientId(patientName, profiles);
     try {
       const createdProfile = desktopRuntime
-        ? await profileBridge.createProfile(patientId, patientName, notes)
+        ? await profileBridge.createProfile(patientName, notes)
         : {
             schemaVersion: 2 as const,
-            patientId,
+            patientId: crypto.randomUUID(),
             patientName,
             notes,
             updatedAt: new Date().toISOString(),
             keyBindings: {},
           };
       setProfiles((current) => [...current, createdProfile]);
-      setExpandedPatientId(patientId);
+      setExpandedPatientId(createdProfile.patientId);
       setShowNewDialog(false);
       setPageError(null);
       return null;
@@ -181,10 +166,21 @@ const Profiles = () => {
       if (expandedPatientId === profile.patientId) {
         setExpandedPatientId(null);
       }
+      if (activeProfile?.patientId === profile.patientId) {
+        clearActiveProfile();
+      }
       setPageError(null);
     } catch (error) {
       setPageError(getErrorMessage(error));
     }
+  };
+
+  const openProfileRoute = (
+    profile: PatientProfile,
+    route: typeof ROUTES.calibrate | typeof ROUTES.session,
+  ) => {
+    setActiveProfile(profile);
+    navigate(route);
   };
 
   return (
@@ -240,6 +236,8 @@ const Profiles = () => {
                 onRemoveBinding={(gestureId) =>
                   handleRemoveBinding(profile, gestureId)
                 }
+                onCalibrate={() => openProfileRoute(profile, ROUTES.calibrate)}
+                onStartSession={() => openProfileRoute(profile, ROUTES.session)}
                 onDelete={() => handleDeleteProfile(profile)}
               />
             ))

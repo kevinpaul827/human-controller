@@ -4,9 +4,18 @@ import useDesktopCameraPreview from "../hooks/useDesktopCameraPreview";
 import SessionCameraErrorModal from "./modals/SessionCameraErrorModal";
 import sessionBridge from "../services/sessionBridge";
 import styles from "../styles/session.module.css";
-import type { SessionStatusEvent, SessionState } from "../types/session";
+import type {
+  SessionGestureMapping,
+  SessionStatusEvent,
+  SessionState,
+} from "../types/session";
 
-const SessionCamera = () => {
+type SessionCameraProps = {
+  patientId?: string | null;
+  onGesturesLoaded?: (gestures: SessionGestureMapping[]) => void;
+};
+
+const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [errorEvent, setErrorEvent] = useState<SessionStatusEvent | null>(null);
   const isLive = sessionState === "live";
@@ -33,12 +42,19 @@ const SessionCamera = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [setElapsed]);
 
   const handleStartSession = async () => {
     setErrorEvent(null);
     setElapsed(0);
     try {
+      // Load profile bindings when assigned; otherwise start unassigned.
+      if (patientId) {
+        const profileData = await sessionBridge.loadProfile(patientId);
+        onGesturesLoaded?.(profileData.gestures);
+      } else {
+        onGesturesLoaded?.([]);
+      }
       await sessionBridge.startSession();
       setSessionState("live");
     } catch (error) {

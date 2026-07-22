@@ -23,6 +23,8 @@ type PatientCardProps = {
   onExpandChange: (expanded: boolean) => void;
   onSetBinding: (gestureId: string, key: string) => Promise<string | null>;
   onRemoveBinding: (gestureId: string) => Promise<string | null>;
+  onCalibrate: () => void;
+  onStartSession: () => void;
   onDelete: () => Promise<void>;
 };
 
@@ -33,6 +35,8 @@ const PatientCard = ({
   onExpandChange,
   onSetBinding,
   onRemoveBinding,
+  onCalibrate,
+  onStartSession,
   onDelete,
 }: PatientCardProps) => {
   const [selectedGestureId, setSelectedGestureId] = useState("");
@@ -279,6 +283,22 @@ const PatientCard = ({
           disabled={saving}
         >
           {expanded ? "Close" : "Manage keybindings"}
+        </button>
+        <button
+          type="button"
+          className={styles.buttonSecondary}
+          onClick={onCalibrate}
+          disabled={saving}
+        >
+          Calibrate
+        </button>
+        <button
+          type="button"
+          className={styles.buttonPrimary}
+          onClick={onStartSession}
+          disabled={saving}
+        >
+          Start session
         </button>
         <span className={styles.actionsSpacer} aria-hidden="true" />
         <button

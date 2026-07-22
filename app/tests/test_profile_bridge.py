@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from uuid import UUID
 
 from app.gesture_store import GestureStore
 from app.profile_bridge import ProfileBridge
@@ -29,15 +30,15 @@ class ProfileBridgeTests(unittest.TestCase):
         return json.loads(raw_response)
 
     def test_profile_crud_and_key_bindings(self) -> None:
-        created = self._response(
-            self.bridge.createProfile("patient-a", "Patient A", "Demo notes")
-        )
+        created = self._response(self.bridge.createProfile("Patient A", "Demo notes"))
         self.assertTrue(created["ok"])
         self.assertEqual(created["data"]["keyBindings"], {})
+        patient_id = created["data"]["patientId"]
+        self.assertEqual(str(UUID(patient_id)), patient_id)
 
         updated = self._response(
             self.bridge.setKeyBinding(
-                "patient-a",
+                patient_id,
                 "right_arm_raise",
                 "ArrowUp",
             )
@@ -49,16 +50,16 @@ class ProfileBridgeTests(unittest.TestCase):
         )
 
         removed = self._response(
-            self.bridge.removeKeyBinding("patient-a", "right_arm_raise")
+            self.bridge.removeKeyBinding(patient_id, "right_arm_raise")
         )
         self.assertTrue(removed["ok"])
         self.assertEqual(removed["data"]["keyBindings"], {})
 
-        deleted = self._response(self.bridge.deleteProfile("patient-a"))
-        self.assertEqual(deleted, {"ok": True, "data": "patient-a"})
+        deleted = self._response(self.bridge.deleteProfile(patient_id))
+        self.assertEqual(deleted, {"ok": True, "data": patient_id})
 
     def test_lists_profiles_and_user_facing_gesture_names(self) -> None:
-        self.bridge.createProfile("patient-a", "Patient A", "")
+        self.bridge.createProfile("Patient A", "")
 
         profiles = self._response(self.bridge.listProfiles())
         gestures = self._response(self.bridge.listGestures())
@@ -68,12 +69,10 @@ class ProfileBridgeTests(unittest.TestCase):
         self.assertEqual(gestures["data"][0]["gestureId"], "right_arm_raise")
 
     def test_returns_error_response_for_invalid_profile(self) -> None:
-        response = self._response(
-            self.bridge.createProfile("../unsafe", "Patient A", "")
-        )
+        response = self._response(self.bridge.createProfile("", ""))
 
         self.assertFalse(response["ok"])
-        self.assertIn("patient_id", response["error"])
+        self.assertIn("patient_name", response["error"])
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from uuid import UUID
 
 from pydantic import ValidationError
 
@@ -55,6 +56,21 @@ class ProfileManagerTests(unittest.TestCase):
         self.manager.create(self.sample_profile)
         with self.assertRaises(ProfileAlreadyExistsError):
             self.manager.create(self.sample_profile)
+
+    def test_create_new_generates_uuid_and_preserves_schema_version(self) -> None:
+        created = self.manager.create_new("New Patient", "Initial assessment")
+
+        self.assertEqual(str(UUID(created.patient_id)), created.patient_id)
+        self.assertEqual(created.schema_version, 2)
+        self.assertEqual(created.patient_name, "New Patient")
+        self.assertEqual(created.notes, "Initial assessment")
+        self.assertTrue(self.manager.exists(created.patient_id))
+
+    def test_create_new_generates_unique_patient_ids(self) -> None:
+        first = self.manager.create_new("Patient")
+        second = self.manager.create_new("Patient")
+
+        self.assertNotEqual(first.patient_id, second.patient_id)
 
     def test_list_profiles(self) -> None:
         self.manager.save(self.sample_profile)

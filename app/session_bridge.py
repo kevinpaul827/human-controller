@@ -3,6 +3,7 @@ from enum import Enum
 from PySide6.QtCore import QObject, Signal, Slot
 
 from .camera_manager import CameraManager
+from .profile_manager import ProfileError, ProfileManager
 
 class SessionState(str, Enum):
     IDLE = "idle"
@@ -19,12 +20,19 @@ class SessionBridge(QObject):
     poseEstimated = Signal(dict)
     gestureMatchUpdated = Signal(dict)
 
-    def __init__(self, camera_manager):
+    def __init__(
+        self,
+        camera_manager: CameraManager,
+        profile_manager: ProfileManager,
+    ):
         super().__init__()
         self.state = SessionState.IDLE
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
-        self.camera: CameraManager = camera_manager
+        self.camera = camera_manager
+        self.profile_manager = profile_manager
+        self.active_patient_id = None
+        self.active_key_bindings = {}
 
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
@@ -113,15 +121,57 @@ class SessionBridge(QObject):
         if self.state != SessionState.LIVE:
             return
 
-        self.gestureMatchUpdated.emit(payload)
+        enriched_payload = dict(payload)
+        gesture_id = enriched_payload.get("gestureId")
+        enriched_payload["key"] = self.active_key_bindings.get(gesture_id)
+        self.gestureMatchUpdated.emit(enriched_payload)
+
+    def _load_profile(self, patient_id):
+        profile = self.profile_manager.load(patient_id)
+        self.active_patient_id = profile.patient_id
+        self.active_key_bindings = dict(profile.key_bindings)
+        gestures = self.camera.configure_session_gestures(
+            self.active_key_bindings
+        )
+        loaded_ids = {gesture["gestureId"] for gesture in gestures}
+        return {
+            "patientId": profile.patient_id,
+            "gestures": gestures,
+            "missingGestureIds": [
+                gesture_id
+                for gesture_id in self.active_key_bindings
+                if gesture_id not in loaded_ids
+            ],
+        }
+
+    def _clear_profile(self):
+        self.camera.clear_session_gestures()
+        self.active_patient_id = None
+        self.active_key_bindings = {}
+
+    def _profile_result(self, patient_id):
+        try:
+            return {"ok": True, "data": self._load_profile(patient_id)}
+        except (OSError, ProfileError, ValueError) as error:
+            self._clear_profile()
+            self.emit_error(str(error))
+            return {"ok": False, "error": str(error)}
+
+    @Slot(str, result="QVariantMap")
+    def loadProfile(self, patient_id):
+        return self._profile_result(patient_id)
 
     @Slot()
     def startSession(self):
+        # Keep the original no-arg contract used by existing session UI.
         self.camera.start(self.BRIDGE)
 
     @Slot()
     def stopSession(self):
         self.camera.stop(self.BRIDGE)
+        self._clear_profile()
+        if self.state != SessionState.IDLE:
+            self.set_state(SessionState.IDLE)
 
     @Slot(result=str)
     def getSessionState(self):
@@ -129,7 +179,7 @@ class SessionBridge(QObject):
     
     @Slot(result="QVariantList")
     def getLoadedSessionGestures(self):
-        return self.camera.loaded_session_gestures()
+        return self.camera.session_gesture_mappings()
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
