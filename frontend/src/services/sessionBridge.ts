@@ -1,7 +1,8 @@
-import { SavedGestureSummary } from "../types/calibrate";
 import type {
   SessionAspectRatioListener,
   SessionBridge,
+  SessionGestureMapping,
+  SessionProfileData,
   SessionPreviewBounds,
   SessionStatusEvent,
 } from "../types/session";
@@ -16,13 +17,23 @@ type QtSignal<T> = {
   disconnect?(callback: (payload: T) => void): void;
 };
 
+type SessionProfileResult = {
+  ok: boolean;
+  data?: SessionProfileData;
+  error?: string;
+};
+
 type QtSessionBridgeObject = {
+  loadProfile?: (
+    patientId: string,
+    callback?: (result: SessionProfileResult) => void,
+  ) => SessionProfileResult | Promise<SessionProfileResult> | void;
   startSession: () => void | Promise<void>;
   stopSession: () => void | Promise<void>;
   getSessionState?: () => SessionStatusEvent["state"];
-  getLoadedSessionGestures?: () =>
-    | SavedGestureSummary[]
-    | Promise<SavedGestureSummary[]>;
+  getLoadedSessionGestures?: (
+    callback?: (gestures: SessionGestureMapping[]) => void,
+  ) => SessionGestureMapping[] | Promise<SessionGestureMapping[]> | void;
   updatePreviewBounds: (
     left: number,
     top: number,
@@ -59,7 +70,64 @@ const getSessionBridgeOrThrow = () => {
   return bridgePromise;
 };
 
+const invokeWithResult = <T>(
+  invoke: (callback: (result: T) => void) => unknown,
+) =>
+  new Promise<T>((resolve, reject) => {
+    let settled = false;
+
+    const settle = (result: T) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(result);
+    };
+
+    try {
+      const maybePromise = invoke(settle);
+      if (
+        maybePromise != null &&
+        typeof (maybePromise as PromiseLike<T>).then === "function"
+      ) {
+        void Promise.resolve(maybePromise as PromiseLike<T>).then(
+          settle,
+          (error: unknown) => {
+            if (!settled) {
+              settled = true;
+              reject(error);
+            }
+          },
+        );
+      }
+    } catch (error) {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    }
+  });
+
+const parseProfileResult = (result: SessionProfileResult) => {
+  if (!result.ok || !result.data) {
+    throw new Error(result.error || "Unable to load the patient profile.");
+  }
+  return result.data;
+};
+
 const sessionBridge: SessionBridge = {
+  async loadProfile(patientId) {
+    const bridge = await getSessionBridgeOrThrow();
+    if (!bridge.loadProfile) {
+      throw new Error("Profile session loading is unavailable in this build.");
+    }
+    return parseProfileResult(
+      await invokeWithResult<SessionProfileResult>((callback) =>
+        bridge.loadProfile?.(patientId, callback),
+      ),
+    );
+  },
+
   async startSession() {
     const bridge = await getSessionBridgeOrThrow();
     await bridge.startSession();
@@ -76,7 +144,11 @@ const sessionBridge: SessionBridge = {
       throw new Error("Loaded session gestures unavailable in this build.");
     }
 
-    return (await bridge.getLoadedSessionGestures()) ?? [];
+    return (
+      (await invokeWithResult<SessionGestureMapping[]>((callback) =>
+        bridge.getLoadedSessionGestures?.(callback),
+      )) ?? []
+    );
   },
 
   async updatePreviewBounds(bounds: SessionPreviewBounds) {

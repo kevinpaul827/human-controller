@@ -22,6 +22,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import CalibrationProgress from "../components/CalibrationProgress";
 import SessionCameraErrorModal from "../components/modals/SessionCameraErrorModal";
+import useActiveProfile from "../hooks/useActiveProfile";
 import useDesktopCameraPreview from "../hooks/useDesktopCameraPreview";
 import useSavedGestures from "../hooks/useSavedGestures";
 import calibrateBridge from "../services/calibrateBridge";
@@ -384,6 +385,7 @@ const CalibrationPanel = ({
 
 const Calibrate = () => {
   const navigate = useNavigate();
+  const { activeProfile } = useActiveProfile();
   const [calibrateState, setCalibrateState] = useState<CalibrateState>("idle");
   const [errorEvent, setErrorEvent] = useState<CalibrateStatusEvent | null>(
     null,
@@ -623,7 +625,8 @@ const Calibrate = () => {
             flexWrap="wrap"
           >
             <Typography variant="h4" component="h1" className={styles.title}>
-              Calibration Workspace
+              Calibration Workspace —{" "}
+              {activeProfile?.patientName ?? "Unassigned"}
             </Typography>
             <Chip
               label={isLive ? "live" : "idle"}

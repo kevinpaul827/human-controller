@@ -60,6 +60,7 @@ class CameraManager(QObject):
         log_info(f"has angles_for_pose: {hasattr(self.gesture_matcher, 'angles_for_pose')}")
         self.template_builder = TemplateBuilder()
         self._loaded_session_gesture_ids = []
+        self._session_key_bindings = {}
         self._use_session_gesture_subset = False
         self._calibration_frames = []
         self._calibration_reps = []
@@ -374,6 +375,28 @@ class CameraManager(QObject):
 
     def loaded_session_gestures(self):
         return [gesture.to_summary() for gesture in self._loaded_session_gestures()]
+
+    def session_gesture_mappings(self):
+        return [
+            {
+                **gesture.to_summary(),
+                "key": self._session_key_bindings.get(gesture.gesture_id, ""),
+            }
+            for gesture in self._loaded_session_gestures()
+        ]
+
+    def configure_session_gestures(self, key_bindings):
+        self._session_key_bindings = dict(key_bindings)
+        self._loaded_session_gesture_ids = list(self._session_key_bindings)
+        self._use_session_gesture_subset = True
+        self._refresh_gesture_matcher_templates()
+        return self.session_gesture_mappings()
+
+    def clear_session_gestures(self):
+        self._loaded_session_gesture_ids = []
+        self._session_key_bindings = {}
+        self._use_session_gesture_subset = False
+        self._refresh_gesture_matcher_templates()
 
     def load_saved_gesture(self, gesture_id):
         resolved_gesture_id = str(gesture_id or "").strip()

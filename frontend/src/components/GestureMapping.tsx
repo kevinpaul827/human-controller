@@ -1,6 +1,7 @@
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { Box, Button, Paper, Typography } from "@mui/material";
-import type { SavedGestureSummary } from "../types/calibrate";
+import type { SessionGestureMapping } from "../types/session";
+import { formatKey } from "../utils/keyboard";
 import styles from "../styles/session.module.css";
 
 // type GestureMappingItem = {
@@ -10,7 +11,7 @@ import styles from "../styles/session.module.css";
 // };
 
 type GestureMappingProps = {
-  gestures: SavedGestureSummary[];
+  gestures: SessionGestureMapping[];
   errorMessage?: string | null;
   onCalibrateNewGesture: () => void;
 };
@@ -41,22 +42,26 @@ const GestureMapping = ({
           <Box className={styles.mappingRow}>
             <Typography>{errorMessage}</Typography>
           </Box>
-        ) : gestures.length > 0 ? (
+        ) : null}
+        {gestures.length > 0 ? (
           gestures.map((gesture) => (
             <Box key={gesture.gestureId} className={styles.mappingRow}>
               <Box className={styles.mappingInfo}>
                 <Typography variant="body1">{gesture.name}</Typography>
               </Box>
+              <Typography className={styles.keycap}>
+                {formatKey(gesture.key)}
+              </Typography>
             </Box>
           ))
-        ) : (
+        ) : errorMessage ? null : (
           <Box className={styles.mappingRow}>
             <Box className={styles.mappingInfo}>
               <Typography variant="body1">No gestures loaded</Typography>
             </Box>
 
             <Typography variant="body2">
-              Load a gesture from calibration
+              Assign calibrated movements in Profiles first
             </Typography>
           </Box>
         )}
