@@ -9,7 +9,7 @@ CURRENT_SCHEMA_VERSION = 2
 
 
 class PatientProfile(BaseModel):
-    """Patient configuration that maps calibrated gestures to keyboard keys."""
+
 
     schema_version: Literal[2] = Field(
         default=CURRENT_SCHEMA_VERSION,
@@ -25,6 +25,10 @@ class PatientProfile(BaseModel):
     key_bindings: dict[str, str] = Field(
         default_factory=dict,
         alias="keyBindings",
+    )
+    match_thresholds: dict[str, float] = Field(
+        default_factory=dict,
+        alias="matchThresholds",
     )
 
     model_config = {
@@ -61,4 +65,23 @@ class PatientProfile(BaseModel):
             if len(resolved_key) > 32:
                 raise ValueError("key binding cannot exceed 32 characters")
             validated[resolved_gesture_id] = resolved_key
+        return validated
+
+    @field_validator("match_thresholds")
+    @classmethod
+    def match_thresholds_must_be_valid(
+        cls,
+        value: dict[str, float],
+    ) -> dict[str, float]:
+        validated: dict[str, float] = {}
+        for gesture_id, threshold in value.items():
+            resolved_gesture_id = gesture_id.strip()
+            if not resolved_gesture_id:
+                raise ValueError("gesture_id cannot be empty")
+            if len(resolved_gesture_id) > 64:
+                raise ValueError("gesture_id cannot exceed 64 characters")
+            resolved_threshold = float(threshold)
+            if not 0.0 <= resolved_threshold <= 100.0:
+                raise ValueError("match threshold must be between 0 and 100")
+            validated[resolved_gesture_id] = resolved_threshold
         return validated

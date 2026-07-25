@@ -87,29 +87,30 @@ def _install_pose_processor_stub():
     sys.modules["app.pose_processor"] = pose_processor_module
 
 
-def _install_overlay_constants_stub():
-    overlay_constants_module = ModuleType("app.overlay_constants")
-    overlay_constants_module.MIN_VISIBILITY = 0.5
-    overlay_constants_module.POSE_CONNECTIONS = []
-    sys.modules["app.overlay_constants"] = overlay_constants_module
+def _install_picture_in_picture_stub():
+    picture_in_picture_module = ModuleType("app.picture_in_picture_window")
+    picture_in_picture_module.PictureInPictureWindow = type(
+        "PictureInPictureWindow", (), {}
+    )
+    sys.modules["app.picture_in_picture_window"] = picture_in_picture_module
 
 
 try:
-    from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl  # noqa: F401
-    from PySide6.QtGui import QDesktopServices, QImage  # noqa: F401
-    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame  # noqa: F401
-    from PySide6.QtMultimediaWidgets import QVideoWidget  # noqa: F401
-    from PySide6.QtWebChannel import QWebChannel  # noqa: F401
-    from PySide6.QtWebEngineWidgets import QWebEngineView  # noqa: F401
-    from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox  # noqa: F401
+    from PySide6.QtCore import QElapsedTimer, QThread, Qt, QUrl
+    from PySide6.QtGui import QDesktopServices, QImage
+    from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, QVideoFrame
+    from PySide6.QtMultimediaWidgets import QVideoWidget
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
 except Exception:
     _install_pyside6_stub()
 
-# These entrypoint tests only care about startup/error handling in app.main.
-# Stubbing PoseProcessor keeps the import lightweight so the tests do not need
-# numpy, OpenCV, or MediaPipe just to import the window module graph.
+
+
+
 _install_pose_processor_stub()
-_install_overlay_constants_stub()
+_install_picture_in_picture_stub()
 
 from app import main
 from app import main_window

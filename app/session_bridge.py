@@ -3,7 +3,6 @@ from enum import Enum
 from PySide6.QtCore import QObject, Signal, Slot
 
 from .camera_manager import CameraManager
-from .profile_manager import ProfileError, ProfileManager
 
 class SessionState(str, Enum):
     IDLE = "idle"
@@ -19,34 +18,55 @@ class SessionBridge(QObject):
     previewAspectRatioChanged = Signal(float)
     poseEstimated = Signal(dict)
     gestureMatchUpdated = Signal(dict)
+    overlayVisibilityChanged = Signal(bool)
 
-    def __init__(
-        self,
-        camera_manager: CameraManager,
-        profile_manager: ProfileManager,
-    ):
+    def __init__(self, camera_manager):
         super().__init__()
         self.state = SessionState.IDLE
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
-        self.camera = camera_manager
-        self.profile_manager = profile_manager
-        self.active_patient_id = None
-        self.active_key_bindings = {}
+        self.picture_in_picture = None
+        self.overlay_requested = True
+        self.camera: CameraManager = camera_manager
 
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
         self.camera.errorOccurred.connect(self.handle_camera_error)
         self.camera.frameProcessed.connect(self.handle_frame_processed)
+        self.camera.previewFrameReady.connect(self.handle_preview_frame)
         self.camera.gestureMatchUpdated.connect(self.handle_gesture_match_updated)
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
-    
+
     def check_camera_ownership(self):
         return self.camera.active_bridge == self.BRIDGE
 
     def attach_preview_widget(self, preview_widget):
         self.preview_widget = preview_widget
         self.preview_widget.hide()
+
+    def attach_picture_in_picture(self, window):
+        self.picture_in_picture = window
+        self.picture_in_picture.visibilityChanged.connect(
+            self.handle_overlay_visibility_changed
+        )
+
+    def handle_overlay_visibility_changed(self, visible):
+        self.overlay_requested = bool(visible)
+        self.overlayVisibilityChanged.emit(bool(visible))
+
+    def apply_overlay_visibility(self):
+        if self.picture_in_picture is None:
+            return
+
+        should_show = (
+            self.overlay_requested
+            and self.state == SessionState.LIVE
+            and self.check_camera_ownership()
+        )
+        if should_show:
+            self.picture_in_picture.show_overlay()
+        else:
+            self.picture_in_picture.hide_overlay()
 
     def set_state(self, state):
         self.state = state
@@ -56,6 +76,7 @@ class SessionBridge(QObject):
         self.state = SessionState.ERROR
         self.sessionStatusChanged.emit({"state": self.state.value, "message": message})
         self.clear_preview()
+        self.apply_overlay_visibility()
 
     def apply_preview_bounds(self):
         if self.preview_widget is None:
@@ -69,12 +90,14 @@ class SessionBridge(QObject):
             self.preview_widget.raise_()
         else:
             self.preview_widget.hide()
-    
+
     def clear_preview(self):
         if self.preview_widget is not None:
             self.preview_widget.hide()
             self.preview_widget.clear_pose()
-            self.preview_widget.clear_frame() 
+            self.preview_widget.clear_frame()
+        if self.picture_in_picture is not None:
+            self.picture_in_picture.clear()
 
     def handle_camera_started(self, bridge):
         if bridge != self.BRIDGE:
@@ -82,13 +105,15 @@ class SessionBridge(QObject):
 
         self.set_state(SessionState.LIVE)
         self.apply_preview_bounds()
-    
+        self.apply_overlay_visibility()
+
     def handle_camera_stopped(self, bridge):
         if bridge != self.BRIDGE:
             return
 
         self.set_state(SessionState.IDLE)
         self.clear_preview()
+        self.apply_overlay_visibility()
 
     def handle_camera_error(self, message, bridge):
         if bridge != self.BRIDGE:
@@ -102,16 +127,24 @@ class SessionBridge(QObject):
 
         if self.state != SessionState.LIVE:
             return
-        
-        if self.preview_widget is not None:
-            self.preview_widget.set_frame(frame)
-        
+
+        if self.picture_in_picture is not None:
+            self.picture_in_picture.set_pose(pose)
+
+
+
         self.poseEstimated.emit(pose)
-    
+
+    def handle_preview_frame(self, frame):
+        if not self.check_camera_ownership() or self.state != SessionState.LIVE:
+            return
+        if self.picture_in_picture is not None:
+            self.picture_in_picture.set_frame(frame)
+
     def handle_preview_aspect_ratio_changed(self, aspect_ratio):
         if not self.check_camera_ownership():
             return
-        
+
         self.previewAspectRatioChanged.emit(aspect_ratio)
 
     def handle_gesture_match_updated(self, payload):
@@ -121,65 +154,34 @@ class SessionBridge(QObject):
         if self.state != SessionState.LIVE:
             return
 
-        enriched_payload = dict(payload)
-        gesture_id = enriched_payload.get("gestureId")
-        enriched_payload["key"] = self.active_key_bindings.get(gesture_id)
-        self.gestureMatchUpdated.emit(enriched_payload)
-
-    def _load_profile(self, patient_id):
-        profile = self.profile_manager.load(patient_id)
-        self.active_patient_id = profile.patient_id
-        self.active_key_bindings = dict(profile.key_bindings)
-        gestures = self.camera.configure_session_gestures(
-            self.active_key_bindings
-        )
-        loaded_ids = {gesture["gestureId"] for gesture in gestures}
-        return {
-            "patientId": profile.patient_id,
-            "gestures": gestures,
-            "missingGestureIds": [
-                gesture_id
-                for gesture_id in self.active_key_bindings
-                if gesture_id not in loaded_ids
-            ],
-        }
-
-    def _clear_profile(self):
-        self.camera.clear_session_gestures()
-        self.active_patient_id = None
-        self.active_key_bindings = {}
-
-    def _profile_result(self, patient_id):
-        try:
-            return {"ok": True, "data": self._load_profile(patient_id)}
-        except (OSError, ProfileError, ValueError) as error:
-            self._clear_profile()
-            self.emit_error(str(error))
-            return {"ok": False, "error": str(error)}
-
-    @Slot(str, result="QVariantMap")
-    def loadProfile(self, patient_id):
-        return self._profile_result(patient_id)
+        if self.picture_in_picture is not None:
+            self.picture_in_picture.show_match(payload)
+        self.gestureMatchUpdated.emit(payload)
 
     @Slot()
     def startSession(self):
-        # Keep the original no-arg contract used by existing session UI.
+        self.overlay_requested = True
         self.camera.start(self.BRIDGE)
 
     @Slot()
     def stopSession(self):
         self.camera.stop(self.BRIDGE)
-        self._clear_profile()
-        if self.state != SessionState.IDLE:
-            self.set_state(SessionState.IDLE)
+
+    @Slot(bool)
+    def setOverlayVisible(self, visible):
+        self.overlay_requested = bool(visible)
+        self.apply_overlay_visibility()
+
+    @Slot(result=bool)
+    def getOverlayVisible(self):
+        return bool(
+            self.picture_in_picture is not None
+            and self.picture_in_picture.isVisible()
+        )
 
     @Slot(result=str)
     def getSessionState(self):
         return self.state.value
-    
-    @Slot(result="QVariantList")
-    def getLoadedSessionGestures(self):
-        return self.camera.session_gesture_mappings()
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
@@ -194,3 +196,7 @@ class SessionBridge(QObject):
     @Slot()
     def openCameraSettings(self):
         self.camera.openCameraSettings()
+
+    @Slot()
+    def openAccessibilitySettings(self):
+        self.camera.openAccessibilitySettings()

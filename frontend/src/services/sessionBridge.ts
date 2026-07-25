@@ -1,39 +1,24 @@
 import type {
   SessionAspectRatioListener,
   SessionBridge,
-  SessionGestureMapping,
-  SessionProfileData,
+  GestureMatchEvent,
+  GestureMatchListener,
+  OverlayVisibilityListener,
   SessionPreviewBounds,
   SessionStatusEvent,
 } from "../types/session";
 
 import { getQtWebChannel } from "./qtWebChannel";
 
-/**
- * Wrapper around the PySide6 Qt WebChannel session bridge.
- */
 type QtSignal<T> = {
   connect(callback: (payload: T) => void): void;
   disconnect?(callback: (payload: T) => void): void;
 };
 
-type SessionProfileResult = {
-  ok: boolean;
-  data?: SessionProfileData;
-  error?: string;
-};
-
 type QtSessionBridgeObject = {
-  loadProfile?: (
-    patientId: string,
-    callback?: (result: SessionProfileResult) => void,
-  ) => SessionProfileResult | Promise<SessionProfileResult> | void;
   startSession: () => void | Promise<void>;
   stopSession: () => void | Promise<void>;
   getSessionState?: () => SessionStatusEvent["state"];
-  getLoadedSessionGestures?: (
-    callback?: (gestures: SessionGestureMapping[]) => void,
-  ) => SessionGestureMapping[] | Promise<SessionGestureMapping[]> | void;
   updatePreviewBounds: (
     left: number,
     top: number,
@@ -42,8 +27,13 @@ type QtSessionBridgeObject = {
     devicePixelRatio: number,
   ) => void | Promise<void>;
   openCameraSettings?: () => void | Promise<void>;
+  openAccessibilitySettings?: () => void | Promise<void>;
+  setOverlayVisible?: (visible: boolean) => void | Promise<void>;
+  getOverlayVisible?: () => boolean;
   sessionStatusChanged?: QtSignal<SessionStatusEvent>;
   previewAspectRatioChanged?: QtSignal<number>;
+  gestureMatchUpdated?: QtSignal<GestureMatchEvent>;
+  overlayVisibilityChanged?: QtSignal<boolean>;
 };
 
 const BRIDGE_NAME = "sessionBridge";
@@ -51,9 +41,6 @@ const BRIDGE_ERROR = "Qt WebChannel session bridge is unavailable.";
 
 let bridgePromise: Promise<QtSessionBridgeObject> | null = null;
 
-/**
- * Resolves the desktop bridge exposed by PySide6.
- */
 const getSessionBridgeOrThrow = () => {
   bridgePromise ??= getQtWebChannel().then((channel) => {
     const bridge = channel.objects[BRIDGE_NAME] as
@@ -70,64 +57,7 @@ const getSessionBridgeOrThrow = () => {
   return bridgePromise;
 };
 
-const invokeWithResult = <T>(
-  invoke: (callback: (result: T) => void) => unknown,
-) =>
-  new Promise<T>((resolve, reject) => {
-    let settled = false;
-
-    const settle = (result: T) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(result);
-    };
-
-    try {
-      const maybePromise = invoke(settle);
-      if (
-        maybePromise != null &&
-        typeof (maybePromise as PromiseLike<T>).then === "function"
-      ) {
-        void Promise.resolve(maybePromise as PromiseLike<T>).then(
-          settle,
-          (error: unknown) => {
-            if (!settled) {
-              settled = true;
-              reject(error);
-            }
-          },
-        );
-      }
-    } catch (error) {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    }
-  });
-
-const parseProfileResult = (result: SessionProfileResult) => {
-  if (!result.ok || !result.data) {
-    throw new Error(result.error || "Unable to load the patient profile.");
-  }
-  return result.data;
-};
-
 const sessionBridge: SessionBridge = {
-  async loadProfile(patientId) {
-    const bridge = await getSessionBridgeOrThrow();
-    if (!bridge.loadProfile) {
-      throw new Error("Profile session loading is unavailable in this build.");
-    }
-    return parseProfileResult(
-      await invokeWithResult<SessionProfileResult>((callback) =>
-        bridge.loadProfile?.(patientId, callback),
-      ),
-    );
-  },
-
   async startSession() {
     const bridge = await getSessionBridgeOrThrow();
     await bridge.startSession();
@@ -136,19 +66,6 @@ const sessionBridge: SessionBridge = {
   async stopSession() {
     const bridge = await getSessionBridgeOrThrow();
     await bridge.stopSession();
-  },
-
-  async getLoadedSessionGestures() {
-    const bridge = await getSessionBridgeOrThrow();
-    if (!bridge.getLoadedSessionGestures) {
-      throw new Error("Loaded session gestures unavailable in this build.");
-    }
-
-    return (
-      (await invokeWithResult<SessionGestureMapping[]>((callback) =>
-        bridge.getLoadedSessionGestures?.(callback),
-      )) ?? []
-    );
   },
 
   async updatePreviewBounds(bounds: SessionPreviewBounds) {
@@ -170,6 +87,26 @@ const sessionBridge: SessionBridge = {
     }
 
     await bridge.openCameraSettings();
+  },
+
+  async openAccessibilitySettings() {
+    const bridge = await getSessionBridgeOrThrow();
+
+    if (!bridge.openAccessibilitySettings) {
+      throw new Error(
+        "Desktop accessibility settings are unavailable in this build.",
+      );
+    }
+
+    await bridge.openAccessibilitySettings();
+  },
+
+  async setOverlayVisible(visible) {
+    const bridge = await getSessionBridgeOrThrow();
+    if (!bridge.setOverlayVisible) {
+      throw new Error("Desktop game overlay is unavailable in this build.");
+    }
+    await bridge.setOverlayVisible(visible);
   },
 
   onSessionStatus(listener) {
@@ -230,6 +167,40 @@ const sessionBridge: SessionBridge = {
       })
       .catch(() => {});
 
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  },
+
+  onGestureMatch(listener: GestureMatchListener) {
+    let active = true;
+    let unsubscribe = () => {};
+    void getSessionBridgeOrThrow()
+      .then((bridge) => {
+        if (!active || !bridge.gestureMatchUpdated) return;
+        bridge.gestureMatchUpdated.connect(listener);
+        unsubscribe = () => bridge.gestureMatchUpdated?.disconnect?.(listener);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  },
+
+  onOverlayVisibility(listener: OverlayVisibilityListener) {
+    let active = true;
+    let unsubscribe = () => {};
+    void getSessionBridgeOrThrow()
+      .then((bridge) => {
+        if (!active || !bridge.overlayVisibilityChanged) return;
+        bridge.overlayVisibilityChanged.connect(listener);
+        unsubscribe = () =>
+          bridge.overlayVisibilityChanged?.disconnect?.(listener);
+        listener(Boolean(bridge.getOverlayVisible?.()));
+      })
+      .catch(() => {});
     return () => {
       active = false;
       unsubscribe();

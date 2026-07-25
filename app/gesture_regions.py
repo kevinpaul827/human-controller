@@ -18,7 +18,6 @@ LOWER_BODY_JOINTS = {
 
 
 def infer_gesture_regions(active_joints: list[str]) -> list[str]:
-    """Infer coarse body regions for saved gesture metadata."""
     regions: list[str] = []
     joint_set = set(active_joints)
 

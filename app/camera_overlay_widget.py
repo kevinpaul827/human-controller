@@ -3,7 +3,13 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from .logging_utils import log_debug, log_verbose
-from .overlay_constants import MIN_VISIBILITY, POSE_CONNECTIONS
+from .overlay_constants import (
+    BODY_LANDMARKS,
+    MIN_VISIBILITY,
+    POSE_CONNECTIONS,
+    connections_for_angle_joints,
+    landmarks_for_angle_joints,
+)
 
 POINT_RADIUS = 4
 LINE_WIDTH = 3
@@ -16,6 +22,7 @@ class CameraOverlayWidget(QWidget):
         self._draw_rect = QRectF()
         self._landmarks = []
         self._visibility = []
+        self._active_joints = None
         self._frame_log_emitted = False
         self._paint_log_emitted = False
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -29,7 +36,10 @@ class CameraOverlayWidget(QWidget):
             self.update()
             return
 
-        self._frame_image = image
+
+
+
+        self._frame_image = image.mirrored(True, False)
         if not self._frame_log_emitted:
             log_debug(f"[overlay] received first synced frame {image.width()}x{image.height()}")
             self._frame_log_emitted = True
@@ -40,6 +50,7 @@ class CameraOverlayWidget(QWidget):
             log_verbose("[overlay] cleared pose payload")
             self._landmarks = []
             self._visibility = []
+            self._active_joints = None
             self.update()
             return
 
@@ -47,6 +58,11 @@ class CameraOverlayWidget(QWidget):
         visibility = payload.get("visibility")
         self._landmarks = landmarks if landmarks is not None else []
         self._visibility = visibility if visibility is not None else []
+        self._active_joints = (
+            tuple(payload.get("activeJoints", []))
+            if "activeJoints" in payload
+            else None
+        )
         count = len(self._landmarks)
         log_verbose(f"[overlay] received pose payload with {count} landmarks")
         self.update()
@@ -55,6 +71,7 @@ class CameraOverlayWidget(QWidget):
         log_debug("[overlay] clearing stored landmarks")
         self._landmarks = []
         self._visibility = []
+        self._active_joints = None
         self.update()
 
     def clear_frame(self):
@@ -92,8 +109,8 @@ class CameraOverlayWidget(QWidget):
         if self._draw_rect.isNull():
             return
 
-        # Keep pose strokes inside the letterboxed preview area so they do not
-        # bleed into the black margins when landmarks land near the frame edge.
+
+
         painter.save()
         painter.setClipRect(self._draw_rect)
 
@@ -101,7 +118,12 @@ class CameraOverlayWidget(QWidget):
         line_pen.setWidth(LINE_WIDTH)
         painter.setPen(line_pen)
 
-        for start_idx, end_idx in POSE_CONNECTIONS:
+        connections = (
+            POSE_CONNECTIONS
+            if self._active_joints is None
+            else connections_for_angle_joints(self._active_joints)
+        )
+        for start_idx, end_idx in connections:
             start_point = self._point_for_index(start_idx)
             end_point = self._point_for_index(end_idx)
             if start_point is None or end_point is None:
@@ -113,7 +135,12 @@ class CameraOverlayWidget(QWidget):
         painter.setPen(point_pen)
         painter.setBrush(QColor(86, 255, 176, 230))
 
-        for index in range(len(self._landmarks)):
+        landmarks = (
+            BODY_LANDMARKS
+            if self._active_joints is None
+            else landmarks_for_angle_joints(self._active_joints)
+        )
+        for index in landmarks:
             point = self._point_for_index(index)
             if point is None:
                 continue
@@ -148,7 +175,7 @@ class CameraOverlayWidget(QWidget):
         if max_x < min_x or max_y < min_y:
             return None
 
-        x = draw_rect.left() + landmark_x * draw_rect.width()
+        x = draw_rect.left() + (1.0 - landmark_x) * draw_rect.width()
         y = draw_rect.top() + landmark_y * draw_rect.height()
         x = round(min(max(x, min_x), max_x))
         y = round(min(max(y, min_y), max_y))

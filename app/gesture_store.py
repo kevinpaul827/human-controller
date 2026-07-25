@@ -98,20 +98,20 @@ class SavedGesture:
         }
 
     def to_template(self):
-        from backend.matching_engine.core.angles import AngleKey
+        from backend.matching_engine.core.bones import parse_feature_key
         from backend.matching_engine.core.types import GestureTemplate
 
         return GestureTemplate(
             name=self.name,
             gesture_id=self.gesture_id,
             type=self.type,
-            active_joints=[AngleKey(joint) for joint in self.active_joints],
+            active_joints=[parse_feature_key(joint) for joint in self.active_joints],
             target_angles={
-                AngleKey(joint): float(angle)
+                parse_feature_key(joint): float(angle)
                 for joint, angle in self.target_angles.items()
             },
             tolerance_deg={
-                AngleKey(joint): float(angle)
+                parse_feature_key(joint): float(angle)
                 for joint, angle in self.tolerance_deg.items()
             },
             trajectory=self.trajectory,
@@ -125,6 +125,14 @@ class GestureStore:
 
     def _gesture_path(self, gesture_id: str) -> Path:
         return self.gestures_dir / f"{gesture_id}.json"
+
+    def gesture_path(self, gesture_id: str) -> Path:
+        return self._gesture_path(gesture_id)
+
+    def delete(self, gesture_id: str) -> None:
+        path = self._gesture_path(gesture_id)
+        if path.exists():
+            path.unlink()
 
     def _make_gesture_id(self, name: str) -> str:
         slug = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")

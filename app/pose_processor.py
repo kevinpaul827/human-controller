@@ -22,12 +22,12 @@ class PoseProcessor(QObject):
 
             if self.estimator is None:
                 self.estimator = PoseEstimator()
-            
-            # PoseEstimator is based on logic that we are using an OpenCV camera
-            # which uses BGR frames. The following lines of code is to transform
-            # QImages into BGR frames to be accepted by PoseEstimator.
+
+
+
+
             image = image.convertToFormat(QImage.Format.Format_BGR888)
-            
+
             width = image.width()
             height = image.height()
             bytes_per_line = image.bytesPerLine()
@@ -39,13 +39,13 @@ class PoseProcessor(QObject):
 
             pose = self.estimator.estimate_pose(frame, timestamp_ms)
             self.poseEstimated.emit(pose)
-        
+
         except Exception as error_msg:
             self.errorOccurred.emit(str(error_msg))
-        
+
         finally:
             self.processingFinished.emit()
-    
+
     @Slot()
     def close(self):
         if self.estimator is not None:

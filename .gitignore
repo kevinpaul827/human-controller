@@ -16,3 +16,6 @@ __pycache__/
 build/
 human_controller.spec
 backend/debug_harness/data/
+data/*.pkl
+color-palette-generator-i7-main/
+STYLE_GUIDE.md

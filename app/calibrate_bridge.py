@@ -32,7 +32,7 @@ class CalibrateBridge(QObject):
         self.camera.frameProcessed.connect(self.handle_frame_processed)
         self.camera.calibrationUpdated.connect(self.handle_calibration_updated)
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
-    
+
     def check_camera_ownership(self):
         return self.camera.active_bridge == self.BRIDGE
 
@@ -61,12 +61,12 @@ class CalibrateBridge(QObject):
             self.preview_widget.raise_()
         else:
             self.preview_widget.hide()
-    
+
     def clear_preview(self):
         if self.preview_widget is not None:
             self.preview_widget.hide()
             self.preview_widget.clear_pose()
-            self.preview_widget.clear_frame() 
+            self.preview_widget.clear_frame()
 
     def handle_camera_started(self, bridge):
         if bridge != self.BRIDGE:
@@ -74,7 +74,7 @@ class CalibrateBridge(QObject):
 
         self.set_state(CalibrateState.LIVE)
         self.apply_preview_bounds()
-    
+
     def handle_camera_stopped(self, bridge):
         if bridge != self.BRIDGE:
             return
@@ -94,16 +94,16 @@ class CalibrateBridge(QObject):
 
         if self.state != CalibrateState.LIVE:
             return
-        
+
         if self.preview_widget is not None:
             self.preview_widget.set_frame(frame)
-        
+
         self.poseEstimated.emit(pose)
-    
+
     def handle_preview_aspect_ratio_changed(self, aspect_ratio):
         if not self.check_camera_ownership():
             return
-        
+
         self.previewAspectRatioChanged.emit(aspect_ratio)
 
     def handle_calibration_updated(self, payload):
@@ -140,44 +140,45 @@ class CalibrateBridge(QObject):
 
     @Slot()
     def startCalibration(self):
-        """Tell the camera manager to begin calibration mode."""
+
         self.camera.start_calibration()
 
     @Slot(result="QVariantMap")
     def captureRep(self):
-        """Ask the camera manager to save the current held pose as one rep."""
+
         try:
             return self.camera.capture_rep()
         except ValueError as error:
             return {"error": str(error)}
 
+    @Slot(float, result="QVariantMap")
+    def startRep(self, recording_seconds):
+        try:
+            self.camera.start_rep(recording_seconds)
+            return {"ok": True}
+        except ValueError as error:
+            return {"error": str(error)}
+
+    @Slot(result="QVariantMap")
+    def stopRep(self):
+        try:
+            return self.camera.stop_rep()
+        except ValueError as error:
+            return {"error": str(error)}
+
+    @Slot()
+    def cancelRep(self):
+        self.camera.cancel_rep()
+
     @Slot()
     def resetRep(self):
-        """Clear the current calibration data so the user can start over."""
+
         self.camera.reset_rep()
 
-    @Slot(str, result="QVariantMap")
-    def saveRep(self, name):
-        """Save the captured reps as a new gesture template with the given name."""
+    @Slot(str, str, result="QVariantMap")
+    def saveRep(self, name, gesture_id):
+
         try:
-            return self.camera.save_rep(name)
+            return self.camera.save_rep(name, gesture_id or None)
         except ValueError as error:
             return {"error": str(error)}
-
-    @Slot(result="QVariantList")
-    def listSavedGestures(self):
-        # FIXME: this should comes from self.gesture_store.list_saved_gestures()
-        return self.camera.list_saved_gestures()
-
-    @Slot(result="QVariantList")
-    def getLoadedSessionGestures(self):
-        return self.camera.loaded_session_gestures()
-
-    @Slot(str, result="QVariantMap")
-    def loadSavedGesture(self, gesture_id):
-        try:
-            return self.camera.load_saved_gesture(gesture_id)
-        except ValueError as error:
-            return {"error": str(error)}
-        except FileNotFoundError:
-            return {"error": "Selected gesture could not be found."}
