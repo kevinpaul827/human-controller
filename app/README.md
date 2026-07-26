@@ -1,165 +1,97 @@
 # App
 
-This directory contains the Python desktop app code for the project.
+This folder contains the Python desktop application for Human Controller.
 
-Repository build and packaging helpers live under `scripts/`, not in `app/`.
+The desktop app is responsible for:
 
-## Stack
+- creating the native Qt window
+- loading the frontend inside `QWebEngineView`
+- exposing Python bridge objects to the frontend through Qt WebChannel
+- managing camera/session state
+- optionally starting the local backend helper during preview mode
 
-- Python
-- PySide6
-- Pydantic (profile data validation)
-- NumPy and OpenCV (camera frame processing for pose estimation)
+For full-project setup, use the root [README](../README.md). This file is the app-specific companion guide.
 
-## Structure
+## Key Files
 
 ```text
-├── app/
-│   ├── backend_process.py
-│   ├── camera_overlay_widget.py
-│   ├── logging_utils.py
-│   ├── main.py
-│   ├── main_window.py
-│   ├── pose_processor.py
-│   ├── session_bridge.py
-│   ├── profile_demo.py
-│   ├── profile_manager/
-│   │   ├── manager.py
-│   │   ├── models.py
-│   │   └── exceptions.py
-│   ├── data/profiles/
-│   ├── requirements.txt
-│   ├── tests/
-│       ├── test_backend_process.py
-│       ├── test_main.py
-│       └── test_profile_manager.py
-│   └── unused/
-│       └── camera_reader.py
-├── backend/
-│   ├── dev_server.py
-│   └── perception/
-├── scripts/
-│   ├── build_macos_app.py
-│   ├── preview_local.py
-│   └── run_backend_dev.py
+app/
+├── main.py                  # App entry point
+├── main_window.py           # Main Qt window and frontend loading
+├── session_bridge.py        # Session page bridge between React and Python
+├── calibrate_bridge.py      # Calibration bridge
+├── profile_bridge.py        # Profile management bridge
+├── camera_overlay_widget.py # Native camera/pose overlay
+├── camera_manager.py        # Camera lifecycle and frame processing
+├── backend_process.py       # Starts/stops the local backend helper
+├── pose_processor.py        # Pose processing pipeline
+├── profile_manager/         # Profile loading, validation, persistence
+├── data/profiles/           # Saved patient profiles
+├── data/gestures/           # Saved gesture definitions
+└── tests/                   # Desktop app tests
 ```
 
-Plain English:
-- `main.py` is the app entry point.
-- `main_window.py` builds the main Qt window and loads the frontend.
-- `session_bridge.py` is the bridge between the web frontend and the Qt/camera side.
-- `camera_overlay_widget.py` draws the native desktop session preview and pose overlay.
-- `pose_processor.py` turns Qt camera frames into data the backend pose estimator can use on a worker thread.
-- `logging_utils.py` provides simple `info` / `debug` / `verbose` log gating for the desktop app.
-- `backend_process.py` starts and stops the small backend helper used in preview and packaged builds.
-- `scripts/` contains developer tooling such as packaging and local preview helpers.
+## How the Desktop App Fits In
 
-## Profile Manager
+The app sits between the React frontend and the Python backend code.
 
-Patient profiles are stored as versioned JSON files (`schemaVersion: 2`) under
-`app/data/profiles/`.
+- `main_window.py` loads either the built frontend files or a live Vite URL.
+- `main_window.py` registers `sessionBridge`, `calibrateBridge`, and `profileBridge` on a Qt `QWebChannel`.
+- the frontend calls those bridge objects from TypeScript services
+- the app manages the native preview overlay so the camera feed stays aligned with the session page
+- in preview mode, `backend_process.py` can start the local backend helper and wait for its `/health` endpoint
 
-Each profile stores a `keyBindings` map from calibrated `gesture_id` values to
-keyboard keys. Gesture recognition data remains separate under
-`app/data/gestures/`.
+Important detail: the session camera preview is not drawn by React. The frontend reports where the preview should appear, and the desktop app overlays the native Qt camera widget on top of the web page.
 
-### Run tests
+## Run the App
 
-```bash
-python -m unittest app.tests.test_profile_manager -v
-```
-
-### Run demo
-
-```bash
-python -m app.profile_demo
-```
-
-## Setup
-
-Create a virtual environment and install the dependencies:
-
-### macOS / Linux
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r app/requirements.txt
-pip install -r backend/requirements.txt
-pip install -r backend/matching_engine/requirements.txt
-```
-
-### Windows
-
-```bash
-python3 -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r app/requirements.txt
-pip install -r backend/requirements.txt
-pip install -r backend/matching_engine/requirements.txt
-```
-
-## Frontend Setup
-
-```bash
-cd frontend
-npm ci
-npm run build
-```
-
-For macOS packaged-app development:
-
-```bash
-make macos-app
-```
-
-The packaged app build is intended to include the desktop app, built frontend,
-and backend helper runtime in one macOS artifact.
-
-`make macos-app` now performs a clean PyInstaller rebuild, so newly added
-desktop modules are picked up without needing manual cache cleanup.
-
-After the first packaged build, rebuild the packaged app whenever frontend or
-Python desktop app changes:
-
-```bash
-make macos-app
-```
-
-## Running the Application
+From the repo root, after following the root setup instructions:
 
 ```bash
 python3 -m app.main
 ```
 
-For integrated local preview during development:
+This expects the frontend build to already exist in `frontend/dist`.
+
+If you want the main integrated development workflow instead, use:
+
+```bash
+make preview-local
+```
+
+That preview workflow starts:
+
+- the Vite dev server
+- the desktop app
+- the local backend helper
+
+## App-Specific Notes
+
+### Frontend requirement
+
+If `frontend/dist/index.html` is missing, the desktop app will not start and will ask you to run the frontend build first.
+
+### macOS camera permission
+
+On macOS, camera permission works best when the app is launched as the packaged `.app` bundle:
+
+```bash
+make macos-app
+open "dist/Human Controller.app"
+```
+
+For local preview on macOS, you may need to build the app bundle once before running:
 
 ```bash
 make macos-app
 make preview-local
 ```
 
-On Windows, GNU Make is optional; run the cross-platform supervisor directly:
+This matches the project-level macOS note in the root README.
 
-```powershell
-.\.venv\Scripts\python.exe scripts\preview_local.py
-```
+### Logging
 
-This loads the frontend from the Vite dev server and starts a temporary backend
-helper process under the desktop app.
-
-Desktop session preview behavior:
-- the React session page reports the preview viewport bounds to Qt
-- the desktop app positions a native overlay widget over that viewport
-- the overlay now renders the frame that was actually used for pose inference,
-  so the displayed image and landmarks stay synchronized
-
-The preview helper is mainly for development convenience:
-- frontend code updates live from Vite
-- backend helper code restarts automatically
-- desktop Python code inside the packaged macOS app still needs `make macos-app` again
-
-Desktop logging can be tuned with `HUMAN_CONTROLLER_LOG_LEVEL`:
+The preview flow supports desktop log levels through `HUMAN_CONTROLLER_LOG_LEVEL`:
 
 ```bash
 HUMAN_CONTROLLER_LOG_LEVEL=info make preview-local
@@ -168,36 +100,24 @@ HUMAN_CONTROLLER_LOG_LEVEL=verbose make preview-local
 HUMAN_CONTROLLER_LOG_LEVEL=silent make preview-local
 ```
 
-On macOS, the initial `make macos-app` step is required so the app runs with the
-bundle identity needed for camera permissions.
+## Tests
 
-## Camera permission notes
-
-- macOS packaged builds must include `NSCameraUsageDescription` in the app bundle `Info.plist` for Qt camera permission requests to work.
-- On Windows, camera access can still be blocked by `Settings > Privacy & security > Camera`, even if the app starts normally.
-
-For local macOS testing, create and open the development app bundle:
+Run the app checks from the repo root:
 
 ```bash
-make macos-app
-open "dist/Human Controller.app"
+make app-check
 ```
 
-If you changed frontend assets, rebuild the packaged app before testing it:
+Run a single test module if needed:
 
 ```bash
-make macos-app
-open "dist/Human Controller.app"
+python -m unittest app.tests.test_profile_manager -v
 ```
 
-If you already denied access before, reset the camera permission first:
+## Demo
+
+To run the profile demo:
 
 ```bash
-tccutil reset Camera
+python -m app.profile_demo
 ```
-
-## Before Opening a PR
-
-Please run the following checks locally before creating a pull request:
-
-- `make app-check`: compiles and runs Python tests for `app/`.
