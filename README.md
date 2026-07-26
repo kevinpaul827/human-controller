@@ -1,55 +1,43 @@
-# capstone-project-26t2-3900-w18b-date
+# Human Controller
 
-This repository is split into three main areas:
+Human Controller is a desktop middleware application that enables patients to control existing games using rehabilitation exercises through gesture-to-keyboard mapping.
 
-- `frontend/`: Vite + React + TypeScript web frontend.
-- `app/`: Python desktop app, Qt session bridge, backend launcher, and tests.
-- `backend/`: Pose-estimation and development backend helpers used by the desktop app.
+This repo combines:
 
-## Current Structure
+- a React frontend in `frontend/`
+- a PySide6 desktop shell in `app/`
+- Python backend and pose/matching code in `backend/`
+
+## Repo Layout
 
 ```text
 .
-├── app/
-│   ├── backend_process.py
-│   ├── camera_overlay_widget.py
-│   ├── logging_utils.py
-│   ├── main.py
-│   ├── main_window.py
-│   ├── pose_processor.py
-│   ├── session_bridge.py
-│   ├── profile_manager/
-│   ├── data/profiles/
-│   ├── requirements.txt
-│   └── tests/
-├── backend/
-│   ├── camera_service/
-│   │   └── camera_feed.py
-│   ├── dev_server.py
-│   ├── matching_engine/
-│   ├── perception/
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.ts
-├── .github/workflows/
-│   ├── app-check.yml
-│   ├── backend-check.yml
-│   ├── frontend-check.yml
-│   └── macos-app-build.yml
-├── scripts/
-│   ├── build_macos_app.py
-│   ├── preview_local.py
-│   └── run_backend_dev.py
-└── Makefile
+├── app/        # Desktop app, Qt bridges, camera/session logic, tests
+├── backend/    # Dev backend helper, pose estimation, matching engine
+├── frontend/   # React + TypeScript UI
+├── scripts/    # Local preview and macOS packaging helpers
+└── Makefile    # Common commands
 ```
 
-## Running the Application
+## How the Parts Fit Together
 
-Create a virtual environment and install the dependencies:
+At runtime, the React app is loaded inside a Qt `QWebEngineView`.
 
-### macOS / Linux
+- `frontend/` renders the UI and calls Python bridge objects through Qt WebChannel.
+- `app/` owns the native window, camera lifecycle, overlays, profile loading, and bridge objects such as `sessionBridge`, `calibrateBridge`, and `profileBridge`.
+- `backend/` contains the backend helper plus matching/perception code used by the desktop flow.
+
+In local preview mode:
+
+- Vite serves the frontend at `http://127.0.0.1:5173`
+- the desktop app loads that URL instead of built files
+- the desktop app also auto-starts the local backend helper
+
+Important detail: the session camera preview is not drawn by React. The frontend reports where the preview should appear, and the desktop app overlays the native Qt camera widget on top of the web page.
+
+## Setup
+
+macOS / Linux:
 
 ```bash
 python3 -m venv .venv
@@ -57,110 +45,98 @@ source .venv/bin/activate
 pip install -r app/requirements.txt
 pip install -r backend/requirements.txt
 pip install -r backend/matching_engine/requirements.txt
-```
-
-### Windows
-
-```bash
-python3 -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r app/requirements.txt
-pip install -r backend/requirements.txt
-pip install -r backend/matching_engine/requirements.txt
-```
-
-### Frontend Setup
-
-```bash
 cd frontend
 npm ci
 npm run build
+cd ..
+python3 -m app.main
 ```
 
-## Development Workflows
+Windows PowerShell:
 
-| Workflow | Command | Use it when | What it does | What updates quickly |
-| --- | --- | --- | --- | --- |
-| Packaged build | `make macos-app` | You changed desktop Python code, want a real app bundle, or need a packaged test build | Builds `Human Controller.app` with the desktop app, bundled frontend, backend helper runtime, and bundled backend assets | Nothing live; this is a rebuild step |
-| Local preview | `make preview-local` | You want to iterate in the real desktop app while getting live frontend updates | Starts Vite, launches the desktop app in dev mode, and auto-starts a temporary backend helper | Frontend changes are prompt/live |
-| Direct Python launch | `python3 -m app.main` | Non-macOS local runs or basic debugging without bundle-specific macOS behavior | Launches the desktop app directly from Python | No live frontend unless separately wired |
+```powershell
+python3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r app/requirements.txt
+pip install -r backend/requirements.txt
+pip install -r backend/matching_engine/requirements.txt
+cd frontend
+npm ci
+npm run build
+cd ..
+python3 -m app.main
+```
 
-Plain English:
-- `make macos-app` is the packaging/build workflow.
-- `make preview-local` is the easiest day-to-day development workflow when you want the desktop app and web UI running together.
-- The `scripts/` folder contains helper tools for packaging and preview; it is not app runtime code by itself.
-- The desktop session preview is rendered by a native Qt overlay widget that stays aligned with the React session page.
+`backend/matching_engine/requirements.txt` is required for backend tests because it installs `pytest`.
 
-On Windows, GNU Make is optional. Run the equivalent workflow from the repository root:
+## Build the App
+
+After following the setup instructions to finish the installation, you can build the desktop app for macOS:
+
+```bash
+make macos-app
+open "dist/Human Controller.app"
+```
+
+`make macos-app` creates `dist/Human Controller.app`.
+
+## Daily Development
+
+Use this when you are actively working on the project and want the frontend, desktop app, and backend helper to run together:
+
+```bash
+make preview-local
+```
+
+This is the main integrated development workflow. It starts:
+
+- the Vite dev server
+- the desktop app
+- the local backend helper
+
+Frontend edits update live. Backend edits are auto-restarted by the preview script.
+
+On Windows, if you do not use `make`:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\preview_local.py
 ```
 
-Optional logging uses the same flags as the Make target:
+If you want more detail about the desktop shell itself, the Qt bridges, or app-specific notes, see [`app/README.md`](app/README.md).
 
-```powershell
-.\.venv\Scripts\python.exe scripts\preview_local.py --log-fe --log-be
-```
+### macOS Camera Note
 
-Notes:
+On macOS, camera permission is tied to the real `.app` bundle identity.
 
-- On macOS, run `make macos-app` once before `make preview-local` so camera permission works through the real app bundle identity.
-- `make macos-app` performs a clean PyInstaller rebuild and refreshes the packaged app bundle from the current source tree.
-- `make preview-local` also expects the backend Python dependencies above to be installed, because it auto-starts the preview backend helper.
-- With `make preview-local`:
-  - frontend changes: prompt/live
-  - backend changes: auto-restart after save
-  - desktop Python changes: still need `make macos-app` on macOS
-
-- Desktop app log verbosity can also be controlled with `HUMAN_CONTROLLER_LOG_LEVEL`:
-
-```bash
-HUMAN_CONTROLLER_LOG_LEVEL=info make preview-local
-HUMAN_CONTROLLER_LOG_LEVEL=debug make preview-local
-HUMAN_CONTROLLER_LOG_LEVEL=verbose make preview-local
-```
-
-- If `preview-local` startup fails, it attempts to clean up the frontend, desktop app, and their child processes before exiting.
-
-### macOS Camera Permission Fix
-
-If macOS denies camera access, launch the desktop app as a real `.app` bundle so it can provide `NSCameraUsageDescription`:
-
-```bash
-make macos-app
-open "dist/Human Controller.app"
-```
-
-If you changed frontend assets, rebuild the packaged app before testing the bundle:
-
-```bash
-make macos-app
-open "dist/Human Controller.app"
-```
-
-If you changed desktop Python modules on macOS, rebuild the packaged app before running `make preview-local` again:
+If `make preview-local` cannot access the camera, build the app once first:
 
 ```bash
 make macos-app
 make preview-local
 ```
 
-If you already denied access earlier, reset camera permission and relaunch:
+If camera access was previously denied:
 
 ```bash
 tccutil reset Camera
 ```
 
+### Checks
 
-## Checks
+From the repo root:
 
-- `make app-check`: compiles and runs Python tests for `app/`.
-- `make backend-check`: runs a compile check for `backend/`.
+```bash
+make app-check
+make backend-check
+cd frontend && npm run lint
+cd frontend && npm run typecheck
+```
 
-GitHub Actions currently enforce:
+### Useful Commands
 
-- `frontend-check.yml` for frontend lint, formatting, and type checks.
-- `app-check.yml` for the Python app checks.
-- `backend-check.yml` for backend dependency install and compile validation.
-- `macos-app-build.yml` for packaged macOS app build and downloadable artifact upload.
+```bash
+make preview-local   # full local preview flow
+make macos-app       # build macOS desktop bundle
+make app-check       # compile + test app/
+make backend-check   # compile + test backend/
+```
