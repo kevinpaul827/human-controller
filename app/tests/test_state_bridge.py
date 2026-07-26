@@ -42,9 +42,13 @@ class StateBridgeThresholdTests(unittest.TestCase):
 
     def test_create_profile_selects_the_new_profile(self):
         created = self.bridge.createProfile("New Patient")
+        profile = next(
+            item
+            for item in created["patients"]
+            if item["patientName"] == "New Patient"
+        )
 
-        self.assertEqual(created["selectedPatientId"], created["patients"][-1]["patientId"])
-        self.assertEqual(created["patients"][-1]["patientName"], "New Patient")
+        self.assertEqual(created["selectedPatientId"], profile["patientId"])
 
 
 if __name__ == "__main__":

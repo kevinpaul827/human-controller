@@ -98,20 +98,20 @@ class SavedGesture:
         }
 
     def to_template(self):
-        from backend.matching_engine.core.bones import parse_feature_key
+        from backend.matching_engine.core.angles import AngleKey
         from backend.matching_engine.core.types import GestureTemplate
 
         return GestureTemplate(
             name=self.name,
             gesture_id=self.gesture_id,
             type=self.type,
-            active_joints=[parse_feature_key(joint) for joint in self.active_joints],
+            active_joints=[AngleKey(joint) for joint in self.active_joints],
             target_angles={
-                parse_feature_key(joint): float(angle)
+                AngleKey(joint): float(angle)
                 for joint, angle in self.target_angles.items()
             },
             tolerance_deg={
-                parse_feature_key(joint): float(angle)
+                AngleKey(joint): float(angle)
                 for joint, angle in self.tolerance_deg.items()
             },
             trajectory=self.trajectory,

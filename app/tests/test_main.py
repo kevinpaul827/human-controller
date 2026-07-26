@@ -169,9 +169,10 @@ class MainEntryPointTests(unittest.TestCase):
     ):
         exit_mock.side_effect = SystemExit(1)
 
-        with patch("app.main.frontend_source_exists", return_value=True):
-            with self.assertRaises(SystemExit):
-                main.main()
+        with patch.object(main.sys, "platform", "darwin"):
+            with patch("app.main.frontend_source_exists", return_value=True):
+                with self.assertRaises(SystemExit):
+                    main.main()
 
         app_ctor_mock.assert_called_once()
         critical_mock.assert_called_once()
@@ -195,9 +196,10 @@ class MainEntryPointTests(unittest.TestCase):
         window_ctor_mock.return_value = fake_window
         exit_mock.side_effect = SystemExit(0)
 
-        with patch("app.main.frontend_source_exists", return_value=True):
-            with self.assertRaises(SystemExit):
-                main.main()
+        with patch.object(main.sys, "platform", "darwin"):
+            with patch("app.main.frontend_source_exists", return_value=True):
+                with self.assertRaises(SystemExit):
+                    main.main()
 
         critical_mock.assert_not_called()
         window_ctor_mock.assert_called_once()
