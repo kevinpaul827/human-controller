@@ -7,6 +7,7 @@ from app.gesture_matcher import GestureMatcher
 from app.gesture_store import GestureStore
 from app.profile_manager import PatientProfile, ProfileManager
 from app.session_bridge import SessionBridge, SessionState
+from app.state_bridge import StateBridge
 
 
 class FakeSignal:
@@ -108,8 +109,15 @@ class SessionProfileFlowTests(unittest.TestCase):
         )
         self.assertEqual(result["data"]["missingGestureIds"], ["missing_gesture"])
         self.assertEqual(
-            self.camera.gesture_matcher._templates_by_id,
-            {"right_arm_raise": "Right Arm Raise"},
+            self.camera.gesture_matcher.active_gesture_ids,
+            frozenset({"right_arm_raise", "missing_gesture"}),
+        )
+        self.assertEqual(
+            [
+                template.gesture_id
+                for template in self.camera.gesture_matcher._state_templates
+            ],
+            ["right_arm_raise"],
         )
 
     def test_start_session_emits_profile_key_with_match(self) -> None:
@@ -156,6 +164,96 @@ class SessionProfileFlowTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(self.bridge.state, SessionState.ERROR)
         self.assertIsNone(self.camera.active_bridge)
+
+
+class StateDrivenFakeCamera:
+    def __init__(self) -> None:
+        self.cameraStarted = FakeSignal()
+        self.cameraStopped = FakeSignal()
+        self.errorOccurred = FakeSignal()
+        self.previewFrameReady = FakeSignal()
+        self.frameProcessed = FakeSignal()
+        self.gestureMatchUpdated = FakeSignal()
+        self.previewAspectRatioChanged = FakeSignal()
+        self.active_bridge = None
+        self.runtime_configuration = None
+
+    def configure_runtime(self, configuration) -> None:
+        self.runtime_configuration = configuration
+
+    def start(self, bridge: str) -> None:
+        self.active_bridge = bridge
+        self.cameraStarted.emit(bridge)
+
+    def stop(self, bridge: str) -> None:
+        if self.active_bridge != bridge:
+            return
+        self.active_bridge = None
+        self.cameraStopped.emit(bridge)
+
+
+class StateDrivenSessionProfileFlowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        root = Path(self.temp_dir.name)
+        self.profile_manager = ProfileManager(root / "profiles")
+        self.gesture_store = GestureStore(root / "gestures")
+        self.gesture_store.create_or_update(
+            gesture_id="right_arm_raise",
+            name="Right Arm Raise",
+            regions=["upper_body"],
+            active_joints=["L_SHOULDER_ABD"],
+            target_angles={"L_SHOULDER_ABD": 90},
+        )
+        self.state_bridge = StateBridge(
+            root,
+            self.gesture_store,
+            self.profile_manager,
+        )
+        profile = self.profile_manager.load("patient-a")
+        profile.key_bindings = {
+            "right_arm_raise": "ArrowUp",
+            "missing_gesture": "M",
+        }
+        self.profile_manager.save(profile)
+        self.camera = StateDrivenFakeCamera()
+        self.state_bridge.runtimeConfigurationChanged.connect(
+            self.camera.configure_runtime
+        )
+        self.bridge = SessionBridge(self.camera, self.state_bridge)
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_selected_profile_drives_runtime_and_session_mapping(self) -> None:
+        result = self.bridge.loadProfile("patient-a")
+        self.bridge.startSession()
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["data"]["patientId"], "patient-a")
+        self.assertEqual(
+            result["data"]["gestures"],
+            [
+                {
+                    "gestureId": "right_arm_raise",
+                    "name": "Right Arm Raise",
+                    "key": "ArrowUp",
+                }
+            ],
+        )
+        self.assertEqual(result["data"]["missingGestureIds"], ["missing_gesture"])
+        self.assertEqual(
+            self.camera.runtime_configuration["bindings"],
+            {
+                "right_arm_raise": "ArrowUp",
+                "missing_gesture": "M",
+            },
+        )
+        self.assertEqual(self.bridge.state, SessionState.LIVE)
+        self.assertEqual(
+            self.bridge.getLoadedSessionGestures()[0]["gestureId"],
+            "right_arm_raise",
+        )
 
 
 if __name__ == "__main__":

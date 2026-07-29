@@ -33,6 +33,8 @@ def _install_pyside6_stub():
             )
         },
     )
+    qtcore_module.QLineF = type("QLineF", (), {})
+    qtcore_module.QPointF = type("QPointF", (), {})
     qtcore_module.QRectF = type("QRectF", (), {})
     qtcore_module.QUrl = type(
         "QUrl",
@@ -91,7 +93,17 @@ def _install_overlay_constants_stub():
     overlay_constants_module = ModuleType("app.overlay_constants")
     overlay_constants_module.MIN_VISIBILITY = 0.5
     overlay_constants_module.POSE_CONNECTIONS = []
+    overlay_constants_module.connections_for_angle_joints = lambda _joints: set()
+    overlay_constants_module.landmarks_for_angle_joints = lambda _joints: set()
     sys.modules["app.overlay_constants"] = overlay_constants_module
+
+
+def _install_picture_in_picture_stub():
+    picture_in_picture_module = ModuleType("app.picture_in_picture_window")
+    picture_in_picture_module.PictureInPictureWindow = type(
+        "PictureInPictureWindow", (), {}
+    )
+    sys.modules["app.picture_in_picture_window"] = picture_in_picture_module
 
 
 try:
@@ -110,9 +122,13 @@ except Exception:
 # numpy, OpenCV, or MediaPipe just to import the window module graph.
 _install_pose_processor_stub()
 _install_overlay_constants_stub()
+_install_picture_in_picture_stub()
 
 from app import main
 from app import main_window
+
+# Do not leak the lightweight import stub into overlay-specific test modules.
+sys.modules.pop("app.overlay_constants", None)
 
 
 class FrontendPathTests(unittest.TestCase):
@@ -168,9 +184,10 @@ class MainEntryPointTests(unittest.TestCase):
     ):
         exit_mock.side_effect = SystemExit(1)
 
-        with patch("app.main.frontend_source_exists", return_value=True):
-            with self.assertRaises(SystemExit):
-                main.main()
+        with patch.object(main.sys, "platform", "darwin"):
+            with patch("app.main.frontend_source_exists", return_value=True):
+                with self.assertRaises(SystemExit):
+                    main.main()
 
         app_ctor_mock.assert_called_once()
         critical_mock.assert_called_once()
@@ -192,14 +209,14 @@ class MainEntryPointTests(unittest.TestCase):
         fake_window = MagicMock()
         app_ctor_mock.return_value = fake_app
         window_ctor_mock.return_value = fake_window
-        exit_mock.side_effect = SystemExit(0)
 
-        with patch("app.main.frontend_source_exists", return_value=True):
-            with self.assertRaises(SystemExit):
-                main.main()
+        with patch.object(main.sys, "platform", "darwin"):
+            with patch("app.main.frontend_source_exists", return_value=True):
+                self.assertEqual(main.main(), 0)
 
         critical_mock.assert_not_called()
         window_ctor_mock.assert_called_once()
         fake_window.show.assert_called_once()
         fake_app.exec.assert_called_once()
-        exit_mock.assert_called_once_with(0)
+        fake_window.shutdown.assert_called_once()
+        exit_mock.assert_not_called()

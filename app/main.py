@@ -12,6 +12,14 @@ from .main_window import (
 def main():
     app = QApplication(sys.argv)
 
+    if sys.platform not in {"darwin", "win32"}:
+        QMessageBox.critical(
+            None,
+            "Unsupported platform",
+            "Human Controller supports only macOS and Windows.",
+        )
+        sys.exit(1)
+
     if not frontend_source_exists():
         QMessageBox.critical(
             None,
@@ -30,8 +38,11 @@ def main():
 
     window.show()
 
-    sys.exit(app.exec())
+    try:
+        return app.exec()
+    finally:
+        window.shutdown()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

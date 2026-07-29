@@ -1,4 +1,5 @@
 import sys
+import time
 
 from PySide6.QtCore import QCameraPermission, QCoreApplication, QElapsedTimer, QObject, QThread, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QImage
@@ -7,11 +8,14 @@ from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, Q
 from backend.matching_engine import AngleKey, TemplateBuilder
 from backend.matching_engine.core.angles import reduce_joints
 
+from .calibration_capture import CalibrationCaptureController, CapturePhase
 from .gesture_matcher import GestureMatcher
 from .gesture_regions import infer_gesture_regions
 from .gesture_store import SavedGesture
+from .key_injector import KeyInjectionError, KeyInjector
 from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
+from .trigger_controller import TriggerController
 
 # CameraManager handles both calibration and live camera sessions.
 # It starts/stops the camera, processes video frames, and sends events for the UI.
@@ -34,6 +38,7 @@ class CameraManager(QObject):
     cameraStopped = Signal(str)
     errorOccurred = Signal(str, str)
 
+    previewFrameReady = Signal(QImage, int)
     frameProcessed = Signal(QImage, dict)
     gestureMatchUpdated = Signal(dict)
     calibrationUpdated = Signal(dict)
@@ -41,7 +46,7 @@ class CameraManager(QObject):
     processFrame = Signal(object, int)
     closePoseProcessor = Signal()
 
-    def __init__(self):
+    def __init__(self, gestures_dir=None, key_injector=None):
         super().__init__()
         self.active_camera = None
         self.active_bridge = None
@@ -53,9 +58,12 @@ class CameraManager(QObject):
         self._stopping = False
         self._frame_log_emitted = False
         self._pending_pose_frame = QImage()
+        self._pending_pose_timestamp_ms = -1
         self._preview_aspect_ratio = 4 / 3
 
-        self.gesture_matcher = GestureMatcher()
+        self.gesture_matcher = GestureMatcher(gestures_dir) if gestures_dir else GestureMatcher()
+        self.key_injector = key_injector or KeyInjector()
+        self.trigger_controller = TriggerController()
         log_info(f"gesture matcher file: {self.gesture_matcher.__class__.__module__}")
         log_info(f"has angles_for_pose: {hasattr(self.gesture_matcher, 'angles_for_pose')}")
         self.template_builder = TemplateBuilder()
@@ -64,6 +72,8 @@ class CameraManager(QObject):
         self._use_session_gesture_subset = False
         self._calibration_frames = []
         self._calibration_reps = []
+        self._recording_rep = False
+        self.calibration_capture = CalibrationCaptureController()
         self.pose_processing = False
         self.pose_thread = QThread(self)
         self.pose_processor = PoseProcessor()
@@ -157,18 +167,68 @@ class CameraManager(QObject):
             if not self.create_camera():
                 return
 
+        self._release_injected_keys()
         self._refresh_gesture_matcher_templates()
+        self.trigger_controller.reset()
         self.camera_timer.restart()
         self._frame_log_emitted = False
         self._pending_pose_frame = QImage()
+        self._pending_pose_timestamp_ms = -1
         log_info("[camera_manager] starting camera session")
         self.active_camera.start()
 
+    @Slot("QVariantMap")
+    def configure_runtime(self, configuration):
+        self._release_injected_keys()
+        if self.active_bridge == "session":
+            self.gestureMatchUpdated.emit(
+                {
+                    "gestureId": None,
+                    "name": None,
+                    "score": 0.0,
+                    "timestamp": None,
+                    "matched": False,
+                    "hasTemplates": False,
+                    "gestureType": None,
+                    "triggered": False,
+                    "keyAction": "reset",
+                }
+            )
+        bindings = dict(configuration.get("bindings", {}))
+        self._session_key_bindings = bindings
+        self._loaded_session_gesture_ids = list(bindings)
+        self._use_session_gesture_subset = True
+        match_thresholds = {
+            str(gesture_id): float(threshold)
+            for gesture_id, threshold in dict(
+                configuration.get("matchThresholds", {})
+            ).items()
+        }
+        self.trigger_controller.configure(
+            bindings,
+            dict(configuration.get("settings", {})),
+            match_thresholds,
+        )
+        self.gesture_matcher.set_active_gestures(
+            bindings.keys(),
+            {
+                gesture_id: threshold / 100.0
+                for gesture_id, threshold in match_thresholds.items()
+            },
+        )
+        threshold = self.trigger_controller.settings["matchThreshold"] / 100.0
+        self.gesture_matcher.match_threshold = threshold
+
     def stop_camera(self):
         log_info("[camera_manager] stopping camera session")
+        self._release_injected_keys()
+        self.trigger_controller.reset()
         self._stopping = True
         self._active = False
         self._pending_pose_frame = QImage()
+        self._pending_pose_timestamp_ms = -1
+        self._recording_rep = False
+        self.calibration_capture.cancel()
 
         self.release_camera()
         stopping_bridge = self.active_bridge
@@ -194,9 +254,14 @@ class CameraManager(QObject):
         if self.active_bridge is None:
             return
         
+        self._release_injected_keys()
+        self.trigger_controller.reset()
         self._stopping = True
         self._active = False
         self._pending_pose_frame = QImage()
+        self._pending_pose_timestamp_ms = -1
+        self._recording_rep = False
+        self.calibration_capture.cancel()
 
         self.release_camera()
         stopping_bridge = self.active_bridge
@@ -238,6 +303,11 @@ class CameraManager(QObject):
         if self._stopping:
             return
         
+        self._release_injected_keys()
+        self.trigger_controller.reset()
+        self._recording_rep = False
+        self.calibration_capture.cancel()
+
         stopping_bridge = self.active_bridge
         self.active_bridge = None
         if stopping_bridge is not None:
@@ -258,9 +328,6 @@ class CameraManager(QObject):
         if not self._active or self.active_bridge is None:
             return
 
-        if self.pose_processing:
-            return
-        
         image = video_frame.toImage()
 
         if image.isNull():
@@ -278,6 +345,11 @@ class CameraManager(QObject):
         if timestamp_ms < 0:
             timestamp_ms = self.camera_timer.elapsed()
 
+        self.previewFrameReady.emit(image.copy(), int(timestamp_ms))
+
+        if self.pose_processing:
+            return
+
         if not self._frame_log_emitted:
             log_debug(
                 f"[camera_manager] received first frame {image.width()}x{image.height()} at {timestamp_ms}ms"
@@ -285,6 +357,7 @@ class CameraManager(QObject):
             self._frame_log_emitted = True
 
         self._pending_pose_frame = image.copy()
+        self._pending_pose_timestamp_ms = int(timestamp_ms)
         self.pose_processing = True
 
         self.processFrame.emit(self._pending_pose_frame.copy(), int(timestamp_ms))
@@ -292,6 +365,7 @@ class CameraManager(QObject):
     def handle_pose_estimated(self, pose):
         if not self._active or self.active_bridge is None:
             self._pending_pose_frame = QImage()
+            self._pending_pose_timestamp_ms = -1
             return
 
         if self._pending_pose_frame.isNull():
@@ -299,7 +373,14 @@ class CameraManager(QObject):
 
         try:
             if hasattr(self.gesture_matcher, "angles_for_pose"):
-                angles = self.gesture_matcher.angles_for_pose(pose)
+                active_angle_keys = (
+                    self.gesture_matcher.active_angle_keys
+                    if self.active_bridge == "session"
+                    else None
+                )
+                angles = self.gesture_matcher.angles_for_pose(
+                    pose, active_angle_keys
+                )
             elif hasattr(self.gesture_matcher, "feature_extractor") and hasattr(
                 self.gesture_matcher.feature_extractor, "to_angles"
             ):
@@ -322,8 +403,47 @@ class CameraManager(QObject):
             # so the user can capture them later as a calibration rep.
             if self.active_bridge == "calibrate":
                 self._append_calibration_frame(angles)
-            match_event = self.gesture_matcher.match_pose(pose)
-            self.gestureMatchUpdated.emit(match_event.to_dict())
+                if self._recording_rep:
+                    captured = self.calibration_capture.update(
+                        angles, time.monotonic()
+                    )
+                    if captured:
+                        self._finalize_automatic_rep()
+                    else:
+                        self._emit_calibration_updated()
+            match_event = self.gesture_matcher.match_pose(pose, angles=angles)
+            match_payload = match_event.to_dict()
+            key_action = self.trigger_controller.process(match_payload)
+            if key_action is not None and self.active_bridge == "session":
+                try:
+                    if key_action["action"] == "press":
+                        self.key_injector.press(key_action["key"])
+                        match_payload.update(
+                            {
+                                "triggered": True,
+                                "key": key_action["key"],
+                                "keyAction": "press",
+                            }
+                        )
+                    else:
+                        self.key_injector.release(key_action["key"])
+                        match_payload.update(
+                            {
+                                "key": key_action["key"],
+                                "keyAction": "release",
+                            }
+                        )
+                except KeyInjectionError as error:
+                    self._release_injected_keys()
+                    self.trigger_controller.reset()
+                    match_payload.update(
+                        {
+                            "triggered": False,
+                            "key": key_action["key"],
+                            "injectionError": str(error),
+                        }
+                    )
+            self.gestureMatchUpdated.emit(match_payload)
         except Exception as error:
             log_info(f"[camera_manager] gesture matcher error: {error}")
 
@@ -333,17 +453,24 @@ class CameraManager(QObject):
                 "detected": False,
                 "landmarks": [],
                 "visibility": [],
+                "timestampMs": self._pending_pose_timestamp_ms,
             }
         else:
             log_verbose("[camera_manager] pose detected, forwarding live landmarks")
             payload = {
                 "detected": True,
                 "landmarks": pose.xyz,
-                "visibility": pose.visibility
+                "visibility": pose.visibility,
+                "timestampMs": self._pending_pose_timestamp_ms,
             }
+            if self.active_bridge == "session":
+                payload["renderJoints"] = sorted(
+                    joint.value for joint in self.gesture_matcher.bound_angle_keys
+                )
 
         frame = self._pending_pose_frame
         self._pending_pose_frame = QImage()
+        self._pending_pose_timestamp_ms = -1
         self.frameProcessed.emit(frame, payload)
 
     def handle_processing_finished(self):
@@ -352,6 +479,12 @@ class CameraManager(QObject):
     def handle_pose_error(self, message):
         log_info(f"[camera_manager] pose processor error: {message}")
         self.emit_camera_error(message)
+
+    def _release_injected_keys(self):
+        try:
+            self.key_injector.release_all()
+        except KeyInjectionError as error:
+            log_info(f"[camera_manager] failed to release injected key: {error}")
 
 ############################## Calibration Methods #############################
     def _loaded_session_gestures(self):
@@ -364,11 +497,15 @@ class CameraManager(QObject):
         return gestures
 
     def _refresh_gesture_matcher_templates(self):
+        self.gesture_matcher.reload_templates()
         if self._use_session_gesture_subset:
-            self.gesture_matcher.set_saved_gestures(self._loaded_session_gestures())
+            self.gesture_matcher.set_active_gestures(
+                self._loaded_session_gesture_ids,
+                self.gesture_matcher.match_thresholds,
+            )
             return
 
-        self.gesture_matcher.reload_templates()
+        self.gesture_matcher.set_active_gestures(None)
 
     def list_saved_gestures(self):
         return self.gesture_matcher.store.list_gestures()
@@ -404,10 +541,11 @@ class CameraManager(QObject):
             raise ValueError("Gesture ID is required.")
 
         gesture = self.gesture_matcher.store.load(resolved_gesture_id)
-        if resolved_gesture_id not in self._loaded_session_gesture_ids:
-            self._loaded_session_gesture_ids.append(resolved_gesture_id)
-        self._use_session_gesture_subset = True
-        self._refresh_gesture_matcher_templates()
+        if resolved_gesture_id not in self._session_key_bindings:
+            raise ValueError(
+                "Assign this movement a profile key binding before loading it "
+                "for a session."
+            )
         return {
             "gesture": gesture.to_summary(),
             "loadedGestures": self.loaded_session_gestures(),
@@ -419,12 +557,28 @@ class CameraManager(QObject):
         self._calibration_frames.append(angles)
 
     def _emit_calibration_updated(self):
+        now = time.monotonic()
         self.calibrationUpdated.emit(
             {
                 "repCount": len(self._calibration_reps),
-                "capturing": self.active_bridge == "calibrate" and self._active,
+                "capturing": self._recording_rep,
+                "phase": self.calibration_capture.phase.value,
+                "countdownRemaining": self.calibration_capture.remaining_seconds(now),
             }
         )
+
+    def _finalize_automatic_rep(self):
+        frames = list(self.calibration_capture.frames)
+        if not frames:
+            self.calibration_capture.cancel()
+            self._recording_rep = False
+            self._emit_calibration_updated()
+            return
+
+        self._calibration_reps.append(frames)
+        self._calibration_frames = []
+        self._recording_rep = False
+        self._emit_calibration_updated()
 
     def start_calibration(self):
         """Start a new calibration session.
@@ -434,7 +588,39 @@ class CameraManager(QObject):
         """
         self._calibration_frames = []
         self._calibration_reps = []
+        self._recording_rep = False
+        self.calibration_capture.reset()
         self._emit_calibration_updated()
+
+    def start_rep(self, recording_seconds=10.0):
+        if self.active_bridge != "calibrate" or not self._active:
+            raise ValueError("Wait for the camera to be ready before recording.")
+        self._calibration_frames = []
+        self.calibration_capture.start(time.monotonic(), recording_seconds)
+        self._recording_rep = True
+        self._emit_calibration_updated()
+
+    def cancel_rep(self):
+        self._calibration_frames = []
+        self._recording_rep = False
+        self.calibration_capture.cancel()
+        self._emit_calibration_updated()
+
+    def stop_rep(self):
+        if not self._recording_rep:
+            raise ValueError("Start recording before stopping this rep.")
+        self._recording_rep = False
+        frames = list(self.calibration_capture.frames or self._calibration_frames)
+        if not frames:
+            self.calibration_capture.cancel()
+            self._emit_calibration_updated()
+            raise ValueError("Hold a pose first before capturing a rep.")
+
+        self.calibration_capture.phase = CapturePhase.CAPTURED
+        self._calibration_frames = frames
+        result = self.capture_rep()
+        self._calibration_reps[-1] = frames
+        return result
 
     def capture_rep(self):
         """Capture the current held pose as one calibration rep.
@@ -442,6 +628,8 @@ class CameraManager(QObject):
         The method averages the saved pose frames for this rep and stores the
         result. It also clears the current capture frames so the next rep can be recorded.
         """
+        if self._recording_rep:
+            return self.stop_rep()
         if not self._calibration_frames:
             raise ValueError("Hold a pose first before capturing a rep.")
 
@@ -466,10 +654,12 @@ class CameraManager(QObject):
         """
         self._calibration_frames = []
         self._calibration_reps = []
+        self._recording_rep = False
+        self.calibration_capture.reset()
         self._emit_calibration_updated()
 
-    def save_rep(self, name):
-        """Save the captured reps as a new gesture template.
+    def save_rep(self, name, gesture_id=None):
+        """Save the captured reps as a new or re-recorded gesture template.
 
         The given name is required. Saved reps are converted into a gesture and
         stored for later matching.
@@ -482,33 +672,51 @@ class CameraManager(QObject):
             log_info("[camera_manager.save_rep] aborted: no captured reps available")
             raise ValueError("Capture at least one rep before saving.")
 
-        active_joints = [
-            joint
-            for joint in AngleKey
-            if any(rep.get(joint) is not None for rep in self._calibration_reps)
-        ]
-        template = self.template_builder.build(
-            [[rep] for rep in self._calibration_reps],
-            name=resolved_name,
-            active_joints=active_joints or None,
+        motion_mode = any(
+            isinstance(rep, list) for rep in self._calibration_reps
         )
+        if motion_mode:
+            reps = [
+                rep if isinstance(rep, list) else [rep]
+                for rep in self._calibration_reps
+            ]
+            template = self.template_builder.build(
+                reps,
+                name=resolved_name,
+                mode="motion",
+            )
+        else:
+            active_joints = [
+                joint
+                for joint in AngleKey
+                if any(
+                    rep.get(joint) is not None
+                    for rep in self._calibration_reps
+                )
+            ]
+            template = self.template_builder.build(
+                [[rep] for rep in self._calibration_reps],
+                name=resolved_name,
+                active_joints=active_joints or None,
+            )
+        active_joint_names = [joint.value for joint in template.active_joints]
         saved = SavedGesture(
-            gesture_id=template.gesture_id,
+            gesture_id=str(gesture_id or template.gesture_id),
             name=template.name,
             type=template.type,
-            regions=infer_gesture_regions([joint.value for joint in template.active_joints]),
-            active_joints=[joint.value for joint in template.active_joints],
+            regions=infer_gesture_regions(active_joint_names),
+            active_joints=active_joint_names,
             target_angles={joint.value: float(value) for joint, value in template.target_angles.items()},
             tolerance_deg={joint.value: float(value) for joint, value in template.tolerance_deg.items()},
             trajectory=list(template.trajectory),
             fps=int(template.fps),
         )
         self.gesture_matcher.store.save(saved)
-        if self._use_session_gesture_subset and saved.gesture_id not in self._loaded_session_gesture_ids:
-            self._loaded_session_gesture_ids.append(saved.gesture_id)
         self._refresh_gesture_matcher_templates()
         self._calibration_frames = []
         self._calibration_reps = []
+        self._recording_rep = False
+        self.calibration_capture.reset()
         self._emit_calibration_updated()
         return {
             "gestureId": saved.gesture_id,
@@ -530,6 +738,21 @@ class CameraManager(QObject):
             return
 
         self.emit_camera_error("Open your system camera privacy settings to allow access.")
+
+    @Slot()
+    def openAccessibilitySettings(self):
+        if sys.platform == "darwin":
+            QDesktopServices.openUrl(
+                QUrl(
+                    "x-apple.systempreferences:com.apple.preference.security?"
+                    "Privacy_Accessibility"
+                )
+            )
+            return
+
+        self.emit_camera_error(
+            "Open your system accessibility settings to allow keyboard control."
+        )
 
     @Slot()
     def shutdown(self):
