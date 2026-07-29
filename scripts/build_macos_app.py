@@ -11,22 +11,33 @@ PYINSTALLER_CONFIG_DIR = ROOT / ".pyinstaller"
 SPEC_PATH = ROOT / "human_controller.spec"
 FRONTEND_PATH = ROOT / "frontend" / "dist" / "index.html"
 POSE_MODEL_PATH = ROOT / "backend" / "perception" / "pose_landmarker_lite.task"
+MEDIAPIPE_LIBRARY_IN_BUNDLE = (
+    DIST_DIR
+    / "Human Controller.app"
+    / "Contents"
+    / "Frameworks"
+    / "mediapipe"
+    / "tasks"
+    / "c"
+    / "libmediapipe.dylib"
+)
 
 # This helper is the "package the whole desktop app" script.
 # It bundles the Qt app, built frontend files, and backend pose model into one
 # macOS `.app` so teammates can test the real desktop experience.
 
 SPEC_TEMPLATE = """# -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 
 hiddenimports = collect_submodules("PySide6")
 hiddenimports += collect_submodules("app")
 hiddenimports += collect_submodules("backend")
+mediapipe_binaries = collect_dynamic_libs("mediapipe")
 
 a = Analysis(
     ["run_app.py"],
     pathex=[],
-    binaries=[],
+    binaries=mediapipe_binaries,
     datas=[
         ("frontend/dist", "frontend/dist"),
         ("backend/perception/pose_landmarker_lite.task", "backend/perception"),
@@ -125,6 +136,13 @@ def main() -> int:
     result = subprocess.run(command, cwd=ROOT, env=env, check=False)
     if result.returncode != 0:
         return result.returncode
+
+    if not MEDIAPIPE_LIBRARY_IN_BUNDLE.exists():
+        print(
+            "Build failed validation: MediaPipe's native library was not "
+            f"bundled at {MEDIAPIPE_LIBRARY_IN_BUNDLE}"
+        )
+        return 1
 
     print(f"Created macOS app bundle at: {DIST_DIR / 'Human Controller.app'}")
     print('Launch it with: open "dist/Human Controller.app"')
