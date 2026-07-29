@@ -38,10 +38,12 @@ The app sits between the React frontend and the Python backend code.
 - `main_window.py` loads either the built frontend files or a live Vite URL.
 - `main_window.py` registers `sessionBridge`, `calibrateBridge`, and `profileBridge` on a Qt `QWebChannel`.
 - the frontend calls those bridge objects from TypeScript services
-- the app manages the native preview overlay so the camera feed stays aligned with the session page
+- the app manages the native calibration preview and Session picture-in-picture overlay
 - in preview mode, `backend_process.py` can start the local backend helper and wait for its `/health` endpoint
 
-Important detail: the session camera preview is not drawn by React. The frontend reports where the preview should appear, and the desktop app overlays the native Qt camera widget on top of the web page.
+Important detail: camera pixels are not drawn by React. Calibration reports an
+in-page viewport for the native Qt preview, while Session uses a separate
+always-on-top picture-in-picture window.
 
 ## Run the App
 

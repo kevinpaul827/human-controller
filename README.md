@@ -33,7 +33,9 @@ In local preview mode:
 - the desktop app loads that URL instead of built files
 - the desktop app also auto-starts the local backend helper
 
-Important detail: the session camera preview is not drawn by React. The frontend reports where the preview should appear, and the desktop app overlays the native Qt camera widget on top of the web page.
+Important detail: camera pixels are not drawn by React. Calibration reports an
+in-page viewport for the native Qt preview, while Session uses a separate
+always-on-top picture-in-picture window.
 
 ## Setup
 
