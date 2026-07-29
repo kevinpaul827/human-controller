@@ -38,9 +38,7 @@ type QtCalibrateBridgeObject = {
   resetRep?: () => void | Promise<void>;
   saveRep?: (
     name: string,
-    gestureIdOrCallback?:
-      | string
-      | ((result: QtSavedRepResult) => void),
+    gestureIdOrCallback?: string | ((result: QtSavedRepResult) => void),
     callback?: (result: QtSavedRepResult) => void,
   ) => QtSavedRepResult | Promise<QtSavedRepResult> | void;
   listSavedGestures?: (

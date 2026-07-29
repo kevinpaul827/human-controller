@@ -97,8 +97,7 @@ const bindingsForPatient = (
     ? Object.entries(patient.keyBindings).map(([gestureId, key]) => ({
         gestureId,
         key,
-        matchThreshold:
-          patient.matchThresholds[gestureId] ?? defaultThreshold,
+        matchThreshold: patient.matchThresholds[gestureId] ?? defaultThreshold,
       }))
     : [];
 
@@ -230,9 +229,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
               100,
               Math.max(
                 0,
-                Number(
-                  binding.matchThreshold ?? state.settings.matchThreshold,
-                ),
+                Number(binding.matchThreshold ?? state.settings.matchThreshold),
               ),
             ),
           },
@@ -433,11 +430,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
         });
       },
 
-      setPatientBinding: (
-        patientId: string,
-        gestureId: string,
-        key: string,
-      ) =>
+      setPatientBinding: (patientId: string, gestureId: string, key: string) =>
         setState((current) => {
           const patients = current.patients.map((patient) =>
             patient.patientId === patientId
@@ -457,9 +450,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
           if (current.selectedPatientId !== patientId) {
             return { ...current, patients };
           }
-          const patient = patients.find(
-            (item) => item.patientId === patientId,
-          );
+          const patient = patients.find((item) => item.patientId === patientId);
           return {
             ...current,
             patients,
@@ -490,9 +481,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
           if (current.selectedPatientId !== patientId) {
             return { ...current, patients };
           }
-          const patient = patients.find(
-            (item) => item.patientId === patientId,
-          );
+          const patient = patients.find((item) => item.patientId === patientId);
           return {
             ...current,
             patients,

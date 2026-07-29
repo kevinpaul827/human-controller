@@ -111,7 +111,7 @@ const Profiles = () => {
   const handleSetBinding = async (
     profile: PatientProfile,
     gestureId: string,
-      key: string,
+    key: string,
   ) => {
     try {
       if (desktopRuntime) {
