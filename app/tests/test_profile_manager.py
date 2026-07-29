@@ -24,6 +24,10 @@ def _sample_profile() -> PatientProfile:
             "gesture1": "ArrowUp",
             "elbow_bend": "A",
         },
+        match_thresholds={
+            "gesture1": 82,
+            "elbow_bend": 64,
+        },
     )
 
 
@@ -43,6 +47,7 @@ class ProfileManagerTests(unittest.TestCase):
         self.assertEqual(loaded.patient_id, "patient-a")
         self.assertEqual(loaded.schema_version, 2)
         self.assertEqual(loaded.key_bindings["gesture1"], "ArrowUp")
+        self.assertEqual(loaded.match_thresholds["gesture1"], 82)
 
     def test_saved_json_uses_key_bindings_alias(self) -> None:
         path = self.manager.save(self.sample_profile)
@@ -50,6 +55,7 @@ class ProfileManagerTests(unittest.TestCase):
 
         self.assertEqual(payload["schemaVersion"], 2)
         self.assertEqual(payload["keyBindings"]["elbow_bend"], "A")
+        self.assertEqual(payload["matchThresholds"]["elbow_bend"], 64)
         self.assertNotIn("gameProfiles", payload)
 
     def test_create_rejects_duplicate_profile(self) -> None:
@@ -90,6 +96,10 @@ class ProfileManagerTests(unittest.TestCase):
         self.assertEqual(duplicate.patient_id, "patient-a-copy")
         self.assertEqual(duplicate.patient_name, "Patient A Copy")
         self.assertEqual(duplicate.key_bindings, self.sample_profile.key_bindings)
+        self.assertEqual(
+            duplicate.match_thresholds,
+            self.sample_profile.match_thresholds,
+        )
 
     def test_duplicate_profile_rejects_unsafe_patient_id(self) -> None:
         self.manager.save(self.sample_profile)
@@ -166,6 +176,14 @@ class ProfileManagerTests(unittest.TestCase):
                 key_bindings={"gesture1": ""},
             )
 
+    def test_profile_rejects_match_threshold_outside_percentage_range(self) -> None:
+        with self.assertRaises(ValidationError):
+            PatientProfile(
+                patient_id="patient-a",
+                patient_name="Patient A",
+                match_thresholds={"gesture1": 101},
+            )
+
     def test_profile_rejects_legacy_game_profiles_field(self) -> None:
         with self.assertRaises(ValidationError):
             PatientProfile(
@@ -205,6 +223,7 @@ class ProfileManagerTests(unittest.TestCase):
         updated = self.manager.remove_key_binding("patient-a", "gesture1")
 
         self.assertNotIn("gesture1", updated.key_bindings)
+        self.assertNotIn("gesture1", updated.match_thresholds)
         self.assertNotIn(
             "gesture1",
             self.manager.load("patient-a").key_bindings,
@@ -221,6 +240,7 @@ class ProfileManagerTests(unittest.TestCase):
 
         self.assertIn("schemaVersion", properties)
         self.assertIn("keyBindings", properties)
+        self.assertIn("matchThresholds", properties)
         self.assertNotIn("gameProfiles", properties)
 
     def test_only_schema_version_two_is_supported(self) -> None:

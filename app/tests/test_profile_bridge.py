@@ -67,12 +67,24 @@ class ProfileBridgeTests(unittest.TestCase):
         self.assertEqual(profiles["data"][0]["patientName"], "Patient A")
         self.assertEqual(gestures["data"][0]["name"], "Right Arm Raise")
         self.assertEqual(gestures["data"][0]["gestureId"], "right_arm_raise")
+        self.assertEqual(gestures["data"][0]["type"], "state")
 
     def test_returns_error_response_for_invalid_profile(self) -> None:
         response = self._response(self.bridge.createProfile("", ""))
 
         self.assertFalse(response["ok"])
         self.assertIn("patient_name", response["error"])
+
+    def test_mutations_emit_profiles_changed(self) -> None:
+        changes = []
+        self.bridge.profilesChanged.connect(lambda: changes.append(True))
+
+        created = self._response(self.bridge.createProfile("Patient A", ""))["data"]
+        self.bridge.setKeyBinding(created["patientId"], "arm_raise", "A")
+        self.bridge.removeKeyBinding(created["patientId"], "arm_raise")
+        self.bridge.deleteProfile(created["patientId"])
+
+        self.assertEqual(len(changes), 4)
 
 
 if __name__ == "__main__":
