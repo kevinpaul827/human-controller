@@ -151,6 +151,28 @@ def _joint_range(window: AngleWindow, joint: AngleKey) -> float:
     return (max(vals) - min(vals)) if len(vals) >= 2 else 0.0
 
 
+def _covers_trajectory(
+    current: AngleWindow,
+    reference: AngleWindow,
+    joints: List[AngleKey],
+    tolerance_deg: float,
+) -> bool:
+    current_index = 0
+    for reference_frame in reference:
+        while current_index < len(current):
+            cost = _frame_cost(
+                current[current_index],
+                reference_frame,
+                joints,
+            )
+            if cost is not None and cost <= tolerance_deg:
+                break
+            current_index += 1
+        if current_index == len(current):
+            return False
+    return True
+
+
 class MotionMatcher:
     """S-WFDTW matcher for movement (trajectory) gesture templates."""
 
@@ -162,6 +184,8 @@ class MotionMatcher:
         open_begin: bool = False,
         min_amplitude_ratio: float = 0.0,
         end_pose_tol_deg: Optional[float] = None,
+        min_template_range_deg: float = 0.0,
+        coverage_tol_deg: Optional[float] = None,
     ) -> None:
         self.band = band
         self.default_tolerance_deg = default_tolerance_deg
@@ -169,6 +193,8 @@ class MotionMatcher:
         self.open_begin = open_begin
         self.min_amplitude_ratio = min_amplitude_ratio
         self.end_pose_tol_deg = end_pose_tol_deg
+        self.min_template_range_deg = min_template_range_deg
+        self.coverage_tol_deg = coverage_tol_deg
 
     def score(self, current: AngleWindow, template: GestureTemplate) -> float:
         ref = _trajectory_to_window(template.trajectory)
@@ -176,6 +202,12 @@ class MotionMatcher:
             return 0.0
 
         joints = _template_joints(template, ref)
+        if self.min_template_range_deg > 0.0:
+            joints = [
+                joint
+                for joint in joints
+                if _joint_range(ref, joint) >= self.min_template_range_deg
+            ]
         if not joints:
             return 0.0
 
@@ -191,6 +223,14 @@ class MotionMatcher:
                 rv, cv = end_ref.get(j), end_cur.get(j)
                 if rv is not None and cv is not None and abs(cv - rv) > self.end_pose_tol_deg:
                     return 0.0
+
+        if self.coverage_tol_deg is not None and not _covers_trajectory(
+            current,
+            ref,
+            joints,
+            self.coverage_tol_deg,
+        ):
+            return 0.0
 
         dist = dtw_distance(
             current,
