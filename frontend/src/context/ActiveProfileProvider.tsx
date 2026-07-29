@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { useAppState } from "../state/appStateContext";
 import ActiveProfileContext, {
   type ActiveProfile,
 } from "./ActiveProfileContext";
@@ -8,17 +9,16 @@ type ActiveProfileProviderProps = {
 };
 
 const ActiveProfileProvider = ({ children }: ActiveProfileProviderProps) => {
-  const [activeProfile, setActiveProfile] = useState<ActiveProfile | null>(
-    null,
-  );
-
+  const { selectedPatient, selectPatient, clearPatientSelection } =
+    useAppState();
   const value = useMemo(
     () => ({
-      activeProfile,
-      setActiveProfile,
-      clearActiveProfile: () => setActiveProfile(null),
+      activeProfile: selectedPatient,
+      setActiveProfile: (profile: ActiveProfile) =>
+        selectPatient(profile.patientId),
+      clearActiveProfile: clearPatientSelection,
     }),
-    [activeProfile],
+    [selectedPatient, selectPatient, clearPatientSelection],
   );
 
   return (

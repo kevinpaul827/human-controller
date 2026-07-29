@@ -1,99 +1,118 @@
-import { useState } from "react";
-import SettingSlider from "../components/SettingSlider";
-import useActiveProfile from "../hooks/useActiveProfile";
-import styles from "../styles/settings.module.css";
+import { useEffect, useState } from "react";
+import { RotateCcw, Save } from "lucide-react";
+import Page from "@/components/Page";
+import PageHeader from "@/components/PageHeader";
+import { BrutalButton } from "@/components/ui/brutal-button";
+import { BrutalBadge } from "@/components/ui/brutal-badge";
+import {
+  BrutalCard,
+  BrutalCardContent,
+  BrutalCardFooter,
+  BrutalCardHeader,
+  BrutalCardTitle,
+} from "@/components/ui/brutal-card";
+import { BrutalSlider } from "@/components/ui/brutal-slider";
+import { useAppState } from "@/state/appStateContext";
 
-const SMOOTHING_LABELS = ["Low", "Low-Med", "Medium", "Med-High", "High"];
-
-const DEFAULTS = {
-  matchThreshold: 75,
-  holdDuration: 1.5,
-  cooldown: 0.5,
-  smoothing: 2,
-};
+const EFFORT_LABELS = [
+  "Very gentle",
+  "Gentle",
+  "Balanced",
+  "Precise",
+  "Strict",
+];
 
 const Settings = () => {
-  const { activeProfile } = useActiveProfile();
-  const [matchThreshold, setMatchThreshold] = useState(DEFAULTS.matchThreshold);
-  const [holdDuration, setHoldDuration] = useState(DEFAULTS.holdDuration);
-  const [cooldown, setCooldown] = useState(DEFAULTS.cooldown);
-  const [smoothing, setSmoothing] = useState(DEFAULTS.smoothing);
+  const { settings, saveSettings } = useAppState();
+  const [values, setValues] = useState(settings);
+  useEffect(() => setValues(settings), [settings]);
 
-  const handleReset = () => {
-    setMatchThreshold(DEFAULTS.matchThreshold);
-    setHoldDuration(DEFAULTS.holdDuration);
-    setCooldown(DEFAULTS.cooldown);
-    setSmoothing(DEFAULTS.smoothing);
-  };
+  const isDirty = (Object.keys(settings) as (keyof typeof settings)[]).some(
+    (key) => values[key] !== settings[key],
+  );
+
+  const update = <K extends keyof typeof settings>(key: K, value: number) =>
+    setValues((current) => ({ ...current, [key]: value }));
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.heading}>
-          Sensitivity Settings
-          {activeProfile ? ` — ${activeProfile.patientName}` : ""}
-        </h1>
-        <p className={styles.subheading}>
-          Adjust thresholds for patients with different mobility levels
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        eyebrow="Difficulty"
+        title="How hard should it be?"
+        actions={
+          isDirty ? (
+            <BrutalBadge tone="accent">Unsaved changes</BrutalBadge>
+          ) : null
+        }
+      />
 
-      <div className={styles.card}>
-        <h2 className={styles.sectionTitle}>Global Settings</h2>
+      <BrutalCard className="max-w-3xl">
+        <BrutalCardHeader>
+          <BrutalCardTitle>Movement detection</BrutalCardTitle>
+        </BrutalCardHeader>
 
-        <div className={styles.sliderList}>
-          <SettingSlider
-            label="Match Threshold"
-            value={matchThreshold}
+        <BrutalCardContent className="flex flex-col gap-6">
+          <BrutalSlider
+            label="Default match threshold"
+            value={values.matchThreshold}
             min={0}
             max={100}
             step={1}
             formatValue={(value) => `${value}%`}
-            onChange={setMatchThreshold}
+            onChange={(value) => update("matchThreshold", value)}
           />
-          <SettingSlider
-            label="Hold Duration"
-            value={holdDuration}
+          <p className="-mt-4 text-sm font-medium text-muted-foreground">
+            Applied to new bindings. Existing movements can be adjusted
+            independently from the Session page.
+          </p>
+          <BrutalSlider
+            label="Hold duration"
+            value={values.holdDuration}
             min={0.5}
             max={3}
             step={0.1}
-            formatValue={(value) => `${value.toFixed(1)} sec`}
-            onChange={setHoldDuration}
+            formatValue={(value) => `${value.toFixed(1)}s`}
+            onChange={(value) => update("holdDuration", value)}
           />
-          <SettingSlider
-            label="Cooldown Between Triggers"
-            value={cooldown}
+          <BrutalSlider
+            label="Cooldown"
+            value={values.cooldown}
             min={0}
             max={2}
             step={0.1}
-            formatValue={(value) => `${value.toFixed(1)} sec`}
-            onChange={setCooldown}
+            formatValue={(value) => `${value.toFixed(1)}s`}
+            onChange={(value) => update("cooldown", value)}
           />
-          <SettingSlider
-            label="Smoothing Buffer"
-            value={smoothing}
+          <BrutalSlider
+            label="Steadiness"
+            value={values.smoothing}
             min={0}
             max={4}
             step={1}
-            formatValue={(value) => SMOOTHING_LABELS[value] ?? "Medium"}
-            onChange={setSmoothing}
+            formatValue={(value) => EFFORT_LABELS[value] ?? "Balanced"}
+            onChange={(value) => update("smoothing", value)}
           />
-        </div>
-      </div>
+        </BrutalCardContent>
 
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.resetButton}
-          onClick={handleReset}
-        >
-          Reset to Defaults
-        </button>
-        <button type="button" className={styles.saveButton}>
-          Save Changes
-        </button>
-      </div>
-    </div>
+        <BrutalCardFooter className="justify-end">
+          <BrutalButton
+            variant="outline"
+            onClick={() => setValues(settings)}
+            disabled={!isDirty}
+          >
+            <RotateCcw aria-hidden="true" />
+            Start over
+          </BrutalButton>
+          <BrutalButton
+            disabled={!isDirty}
+            onClick={() => saveSettings(values)}
+          >
+            <Save aria-hidden="true" />
+            Save
+          </BrutalButton>
+        </BrutalCardFooter>
+      </BrutalCard>
+    </Page>
   );
 };
 

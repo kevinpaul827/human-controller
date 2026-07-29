@@ -1,34 +1,47 @@
-import { Button, Paper, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import useDesktopCameraPreview from "../hooks/useDesktopCameraPreview";
+import { PictureInPicture2, Play, Square } from "lucide-react";
 import SessionCameraErrorModal from "./modals/SessionCameraErrorModal";
+import { BrutalButton } from "@/components/ui/brutal-button";
+import { BrutalBadge } from "@/components/ui/brutal-badge";
+import useActiveProfile from "@/hooks/useActiveProfile";
+import useDesktopCameraPreview from "@/hooks/useDesktopCameraPreview";
+import {
+  BrutalCard,
+  BrutalCardContent,
+  BrutalCardFooter,
+  BrutalCardHeader,
+  BrutalCardTitle,
+} from "@/components/ui/brutal-card";
 import sessionBridge from "../services/sessionBridge";
-import styles from "../styles/session.module.css";
 import type {
-  SessionGestureMapping,
+  GestureMatchEvent,
   SessionStatusEvent,
   SessionState,
 } from "../types/session";
 
-type SessionCameraProps = {
-  patientId?: string | null;
-  onGesturesLoaded?: (gestures: SessionGestureMapping[]) => void;
-};
-
-const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
+const SessionCamera = () => {
+  const { activeProfile } = useActiveProfile();
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [errorEvent, setErrorEvent] = useState<SessionStatusEvent | null>(null);
+  const [profileWarning, setProfileWarning] = useState<string | null>(null);
+  const [latestMatch, setLatestMatch] = useState<GestureMatchEvent | null>(
+    null,
+  );
+  const [starting, setStarting] = useState(false);
+  const [overlayVisible, setOverlayVisible] = useState(false);
   const isLive = sessionState === "live";
-  const { elapsed, previewAspectRatio, previewViewportRef, setElapsed } =
-    useDesktopCameraPreview({
-      bridge: sessionBridge,
-      isLive,
-    });
+  const { elapsed, setElapsed } = useDesktopCameraPreview({
+    bridge: sessionBridge,
+    isLive,
+  });
 
   useEffect(() => {
     const unsubscribe = sessionBridge.onSessionStatus((event) => {
+      setStarting(false);
       if (event.state === "error") {
         setElapsed(0);
+        setLatestMatch(null);
+        setOverlayVisible(false);
         setSessionState("idle");
         setErrorEvent(event);
         return;
@@ -36,6 +49,8 @@ const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
 
       if (event.state === "idle") {
         setElapsed(0);
+        setLatestMatch(null);
+        setOverlayVisible(false);
       }
       setErrorEvent(null);
       setSessionState(event.state);
@@ -44,19 +59,72 @@ const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
     return unsubscribe;
   }, [setElapsed]);
 
+  useEffect(
+    () =>
+      sessionBridge.onGestureMatch((event) => {
+        setLatestMatch((current) => {
+          if (event.keyAction === "release" || !event.matched) return null;
+          if (
+            current?.keyAction === "press" &&
+            current.gestureId === event.gestureId
+          ) {
+            return {
+              ...event,
+              triggered: true,
+              key: current.key,
+              keyAction: "press",
+            };
+          }
+          return event;
+        });
+        if (event.injectionError) {
+          setErrorEvent({
+            state: "error",
+            message: event.injectionError,
+            settingsTarget: "accessibility",
+          });
+        }
+      }),
+    [],
+  );
+
+  useEffect(() => sessionBridge.onOverlayVisibility(setOverlayVisible), []);
+
+  useEffect(() => {
+    setStarting(false);
+    setLatestMatch(null);
+    setProfileWarning(null);
+    return () => {
+      void sessionBridge.stopSession().catch(() => {});
+    };
+  }, [activeProfile?.patientId]);
+
   const handleStartSession = async () => {
     setErrorEvent(null);
     setElapsed(0);
+    setStarting(true);
     try {
-      if (patientId) {
-        const profileData = await sessionBridge.loadProfile(patientId);
-        onGesturesLoaded?.(profileData.gestures);
+      if (activeProfile) {
+        const profileData = await sessionBridge.loadProfile(
+          activeProfile.patientId,
+        );
+        if (profileData.gestures.length === 0) {
+          setProfileWarning(
+            "This profile has no usable movement key bindings yet.",
+          );
+        } else if (profileData.missingGestureIds.length > 0) {
+          setProfileWarning(
+            `${profileData.missingGestureIds.length} bound movement ${profileData.missingGestureIds.length === 1 ? "file is" : "files are"} missing; re-record ${profileData.missingGestureIds.length === 1 ? "it" : "them"} in Library.`,
+          );
+        } else {
+          setProfileWarning(null);
+        }
       } else {
-        onGesturesLoaded?.([]);
+        setProfileWarning(null);
       }
       await sessionBridge.startSession();
-      setSessionState("live");
     } catch (error) {
+      setStarting(false);
       setSessionState("error");
       setErrorEvent({
         state: "error",
@@ -73,6 +141,9 @@ const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
       setElapsed(0);
       await sessionBridge.stopSession();
       setSessionState("idle");
+      setLatestMatch(null);
+      setOverlayVisible(false);
+      return true;
     } catch (error) {
       setSessionState("error");
       setErrorEvent({
@@ -82,12 +153,17 @@ const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
             ? error.message
             : "Unable to stop the desktop-managed session.",
       });
+      return false;
     }
   };
 
   const handleConfigure = async () => {
     try {
-      await sessionBridge.openCameraSettings();
+      if (errorEvent?.settingsTarget === "accessibility") {
+        await sessionBridge.openAccessibilitySettings();
+      } else {
+        await sessionBridge.openCameraSettings();
+      }
     } catch (error) {
       setErrorEvent({
         state: "error",
@@ -99,60 +175,108 @@ const SessionCamera = ({ patientId, onGesturesLoaded }: SessionCameraProps) => {
     }
   };
 
-  const handleCloseError = async () => {
+  const handleToggleOverlay = async () => {
     try {
-      await handleStopSession();
-    } finally {
+      await sessionBridge.setOverlayVisible(!overlayVisible);
+    } catch (error) {
+      setErrorEvent({
+        state: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to change the desktop game overlay.",
+      });
+    }
+  };
+
+  const handleCloseError = async () => {
+    if (await handleStopSession()) {
       setErrorEvent(null);
     }
   };
 
   return (
     <>
-      <div className={styles.cameraSection}>
-        <Paper className={`${styles.dashboardPanel} ${styles.cameraPanel}`}>
-          <div className={styles.cameraFeed}>
-            <div
-              className={`${styles.cameraHeader} ${isLive ? styles.recordingBoxActive : ""}`}
-            >
-              <Typography className={styles.recordingTitle}>
-                {isLive ? "● RECORDING" : "Camera idle"}
-              </Typography>
-              <Typography className={styles.recordingCaption}>
-                {isLive
-                  ? `Session camera is active (${elapsed.toFixed(1)}s elapsed)`
-                  : "Press Start Session to begin the live camera session."}
-              </Typography>
-            </div>
-            <div className={styles.cameraFeedContent}>
-              <div
-                ref={previewViewportRef}
-                className={styles.cameraViewport}
-                style={{ aspectRatio: String(previewAspectRatio) }}
-              >
-                {!isLive ? (
-                  <Typography className={styles.cameraPlaceholder}>
-                    Idle camera feed
-                  </Typography>
-                ) : null}
-              </div>
-            </div>
+      <BrutalCard className="self-start overflow-hidden">
+        <BrutalCardHeader>
+          <BrutalCardTitle>Session controls</BrutalCardTitle>
+          {isLive ? (
+            <BrutalBadge tone="destructive" dot>
+              REC {elapsed.toFixed(1)}s
+            </BrutalBadge>
+          ) : starting ? (
+            <BrutalBadge dot>Starting</BrutalBadge>
+          ) : (
+            <BrutalBadge>Idle</BrutalBadge>
+          )}
+        </BrutalCardHeader>
+
+        <BrutalCardContent className="flex items-start gap-4">
+          <PictureInPicture2
+            className="mt-1 size-7 shrink-0"
+            aria-hidden="true"
+          />
+          <div className="space-y-1">
+            <p className="font-bold">
+              {isLive ? "Game overlay running" : "Ready to start"}
+            </p>
+            <p className="text-sm font-semibold text-muted-foreground">
+              {isLive
+                ? "Switch to your game; the separate camera window stays on top."
+                : "Starting the session opens the separate camera overlay."}
+            </p>
           </div>
-        </Paper>
-        <div className={styles.cameraControls}>
-          <Button
-            variant="contained"
-            size="large"
-            className={styles.startButton}
-            onClick={isLive ? handleStopSession : handleStartSession}
-          >
-            {isLive ? "Stop Session" : "Start Session"}
-          </Button>
-        </div>
-      </div>
+        </BrutalCardContent>
+
+        <BrutalCardFooter className="flex-wrap justify-between gap-3">
+          <span className="min-w-0 flex-1 text-sm font-bold text-muted-foreground">
+            {latestMatch?.triggered
+              ? `${latestMatch.name ?? "Movement"} → ${latestMatch.key} held`
+              : latestMatch
+                ? `Recognising ${latestMatch.name ?? "movement"}…`
+                : profileWarning
+                  ? profileWarning
+                  : isLive
+                    ? "Waiting for a movement"
+                    : ""}
+          </span>
+          <div className="flex shrink-0 gap-2">
+            {isLive ? (
+              <BrutalButton
+                variant="outline"
+                size="lg"
+                onClick={handleToggleOverlay}
+                aria-pressed={overlayVisible}
+              >
+                <PictureInPicture2 aria-hidden="true" />
+                {overlayVisible ? "Hide overlay" : "Show overlay"}
+              </BrutalButton>
+            ) : null}
+            <BrutalButton
+              variant={isLive ? "destructive" : "primary"}
+              size="lg"
+              disabled={starting}
+              onClick={isLive ? handleStopSession : handleStartSession}
+            >
+              {isLive ? (
+                <>
+                  <Square aria-hidden="true" />
+                  Stop session
+                </>
+              ) : (
+                <>
+                  <Play aria-hidden="true" />
+                  {starting ? "Starting…" : "Start session"}
+                </>
+              )}
+            </BrutalButton>
+          </div>
+        </BrutalCardFooter>
+      </BrutalCard>
 
       <SessionCameraErrorModal
         open={errorEvent !== null}
+        kind={errorEvent?.settingsTarget}
         message={errorEvent?.message}
         onCancel={handleCloseError}
         onConfigure={handleConfigure}

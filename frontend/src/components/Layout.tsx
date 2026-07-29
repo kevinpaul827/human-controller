@@ -1,26 +1,15 @@
-import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
-import NavBar from "./NavBar";
-import styles from "../styles/layout.module.css";
+import UndoBar from "./UndoBar";
 
-const Layout = () => {
-  const [isNavOpen, setIsNavOpen] = useState(true);
-
-  return (
-    <div className={styles.appShell}>
-      <Header />
-      <div className={styles.bodyShell}>
-        <NavBar
-          isOpen={isNavOpen}
-          onToggle={() => setIsNavOpen((open) => !open)}
-        />
-        <main className={styles.mainContent}>
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  );
-};
+const Layout = () => (
+  <div className="flex h-full flex-col overflow-hidden">
+    <Header />
+    <main className="min-h-0 flex-1 overflow-y-auto">
+      <Outlet />
+    </main>
+    <UndoBar />
+  </div>
+);
 
 export default Layout;

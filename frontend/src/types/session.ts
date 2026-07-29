@@ -8,6 +8,7 @@ export type SessionStatusEvent = {
   state: SessionState;
   /** A message providing additional context about the session status. */
   message?: string;
+  settingsTarget?: "camera" | "accessibility";
 };
 
 export type SessionStatusListener = (event: SessionStatusEvent) => void;
@@ -21,6 +22,20 @@ export type SessionPreviewBounds = {
   devicePixelRatio?: number;
 };
 
+export type GestureMatchEvent = {
+  gestureId: string | null;
+  name: string | null;
+  score: number;
+  matched: boolean;
+  hasTemplates: boolean;
+  triggered?: boolean;
+  key?: string;
+  injectionError?: string;
+  keyAction?: "press" | "release" | "reset";
+};
+export type GestureMatchListener = (event: GestureMatchEvent) => void;
+export type OverlayVisibilityListener = (visible: boolean) => void;
+
 export type SessionGestureMapping = {
   gestureId: string;
   name: string;
@@ -30,7 +45,7 @@ export type SessionGestureMapping = {
 export type SessionProfileData = {
   patientId: string;
   gestures: SessionGestureMapping[];
-  missingGestureIds?: string[];
+  missingGestureIds: string[];
 };
 
 export interface SessionBridge {
@@ -40,6 +55,10 @@ export interface SessionBridge {
   getLoadedSessionGestures(): Promise<SessionGestureMapping[]>;
   updatePreviewBounds(bounds: SessionPreviewBounds): Promise<void>;
   openCameraSettings(): Promise<void>;
+  openAccessibilitySettings(): Promise<void>;
+  setOverlayVisible(visible: boolean): Promise<void>;
   onSessionStatus(listener: SessionStatusListener): () => void;
   onPreviewAspectRatio(listener: SessionAspectRatioListener): () => void;
+  onGestureMatch(listener: GestureMatchListener): () => void;
+  onOverlayVisibility(listener: OverlayVisibilityListener): () => void;
 }

@@ -1,8 +1,17 @@
 import { useMemo, useState } from "react";
-import type { GestureSummary, PatientProfile } from "../types/profile";
-import { formatKey } from "../utils/keyboard";
-import KeyCaptureInput from "./KeyCaptureInput";
-import styles from "../styles/patientCard.module.css";
+import { Play, Trash2, Video } from "lucide-react";
+import KeyCaptureInput from "@/components/KeyCaptureInput";
+import { BrutalBadge } from "@/components/ui/brutal-badge";
+import { BrutalButton } from "@/components/ui/brutal-button";
+import {
+  BrutalCard,
+  BrutalCardContent,
+  BrutalCardFooter,
+  BrutalCardHeader,
+  BrutalCardTitle,
+} from "@/components/ui/brutal-card";
+import { Keycap } from "@/components/ui/keycap";
+import type { GestureSummary, PatientProfile } from "@/types/profile";
 
 const formatUpdatedAt = (value: string) => {
   const date = new Date(value);
@@ -45,7 +54,6 @@ const PatientCard = ({
   const [editedKey, setEditedKey] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
   const gestureById = useMemo(
     () => new Map(gestures.map((gesture) => [gesture.gestureId, gesture])),
     [gestures],
@@ -60,12 +68,10 @@ const PatientCard = ({
   const availableGestures = gestures.filter(
     (gesture) => !(gesture.gestureId in profile.keyBindings),
   );
-  const bindingCount = bindings.length;
-  const bindingLabel = `${bindingCount} key binding${bindingCount === 1 ? "" : "s"}`;
 
   const handleAddBinding = async () => {
     if (!selectedGestureId || !newKey) {
-      setFormError("Choose a calibrated movement and press a keyboard key.");
+      setFormError("Choose a movement and press a keyboard key.");
       return;
     }
 
@@ -112,127 +118,112 @@ const PatientCard = ({
   };
 
   return (
-    <article
-      className={`${styles.card} ${expanded ? styles.cardExpanded : ""}`}
-    >
-      <div className={styles.header}>
-        <div className={styles.patientIdentity}>
-          <span className={styles.avatar} aria-hidden="true">
-            {profile.patientName.charAt(0).toUpperCase()}
-          </span>
-          <h2 className={styles.patientName}>{profile.patientName}</h2>
+    <BrutalCard>
+      <BrutalCardHeader>
+        <div className="min-w-0">
+          <BrutalCardTitle className="truncate">
+            {profile.patientName}
+          </BrutalCardTitle>
+          {profile.notes ? (
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">
+              {profile.notes}
+            </p>
+          ) : null}
+          <p className="mt-1 text-xs font-semibold text-muted-foreground">
+            Last updated {formatUpdatedAt(profile.updatedAt)}
+          </p>
         </div>
-        <span className={styles.badge}>{bindingLabel}</span>
-      </div>
-
-      {profile.notes ? <p className={styles.notes}>{profile.notes}</p> : null}
-      <p className={styles.updatedAt}>
-        Last updated {formatUpdatedAt(profile.updatedAt)}
-      </p>
+        <BrutalBadge>
+          {bindings.length} binding{bindings.length === 1 ? "" : "s"}
+        </BrutalBadge>
+      </BrutalCardHeader>
 
       {expanded ? (
-        <div className={styles.body}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h3 className={styles.sectionTitle}>Gesture keybindings</h3>
-              <p className={styles.sectionHelp}>
-                Review movements saved to this profile or change their keys.
-              </p>
-            </div>
-          </div>
-
-          {bindings.length === 0 ? (
-            <p className={styles.emptyBindings}>
-              No keybindings saved for this profile.
-            </p>
-          ) : (
-            <div className={styles.bindingList}>
-              {bindings.map(([gestureId, key]) => {
-                const editing = editingGestureId === gestureId;
-                const gesture = gestureById.get(gestureId);
-                return (
-                  <div key={gestureId} className={styles.bindingRow}>
-                    {editing ? (
+        <BrutalCardContent className="space-y-5">
+          <div className="space-y-2">
+            <h3 className="font-bold">Movement bindings</h3>
+            {bindings.length ? (
+              <div className="divide-y divide-hairline rounded-base border-2">
+                {bindings.map(([gestureId, key]) => (
+                  <div
+                    key={gestureId}
+                    className="flex flex-wrap items-center gap-3 px-3 py-2.5"
+                  >
+                    <span className="min-w-40 flex-1 font-semibold">
+                      {gestureById.get(gestureId)?.name ??
+                        "Unavailable movement"}
+                    </span>
+                    {editingGestureId === gestureId ? (
                       <>
-                        <span className={styles.gestureName}>
-                          {gesture?.name ?? "Unavailable gesture"}
-                        </span>
                         <KeyCaptureInput
-                          ariaLabel={`New key for ${gesture?.name ?? "gesture"}`}
+                          ariaLabel={`New key for ${gestureById.get(gestureId)?.name ?? "movement"}`}
                           value={editedKey}
                           onChange={setEditedKey}
                           disabled={saving}
                         />
-                        <div className={styles.rowActions}>
-                          <button
-                            type="button"
-                            className={styles.buttonPrimary}
-                            onClick={() => void handleUpdateBinding()}
-                            disabled={saving}
-                          >
-                            {saving ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.buttonSecondary}
-                            onClick={() => {
-                              setEditingGestureId(null);
-                              setEditedKey("");
-                              setFormError(null);
-                            }}
-                            disabled={saving}
-                          >
-                            Cancel
-                          </button>
-                        </div>
+                        <BrutalButton
+                          size="sm"
+                          disabled={saving}
+                          onClick={() => void handleUpdateBinding()}
+                        >
+                          Save
+                        </BrutalButton>
+                        <BrutalButton
+                          size="sm"
+                          variant="outline"
+                          disabled={saving}
+                          onClick={() => {
+                            setEditingGestureId(null);
+                            setEditedKey("");
+                            setFormError(null);
+                          }}
+                        >
+                          Cancel
+                        </BrutalButton>
                       </>
                     ) : (
                       <>
-                        <span className={styles.gestureName}>
-                          {gesture?.name ?? "Unavailable gesture"}
-                        </span>
-                        <span className={styles.keycap}>{formatKey(key)}</span>
-                        <div className={styles.rowActions}>
-                          <button
-                            type="button"
-                            className={styles.buttonSecondary}
-                            onClick={() => startEditing(gestureId, key)}
-                            disabled={saving}
-                          >
-                            Change key
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.buttonDangerSmall}
-                            onClick={() => void handleRemoveBinding(gestureId)}
-                            disabled={saving}
-                          >
-                            Remove
-                          </button>
-                        </div>
+                        <Keycap keyName={key} size="sm" />
+                        <BrutalButton
+                          size="sm"
+                          variant="outline"
+                          disabled={saving}
+                          onClick={() => startEditing(gestureId, key)}
+                        >
+                          Change key
+                        </BrutalButton>
+                        <BrutalButton
+                          size="sm"
+                          variant="outline"
+                          disabled={saving}
+                          onClick={() => void handleRemoveBinding(gestureId)}
+                        >
+                          Remove
+                        </BrutalButton>
                       </>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm font-semibold text-muted-foreground">
+                No movements are bound to this profile yet.
+              </p>
+            )}
+          </div>
 
           {gestures.length === 0 ? (
-            <div className={styles.calibrationPrompt}>
-              <span>No calibrated movements are available yet.</span>
-            </div>
-          ) : availableGestures.length > 0 ? (
-            <div className={styles.addBinding}>
-              <h4 className={styles.addBindingTitle}>
-                Add calibrated movement
-              </h4>
-              <div className={styles.addBindingFields}>
+            <p className="text-sm font-semibold text-muted-foreground">
+              No calibrated movements are available yet.
+            </p>
+          ) : availableGestures.length ? (
+            <div className="grid gap-3 rounded-base border-2 bg-surface-muted p-4 md:grid-cols-[minmax(12rem,1fr)_minmax(12rem,1fr)_auto] md:items-end">
+              <label className="flex flex-col gap-1.5 text-sm font-bold">
+                Movement
                 <select
-                  aria-label="Calibrated movement"
-                  className={styles.bindingInput}
                   value={selectedGestureId}
                   onChange={(event) => setSelectedGestureId(event.target.value)}
+                  className="h-11 rounded-base border-2 bg-surface px-3 font-semibold"
                   disabled={saving}
                 >
                   <option value="">Choose movement</option>
@@ -242,75 +233,67 @@ const PatientCard = ({
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm font-bold">
+                Keyboard key
                 <KeyCaptureInput
-                  ariaLabel="Keyboard key for movement"
+                  ariaLabel={`Key for ${profile.patientName}`}
                   value={newKey}
                   onChange={setNewKey}
                   disabled={saving}
                 />
-                <button
-                  type="button"
-                  className={styles.buttonPrimary}
-                  onClick={() => void handleAddBinding()}
-                  disabled={saving}
-                >
-                  {saving ? "Adding…" : "Add"}
-                </button>
-              </div>
+              </label>
+              <BrutalButton
+                disabled={saving}
+                onClick={() => void handleAddBinding()}
+              >
+                Add binding
+              </BrutalButton>
             </div>
           ) : (
-            <p className={styles.allAssigned}>
-              All calibrated movements are already in this profile.
+            <p className="text-sm font-semibold text-muted-foreground">
+              All calibrated movements are already assigned to this profile.
             </p>
           )}
 
           {formError ? (
-            <p className={styles.formError} role="alert">
+            <p className="text-sm font-bold text-destructive" role="alert">
               {formError}
             </p>
           ) : null}
-        </div>
+        </BrutalCardContent>
       ) : null}
 
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.buttonSecondary}
+      <BrutalCardFooter>
+        <BrutalButton
+          variant="outline"
           onClick={() => {
             onExpandChange(!expanded);
             setFormError(null);
           }}
           disabled={saving}
         >
-          {expanded ? "Close" : "Manage keybindings"}
-        </button>
-        <button
-          type="button"
-          className={styles.buttonSecondary}
-          onClick={onCalibrate}
-          disabled={saving}
-        >
+          {expanded ? "Close bindings" : "Manage bindings"}
+        </BrutalButton>
+        <BrutalButton variant="outline" onClick={onCalibrate} disabled={saving}>
+          <Video aria-hidden="true" />
           Calibrate
-        </button>
-        <button
-          type="button"
-          className={styles.buttonPrimary}
-          onClick={onStartSession}
-          disabled={saving}
-        >
+        </BrutalButton>
+        <BrutalButton onClick={onStartSession} disabled={saving}>
+          <Play aria-hidden="true" />
           Start session
-        </button>
-        <span className={styles.actionsSpacer} aria-hidden="true" />
-        <button
-          type="button"
-          className={styles.buttonDanger}
+        </BrutalButton>
+        <BrutalButton
+          className="ml-auto"
+          variant="destructive"
           onClick={() => void onDelete()}
           disabled={saving}
         >
-          Delete profile
-        </button>
-      </div>
-    </article>
+          <Trash2 aria-hidden="true" />
+          Delete
+        </BrutalButton>
+      </BrutalCardFooter>
+    </BrutalCard>
   );
 };
 

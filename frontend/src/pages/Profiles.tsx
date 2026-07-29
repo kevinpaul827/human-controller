@@ -1,30 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
+import { Plus, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CreateProfileDialog from "../components/CreateProfileDialog";
+import Page from "@/components/Page";
 import PatientCard from "../components/PatientCard";
-import { SAMPLE_GESTURES, SAMPLE_PROFILES } from "../data/sampleProfiles";
-import useActiveProfile from "../hooks/useActiveProfile";
+import { BrutalButton } from "@/components/ui/brutal-button";
+import { BrutalCard } from "@/components/ui/brutal-card";
 import profileBridge, {
   isProfileDesktopRuntime,
 } from "../services/profileBridge";
+import { useAppState } from "@/state/appStateContext";
 import type { GestureSummary, PatientProfile } from "../types/profile";
 import { ROUTES } from "../utils/constants";
-import styles from "../styles/profiles.module.css";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "The profile operation failed.";
 
 const Profiles = () => {
   const navigate = useNavigate();
-  const { activeProfile, clearActiveProfile, setActiveProfile } =
-    useActiveProfile();
+  const {
+    patients,
+    gestures: stateGestures,
+    selectPatient,
+    createPatient,
+    deletePatient,
+    setPatientBinding,
+    removePatientBinding,
+    refreshState,
+  } = useAppState();
   const desktopRuntime = isProfileDesktopRuntime();
-  const [profiles, setProfiles] = useState<PatientProfile[]>(
-    desktopRuntime ? [] : SAMPLE_PROFILES,
-  );
-  const [gestures, setGestures] = useState<GestureSummary[]>(
-    desktopRuntime ? [] : SAMPLE_GESTURES,
-  );
+  const [profiles, setProfiles] = useState<PatientProfile[]>(patients);
+  const [gestures, setGestures] = useState<GestureSummary[]>(stateGestures);
   const [expandedPatientId, setExpandedPatientId] = useState<string | null>(
     null,
   );
@@ -34,10 +40,13 @@ const Profiles = () => {
 
   useEffect(() => {
     if (!desktopRuntime) {
+      setProfiles(patients);
+      setGestures(stateGestures);
       return;
     }
 
     let active = true;
+    setLoading(true);
     void Promise.all([
       profileBridge.listProfiles(),
       profileBridge.listGestures(),
@@ -48,6 +57,7 @@ const Profiles = () => {
         }
         setProfiles(loadedProfiles);
         setGestures(loadedGestures);
+        setPageError(null);
       })
       .catch((error: unknown) => {
         if (active) {
@@ -63,7 +73,7 @@ const Profiles = () => {
     return () => {
       active = false;
     };
-  }, [desktopRuntime]);
+  }, [desktopRuntime, stateGestures, patients]);
 
   const sortedProfiles = useMemo(
     () =>
@@ -85,18 +95,13 @@ const Profiles = () => {
     try {
       const createdProfile = desktopRuntime
         ? await profileBridge.createProfile(patientName, notes)
-        : {
-            schemaVersion: 2 as const,
-            patientId: crypto.randomUUID(),
-            patientName,
-            notes,
-            updatedAt: new Date().toISOString(),
-            keyBindings: {},
-          };
+        : await createPatient(patientName, notes);
+      if (!createdProfile) return "The profile could not be created.";
       setProfiles((current) => [...current, createdProfile]);
       setExpandedPatientId(createdProfile.patientId);
       setShowNewDialog(false);
       setPageError(null);
+      if (desktopRuntime) await refreshState();
       return null;
     } catch (error) {
       return getErrorMessage(error);
@@ -106,17 +111,20 @@ const Profiles = () => {
   const handleSetBinding = async (
     profile: PatientProfile,
     gestureId: string,
-    key: string,
+      key: string,
   ) => {
     try {
-      const updatedProfile = desktopRuntime
-        ? await profileBridge.setKeyBinding(profile.patientId, gestureId, key)
-        : {
-            ...profile,
-            updatedAt: new Date().toISOString(),
-            keyBindings: { ...profile.keyBindings, [gestureId]: key },
-          };
-      replaceProfile(updatedProfile);
+      if (desktopRuntime) {
+        const updatedProfile = await profileBridge.setKeyBinding(
+          profile.patientId,
+          gestureId,
+          key,
+        );
+        replaceProfile(updatedProfile);
+        await refreshState();
+      } else {
+        setPatientBinding(profile.patientId, gestureId, key);
+      }
       setPageError(null);
       return null;
     } catch (error) {
@@ -129,18 +137,16 @@ const Profiles = () => {
     gestureId: string,
   ) => {
     try {
-      const updatedProfile = desktopRuntime
-        ? await profileBridge.removeKeyBinding(profile.patientId, gestureId)
-        : (() => {
-            const keyBindings = { ...profile.keyBindings };
-            delete keyBindings[gestureId];
-            return {
-              ...profile,
-              updatedAt: new Date().toISOString(),
-              keyBindings,
-            };
-          })();
-      replaceProfile(updatedProfile);
+      if (desktopRuntime) {
+        const updatedProfile = await profileBridge.removeKeyBinding(
+          profile.patientId,
+          gestureId,
+        );
+        replaceProfile(updatedProfile);
+        await refreshState();
+      } else {
+        removePatientBinding(profile.patientId, gestureId);
+      }
       setPageError(null);
       return null;
     } catch (error) {
@@ -155,10 +161,12 @@ const Profiles = () => {
     if (!confirmed) {
       return;
     }
-
     try {
       if (desktopRuntime) {
         await profileBridge.deleteProfile(profile.patientId);
+        await refreshState();
+      } else {
+        await deletePatient(profile.patientId);
       }
       setProfiles((current) =>
         current.filter((item) => item.patientId !== profile.patientId),
@@ -166,92 +174,102 @@ const Profiles = () => {
       if (expandedPatientId === profile.patientId) {
         setExpandedPatientId(null);
       }
-      if (activeProfile?.patientId === profile.patientId) {
-        clearActiveProfile();
-      }
       setPageError(null);
     } catch (error) {
       setPageError(getErrorMessage(error));
     }
   };
 
-  const openProfileRoute = (
+  const openProfileRoute = async (
     profile: PatientProfile,
     route: typeof ROUTES.calibrate | typeof ROUTES.session,
   ) => {
-    setActiveProfile(profile);
-    navigate(route);
+    try {
+      await selectPatient(profile.patientId);
+      navigate(route);
+    } catch (error) {
+      setPageError(getErrorMessage(error));
+    }
   };
 
   return (
-    <div className={styles.page}>
-      <header className={styles.pageHeader}>
+    <Page>
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className={styles.heading}>Patient Profiles</h1>
-          <p className={styles.subheading}>
-            Keep each patient&apos;s calibrated movements and game controls in
-            one place.
+          <h1 className="text-2xl sm:text-3xl">Patient profiles</h1>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground">
+            Manage each patient&apos;s movement controls and session setup.
           </p>
         </div>
-        <button
-          type="button"
-          className={styles.addNewButton}
-          onClick={() => setShowNewDialog(true)}
-        >
-          + New profile
-        </button>
+        <BrutalButton size="lg" onClick={() => setShowNewDialog(true)}>
+          <Plus aria-hidden="true" />
+          Create profile
+        </BrutalButton>
       </header>
 
-      <p className={styles.saveNotice}>
-        Changes to profiles and key bindings are saved automatically.
-      </p>
-
       {pageError ? (
-        <p className={styles.pageError} role="alert">
+        <p className="text-sm font-bold text-destructive" role="alert">
           {pageError}
         </p>
       ) : null}
 
       {loading ? (
-        <p className={styles.empty}>Loading patient profiles…</p>
-      ) : (
-        <div className={styles.list}>
-          {sortedProfiles.length === 0 ? (
-            <p className={styles.empty}>
-              No patient profiles yet. Create one to begin calibration.
-            </p>
-          ) : (
-            sortedProfiles.map((profile) => (
-              <PatientCard
-                key={profile.patientId}
-                profile={profile}
-                gestures={gestures}
-                expanded={expandedPatientId === profile.patientId}
-                onExpandChange={(expanded) =>
-                  setExpandedPatientId(expanded ? profile.patientId : null)
-                }
-                onSetBinding={(gestureId, key) =>
-                  handleSetBinding(profile, gestureId, key)
-                }
-                onRemoveBinding={(gestureId) =>
-                  handleRemoveBinding(profile, gestureId)
-                }
-                onCalibrate={() => openProfileRoute(profile, ROUTES.calibrate)}
-                onStartSession={() => openProfileRoute(profile, ROUTES.session)}
-                onDelete={() => handleDeleteProfile(profile)}
-              />
-            ))
-          )}
+        <BrutalCard className="items-center justify-center p-10">
+          <p className="font-semibold text-muted-foreground">
+            Loading profiles…
+          </p>
+        </BrutalCard>
+      ) : sortedProfiles.length ? (
+        <div className="space-y-5">
+          {sortedProfiles.map((profile) => (
+            <PatientCard
+              key={profile.patientId}
+              profile={profile}
+              gestures={gestures}
+              expanded={expandedPatientId === profile.patientId}
+              onExpandChange={(expanded) =>
+                setExpandedPatientId(expanded ? profile.patientId : null)
+              }
+              onSetBinding={(gestureId, key) =>
+                handleSetBinding(profile, gestureId, key)
+              }
+              onRemoveBinding={(gestureId) =>
+                handleRemoveBinding(profile, gestureId)
+              }
+              onCalibrate={() =>
+                void openProfileRoute(profile, ROUTES.calibrate)
+              }
+              onStartSession={() =>
+                void openProfileRoute(profile, ROUTES.session)
+              }
+              onDelete={() => handleDeleteProfile(profile)}
+            />
+          ))}
         </div>
+      ) : (
+        <BrutalCard className="items-center justify-center gap-4 p-10 text-center">
+          <Users className="size-10" aria-hidden="true" />
+          <div>
+            <h2 className="text-lg font-bold">No patient profiles</h2>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">
+              Create a profile before starting calibration or a session.
+            </p>
+          </div>
+          <BrutalButton onClick={() => setShowNewDialog(true)}>
+            <Plus aria-hidden="true" />
+            Create profile
+          </BrutalButton>
+        </BrutalCard>
       )}
 
       {showNewDialog ? (
         <CreateProfileDialog
+          open
           onClose={() => setShowNewDialog(false)}
           onCreate={handleCreateProfile}
         />
       ) : null}
-    </div>
+    </Page>
   );
 };
 
