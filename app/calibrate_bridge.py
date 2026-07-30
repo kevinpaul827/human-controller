@@ -151,16 +151,36 @@ class CalibrateBridge(QObject):
         except ValueError as error:
             return {"error": str(error)}
 
+    @Slot(float, result="QVariantMap")
+    def startRep(self, recording_seconds):
+        try:
+            self.camera.start_rep(recording_seconds)
+            return {"ok": True}
+        except ValueError as error:
+            return {"error": str(error)}
+
+    @Slot(result="QVariantMap")
+    def stopRep(self):
+        try:
+            return self.camera.stop_rep()
+        except ValueError as error:
+            return {"error": str(error)}
+
+    @Slot()
+    def cancelRep(self):
+        self.camera.cancel_rep()
+
     @Slot()
     def resetRep(self):
         """Clear the current calibration data so the user can start over."""
         self.camera.reset_rep()
 
     @Slot(str, result="QVariantMap")
-    def saveRep(self, name):
-        """Save the captured reps as a new gesture template with the given name."""
+    @Slot(str, str, result="QVariantMap")
+    def saveRep(self, name, gesture_id=""):
+        """Save the captured reps as a gesture template with the given name."""
         try:
-            return self.camera.save_rep(name)
+            return self.camera.save_rep(name, gesture_id or None)
         except ValueError as error:
             return {"error": str(error)}
 

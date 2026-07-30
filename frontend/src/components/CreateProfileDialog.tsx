@@ -1,12 +1,16 @@
 import { useState } from "react";
-import styles from "../styles/profiles.module.css";
+import { BrutalButton } from "@/components/ui/brutal-button";
+import { BrutalDialog } from "@/components/ui/brutal-dialog";
+import { BrutalField, BrutalInput } from "@/components/ui/brutal-input";
 
 type CreateProfileDialogProps = {
+  open: boolean;
   onClose: () => void;
   onCreate: (patientName: string, notes: string) => Promise<string | null>;
 };
 
 const CreateProfileDialog = ({
+  open,
   onClose,
   onCreate,
 }: CreateProfileDialogProps) => {
@@ -32,88 +36,60 @@ const CreateProfileDialog = ({
     setSaving(false);
     if (saveError) {
       setError(saveError);
+      return;
     }
+    setPatientName("");
+    setNotes("");
   };
 
   return (
-    <div
-      className={styles.dialogBackdrop}
-      role="presentation"
-      onClick={() => {
-        if (!saving) {
-          onClose();
-        }
+    <BrutalDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !saving) onClose();
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && !saving) {
-          onClose();
-        }
-      }}
+      title="Create patient profile"
+      description="Keep movements and game controls separate for each patient."
+      footer={
+        <>
+          <BrutalButton variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </BrutalButton>
+          <BrutalButton onClick={() => void handleSubmit()} disabled={saving}>
+            {saving ? "Creating…" : "Create profile"}
+          </BrutalButton>
+        </>
+      }
     >
-      <div
-        className={styles.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="new-profile-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 id="new-profile-title" className={styles.dialogTitle}>
-          Create patient profile
-        </h2>
-        <p className={styles.dialogDescription}>
-          Movements can be calibrated and added after the profile is created.
-        </p>
-
-        <div className={styles.field}>
-          <label htmlFor="patient-name">Patient name</label>
-          <input
-            id="patient-name"
+      <div className="space-y-4">
+        <BrutalField label="Patient name" htmlFor="profile-patient-name">
+          <BrutalInput
+            id="profile-patient-name"
             value={patientName}
             onChange={(event) => setPatientName(event.target.value)}
             placeholder="e.g. Patient C"
-            autoFocus
             disabled={saving}
+            autoFocus
           />
-        </div>
-
-        <div className={styles.field}>
-          <label htmlFor="notes">Notes</label>
+        </BrutalField>
+        <BrutalField label="Notes" htmlFor="profile-notes">
           <textarea
-            id="notes"
+            id="profile-notes"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             placeholder="Optional treatment or accessibility notes"
-            rows={3}
+            rows={4}
             disabled={saving}
+            className="w-full resize-y rounded-base border-2 bg-surface px-3 py-2 text-[0.9375rem] font-medium focus-visible:outline-3 focus-visible:outline-primary disabled:opacity-55"
           />
-        </div>
-
+        </BrutalField>
         {error ? (
-          <p className={styles.formError} role="alert">
+          <p className="text-sm font-bold text-destructive" role="alert">
             {error}
           </p>
         ) : null}
-
-        <div className={styles.dialogActions}>
-          <button
-            type="button"
-            className={styles.dialogCancel}
-            onClick={onClose}
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className={styles.dialogSubmit}
-            onClick={() => void handleSubmit()}
-            disabled={saving}
-          >
-            {saving ? "Creating…" : "Create profile"}
-          </button>
-        </div>
       </div>
-    </div>
+    </BrutalDialog>
   );
 };
 

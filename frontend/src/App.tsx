@@ -1,12 +1,15 @@
 import { HashRouter } from "react-router-dom";
+import AppStateProvider from "./state/AppStateProvider";
 import ActiveProfileProvider from "./context/ActiveProfileProvider";
 import AppRoutes from "./routes/AppRoutes";
 
 const App = () => (
   <HashRouter>
-    <ActiveProfileProvider>
-      <AppRoutes />
-    </ActiveProfileProvider>
+    <AppStateProvider>
+      <ActiveProfileProvider>
+        <AppRoutes />
+      </ActiveProfileProvider>
+    </AppStateProvider>
   </HashRouter>
 );
 

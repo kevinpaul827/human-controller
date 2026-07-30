@@ -52,6 +52,41 @@ class GestureStoreTests(unittest.TestCase):
         gestures = self.store.load_all()
         self.assertEqual([gesture.name for gesture in gestures], ["Arm Raise", "Squat"])
 
+    def test_delete_removes_json_and_allows_same_id_to_be_re_recorded(self) -> None:
+        gesture = self.store.create_or_update(
+            gesture_id="arm_raise",
+            name="Arm Raise",
+            regions=["right_arm"],
+            active_joints=["R_SHOULDER_ABD"],
+            target_angles={"R_SHOULDER_ABD": 120.0},
+        )
+
+        self.store.delete(gesture.gesture_id)
+
+        self.assertFalse(self.store.gesture_path(gesture.gesture_id).exists())
+        replacement = self.store.create_or_update(
+            gesture_id=gesture.gesture_id,
+            name="Arm Raise Re-recorded",
+            regions=["right_arm"],
+            active_joints=["R_SHOULDER_ABD"],
+            target_angles={"R_SHOULDER_ABD": 130.0},
+        )
+        self.assertEqual(self.store.load(replacement.gesture_id).name, replacement.name)
+
+    def test_delete_missing_gesture_is_idempotent(self) -> None:
+        self.store.delete("missing")
+
+        self.assertEqual(self.store.load_all(), [])
+
+    def test_gesture_id_cannot_escape_the_gesture_directory(self) -> None:
+        outside = self.gestures_dir.parent / "outside.json"
+        outside.write_text("keep", encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "must not contain a path"):
+            self.store.delete("../outside")
+
+        self.assertEqual(outside.read_text(encoding="utf-8"), "keep")
+
 
 if __name__ == "__main__":
     unittest.main()

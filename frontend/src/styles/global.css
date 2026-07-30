@@ -1,11 +1,203 @@
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/space-mono/400.css";
+@import "@fontsource/space-mono/700.css";
+
+@theme inline {
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-placeholder: var(--placeholder);
+  --color-border: var(--border);
+  --color-hairline: var(--hairline);
+  --color-stage: var(--stage);
+  --color-stage-foreground: var(--stage-foreground);
+  --color-stage-muted: var(--stage-muted);
+
+  --radius-base: 5px;
+  --radius-sm: 3px;
+
+  --shadow-brutal-sm: 2px 2px 0 0 var(--border);
+  --shadow-brutal: 4px 4px 0 0 var(--border);
+  --shadow-brutal-lg: 6px 6px 0 0 var(--border);
 }
 
-body {
-  min-width: 320px;
-  background-color: #f6f7f4;
+:root {
+  --background: hsl(48 60% 96%);
+  --foreground: hsl(0 0% 7%);
+  --surface: hsl(0 0% 100%);
+  --surface-muted: hsl(48 30% 93%);
+
+  --primary: hsl(224 76% 51%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  --accent: hsl(45 96% 55%);
+  --accent-foreground: hsl(0 0% 7%);
+
+  --success: hsl(151 70% 24%);
+  --success-foreground: hsl(0 0% 100%);
+
+  --destructive: hsl(0 72% 48%);
+  --destructive-foreground: hsl(0 0% 100%);
+
+  --muted: hsl(48 20% 88%);
+
+  --muted-foreground: hsl(0 0% 26%);
+
+  --placeholder: hsl(0 0% 43%);
+  --border: hsl(0 0% 7%);
+
+  --hairline: hsl(0 0% 78%);
+
+  --stage: hsl(220 18% 11%);
+  --stage-foreground: hsl(0 0% 98%);
+  --stage-muted: hsl(220 10% 72%);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    min-width: 0;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    min-width: 320px;
+
+    overflow: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--hairline);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+    background-clip: content-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .brutal-range::-webkit-slider-runnable-track {
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-base);
+    background: linear-gradient(
+      to right,
+      var(--primary) 0 var(--fill),
+      var(--surface-muted) var(--fill) 100%
+    );
+  }
+
+  .brutal-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 28px;
+    margin-top: -7px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-base);
+    background: var(--accent);
+    box-shadow: var(--shadow-brutal-sm);
+    cursor: grab;
+  }
+
+  .brutal-range:active::-webkit-slider-thumb {
+    cursor: grabbing;
+    box-shadow: none;
+    translate: 2px 2px;
+  }
+
+  .brutal-range::-moz-range-track {
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-base);
+    background: var(--surface-muted);
+  }
+
+  .brutal-range::-moz-range-progress {
+    height: 20px;
+    background: var(--primary);
+  }
+
+  .brutal-range::-moz-range-thumb {
+    width: 14px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-base);
+    background: var(--accent);
+  }
+}
+
+@utility label-caps {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.25;
 }

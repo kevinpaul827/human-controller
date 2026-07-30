@@ -6,3 +6,5 @@ pydantic>=2.0,<3.0
 numpy>=1.26
 opencv-python>=4.10,<5
 mediapipe>=0.10
+pynput>=1.8,<2
+pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"

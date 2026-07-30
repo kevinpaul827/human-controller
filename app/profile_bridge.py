@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from pydantic import ValidationError
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Signal, Slot
 
 from .gesture_store import DEFAULT_GESTURES_DIR, GestureStore
 from .profile_manager import PatientProfile, ProfileError, ProfileManager
@@ -14,6 +14,8 @@ DEFAULT_PROFILES_DIR = Path(__file__).resolve().parent / "data" / "profiles"
 
 class ProfileBridge(QObject):
     """Expose patient profiles and gesture names to the React frontend."""
+
+    profilesChanged = Signal()
 
     def __init__(
         self,
@@ -66,7 +68,11 @@ class ProfileBridge(QObject):
         notes: str,
     ) -> str:
         try:
-            created = self.profile_manager.create_new(patient_name, notes)
+            created = self.profile_manager.create_new(
+                patient_name.strip(),
+                notes.strip(),
+            )
+            self.profilesChanged.emit()
             return self._success(self._profile_data(created))
         except (OSError, ProfileError, ValidationError) as error:
             return self._failure(error)
@@ -75,6 +81,7 @@ class ProfileBridge(QObject):
     def deleteProfile(self, patient_id: str) -> str:
         try:
             self.profile_manager.delete(patient_id)
+            self.profilesChanged.emit()
             return self._success(patient_id)
         except (OSError, ProfileError) as error:
             return self._failure(error)
@@ -92,6 +99,7 @@ class ProfileBridge(QObject):
                 gesture_id,
                 key,
             )
+            self.profilesChanged.emit()
             return self._success(self._profile_data(profile))
         except (OSError, ProfileError) as error:
             return self._failure(error)
@@ -103,6 +111,7 @@ class ProfileBridge(QObject):
                 patient_id,
                 gesture_id,
             )
+            self.profilesChanged.emit()
             return self._success(self._profile_data(profile))
         except (OSError, ProfileError) as error:
             return self._failure(error)

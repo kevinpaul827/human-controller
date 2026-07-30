@@ -24,19 +24,39 @@ type QtCalibrateBridgeObject = {
   startCalibrate: () => void | Promise<void>;
   stopCalibrate: () => void | Promise<void>;
   startCalibration?: () => void | Promise<void>;
-  captureRep?: () => QtCapturedRepResult | Promise<QtCapturedRepResult>;
+  captureRep?: (
+    callback?: (result: QtCapturedRepResult) => void,
+  ) => QtCapturedRepResult | Promise<QtCapturedRepResult> | void;
+  startRep?: (
+    recordingSeconds: number,
+    callback?: (result: QtBridgeAck) => void,
+  ) => QtBridgeAck | Promise<QtBridgeAck> | void;
+  cancelRep?: () => void | Promise<void>;
+  stopRep?: (
+    callback?: (result: QtCapturedRepResult) => void,
+  ) => QtCapturedRepResult | Promise<QtCapturedRepResult> | void;
   resetRep?: () => void | Promise<void>;
-  saveRep?: (name: string) => QtSavedRepResult | Promise<QtSavedRepResult>;
-  listSavedGestures?: () =>
-    | SavedGestureSummary[]
-    | Promise<SavedGestureSummary[]>;
-  getLoadedSessionGestures?: () =>
-    | SavedGestureSummary[]
-    | Promise<SavedGestureSummary[]>;
+  saveRep?: (
+    name: string,
+    gestureIdOrCallback?: string | ((result: QtSavedRepResult) => void),
+    callback?: (result: QtSavedRepResult) => void,
+  ) => QtSavedRepResult | Promise<QtSavedRepResult> | void;
+  listSavedGestures?: (
+    callback?: (gestures: SavedGestureSummary[]) => void,
+  ) => SavedGestureSummary[] | Promise<SavedGestureSummary[]> | void;
+  getLoadedSessionGestures?: (
+    callback?: (gestures: SavedGestureSummary[]) => void,
+  ) => SavedGestureSummary[] | Promise<SavedGestureSummary[]> | void;
   loadSavedGesture?: (
     gestureId: string,
-  ) => QtLoadSavedGestureResult | Promise<QtLoadSavedGestureResult>;
-  getCalibrateState?: () => CalibrateStatusEvent["state"];
+    callback?: (result: QtLoadSavedGestureResult) => void,
+  ) => QtLoadSavedGestureResult | Promise<QtLoadSavedGestureResult> | void;
+  getCalibrateState?: (
+    callback?: (state: CalibrateStatusEvent["state"]) => void,
+  ) =>
+    | CalibrateStatusEvent["state"]
+    | Promise<CalibrateStatusEvent["state"]>
+    | void;
   updatePreviewBounds: (
     left: number,
     top: number,
@@ -49,6 +69,8 @@ type QtCalibrateBridgeObject = {
   calibrationUpdated?: QtSignal<{
     repCount: number;
     capturing: boolean;
+    phase: "idle" | "countdown" | "waiting" | "recording" | "captured";
+    countdownRemaining: number;
   }>;
   previewAspectRatioChanged?: QtSignal<number>;
 };
@@ -57,6 +79,7 @@ type QtBridgeErrorResult = {
   error?: string;
 };
 
+type QtBridgeAck = { ok?: boolean } & QtBridgeErrorResult;
 type QtCapturedRepResult = CapturedRep & QtBridgeErrorResult;
 type QtSavedRepResult = SavedRepResult & QtBridgeErrorResult;
 type QtLoadSavedGestureResult = LoadSavedGestureResult & QtBridgeErrorResult;
@@ -84,6 +107,41 @@ const getCalibrateBridgeOrThrow = () => {
 
   return bridgePromise;
 };
+
+const invokeWithResult = <T>(
+  invoke: (callback: (result: T) => void) => unknown,
+) =>
+  new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const settle = (result: T) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+    try {
+      const maybePromise = invoke(settle);
+      if (
+        maybePromise != null &&
+        typeof (maybePromise as PromiseLike<T>).then === "function"
+      ) {
+        void Promise.resolve(maybePromise as PromiseLike<T>).then(
+          settle,
+          (error: unknown) => {
+            if (settled) return;
+            settled = true;
+            reject(error);
+          },
+        );
+      } else if (maybePromise !== undefined) {
+        settle(maybePromise as T);
+      }
+    } catch (error) {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    }
+  });
 
 const unwrapBridgeResult = <T extends object>(
   result: (T & QtBridgeErrorResult) | null | undefined,
@@ -150,8 +208,50 @@ const calibrateBridge: CalibrateBridge = {
     }
 
     return unwrapBridgeResult(
-      await bridge.captureRep(),
+      await invokeWithResult<QtCapturedRepResult>((callback) =>
+        bridge.captureRep?.(callback),
+      ),
       "Unable to capture the current gesture rep.",
+    );
+  },
+
+  async startRep(recordingSeconds: number) {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.startRep) {
+      throw new Error("Recording controls are unavailable in this build.");
+    }
+
+    unwrapBridgeResult(
+      await invokeWithResult<QtBridgeAck>((callback) =>
+        bridge.startRep?.(recordingSeconds, callback),
+      ),
+      "Unable to start recording.",
+    );
+  },
+
+  async cancelRep() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.cancelRep) {
+      throw new Error("Recording controls are unavailable in this build.");
+    }
+
+    await bridge.cancelRep();
+  },
+
+  async stopRep() {
+    const bridge = await getCalibrateBridgeOrThrow();
+
+    if (!bridge.stopRep) {
+      throw new Error("Recording controls are unavailable in this build.");
+    }
+
+    return unwrapBridgeResult(
+      await invokeWithResult<QtCapturedRepResult>((callback) =>
+        bridge.stopRep?.(callback),
+      ),
+      "Unable to stop recording.",
     );
   },
 
@@ -165,7 +265,7 @@ const calibrateBridge: CalibrateBridge = {
     await bridge.resetRep();
   },
 
-  async saveRep(name: string) {
+  async saveRep(name: string, gestureId?: string) {
     const bridge = await getCalibrateBridgeOrThrow();
 
     if (!bridge.saveRep) {
@@ -173,7 +273,11 @@ const calibrateBridge: CalibrateBridge = {
     }
 
     return unwrapBridgeResult(
-      await bridge.saveRep(name),
+      await invokeWithResult<QtSavedRepResult>((callback) =>
+        gestureId
+          ? bridge.saveRep?.(name, gestureId, callback)
+          : bridge.saveRep?.(name, callback),
+      ),
       "Unable to save the captured gesture reps.",
     );
   },
@@ -185,7 +289,11 @@ const calibrateBridge: CalibrateBridge = {
       throw new Error("Saved gesture listing is unavailable in this build.");
     }
 
-    return (await bridge.listSavedGestures()) ?? [];
+    return (
+      (await invokeWithResult<SavedGestureSummary[]>((callback) =>
+        bridge.listSavedGestures?.(callback),
+      )) ?? []
+    );
   },
 
   async getLoadedSessionGestures() {
@@ -195,7 +303,11 @@ const calibrateBridge: CalibrateBridge = {
       throw new Error("Loaded session gestures are unavailable in this build.");
     }
 
-    return (await bridge.getLoadedSessionGestures()) ?? [];
+    return (
+      (await invokeWithResult<SavedGestureSummary[]>((callback) =>
+        bridge.getLoadedSessionGestures?.(callback),
+      )) ?? []
+    );
   },
 
   async loadSavedGesture(gestureId: string) {
@@ -206,7 +318,9 @@ const calibrateBridge: CalibrateBridge = {
     }
 
     return unwrapBridgeResult(
-      await bridge.loadSavedGesture(gestureId),
+      await invokeWithResult<QtLoadSavedGestureResult>((callback) =>
+        bridge.loadSavedGesture?.(gestureId, callback),
+      ),
       "Unable to load the selected saved gesture.",
     );
   },
@@ -230,9 +344,16 @@ const calibrateBridge: CalibrateBridge = {
         unsubscribe = () => {
           bridge.calibrateStatusChanged?.disconnect?.(listener);
         };
-        const currentState = bridge.getCalibrateState?.();
-        if (active && currentState) {
-          listener({ state: currentState });
+        if (bridge.getCalibrateState) {
+          void invokeWithResult<CalibrateStatusEvent["state"]>((callback) =>
+            bridge.getCalibrateState?.(callback),
+          )
+            .then((currentState) => {
+              if (active && currentState) {
+                listener({ state: currentState });
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch((error: Error) => {

@@ -129,6 +129,52 @@ def test_end_pose_gate_rejects_incomplete_movement():
     assert mm.score(stopped_short, template) == 0.0
 
 
+def test_coverage_gate_rejects_partial_motion_ending_at_end_pose():
+    template = _motion_template([float(v) for v in _ramp(0.0, 90.0, 12)])
+    matcher = MotionMatcher(
+        step_pattern="symmetric2",
+        open_begin=True,
+        end_pose_tol_deg=15.0,
+        coverage_tol_deg=20.0,
+    )
+    partial = _window(
+        [30.0] * 10 + list(_ramp(30.0, 90.0, 8)) + [90.0] * 20
+    )
+    full = _window(
+        [0.0] * 10 + list(_ramp(0.0, 90.0, 12)) + [90.0] * 20
+    )
+
+    assert matcher.score(partial, template) == 0.0
+    assert matcher.score(full, template) > 0.9
+
+
+def test_coverage_gate_requires_template_order():
+    template = _motion_template([0.0, 30.0, 60.0, 90.0, 60.0, 30.0])
+    matcher = MotionMatcher(
+        step_pattern="symmetric2",
+        open_begin=True,
+        coverage_tol_deg=10.0,
+    )
+    up_only = _window([0.0, 10.0, 20.0, 30.0] + [30.0] * 10)
+    full = _window(
+        [0.0, 30.0, 60.0, 90.0, 60.0, 30.0] + [30.0] * 5
+    )
+
+    assert matcher.score(up_only, template) == 0.0
+    assert matcher.score(full, template) > 0.9
+
+
+def test_template_range_gate_rejects_nearly_static_motion_template():
+    template = _motion_template([45.0, 47.0, 44.0, 46.0, 45.0])
+    matcher = MotionMatcher(
+        step_pattern="symmetric2",
+        open_begin=True,
+        min_template_range_deg=15.0,
+    )
+
+    assert matcher.score(_window([45.0] * 40), template) == 0.0
+
+
 # --- MotionMatcher.score -------------------------------------------------
 
 

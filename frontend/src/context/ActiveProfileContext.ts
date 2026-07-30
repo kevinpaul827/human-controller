@@ -5,8 +5,8 @@ export type ActiveProfile = Pick<PatientProfile, "patientId" | "patientName">;
 
 export type ActiveProfileContextValue = {
   activeProfile: ActiveProfile | null;
-  setActiveProfile: (profile: ActiveProfile) => void;
-  clearActiveProfile: () => void;
+  setActiveProfile: (profile: ActiveProfile) => Promise<void>;
+  clearActiveProfile: () => Promise<void>;
 };
 
 const ActiveProfileContext = createContext<

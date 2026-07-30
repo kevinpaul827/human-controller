@@ -124,7 +124,21 @@ class GestureStore:
         self.gestures_dir.mkdir(parents=True, exist_ok=True)
 
     def _gesture_path(self, gesture_id: str) -> Path:
-        return self.gestures_dir / f"{gesture_id}.json"
+        resolved_gesture_id = str(gesture_id or "").strip()
+        if not resolved_gesture_id:
+            raise ValueError("Gesture ID is required.")
+        path = self.gestures_dir / f"{resolved_gesture_id}.json"
+        if path.parent.resolve() != self.gestures_dir.resolve():
+            raise ValueError("Gesture ID must not contain a path.")
+        return path
+
+    def gesture_path(self, gesture_id: str) -> Path:
+        return self._gesture_path(gesture_id)
+
+    def delete(self, gesture_id: str) -> None:
+        path = self._gesture_path(gesture_id)
+        if path.exists():
+            path.unlink()
 
     def _make_gesture_id(self, name: str) -> str:
         slug = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")

@@ -1,5 +1,6 @@
 """Constants for drawing the live session pose overlay."""
 
+from backend.matching_engine.core.angles import ANGLE_TRIPLETS, AngleKey
 from backend.pose_types import BlazePose33
 
 # BlazePose landmark enum pairs to connect with skeleton lines, for example
@@ -41,3 +42,29 @@ POSE_CONNECTIONS = [
 
 # Ignore landmarks below this confidence so weak detections do not clutter the overlay.
 MIN_VISIBILITY = 0.35
+
+
+def landmarks_for_angle_joints(joint_names) -> set[BlazePose33]:
+    landmarks: set[BlazePose33] = set()
+    for joint_name in joint_names:
+        try:
+            joint = AngleKey(joint_name)
+        except ValueError:
+            continue
+        landmarks.update(ANGLE_TRIPLETS[joint])
+    return landmarks
+
+
+def connections_for_angle_joints(
+    joint_names,
+) -> set[tuple[BlazePose33, BlazePose33]]:
+    connections: set[tuple[BlazePose33, BlazePose33]] = set()
+    for joint_name in joint_names:
+        try:
+            joint = AngleKey(joint_name)
+        except ValueError:
+            continue
+        first, centre, last = ANGLE_TRIPLETS[joint]
+        connections.add((first, centre))
+        connections.add((centre, last))
+    return connections

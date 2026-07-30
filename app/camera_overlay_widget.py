@@ -1,35 +1,160 @@
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from .logging_utils import log_debug, log_verbose
-from .overlay_constants import MIN_VISIBILITY, POSE_CONNECTIONS
+from .overlay_constants import (
+    MIN_VISIBILITY,
+    POSE_CONNECTIONS,
+    connections_for_angle_joints,
+    landmarks_for_angle_joints,
+)
 
 POINT_RADIUS = 4
 LINE_WIDTH = 3
+POSE_TRACKER_ALPHA = 0.55
+POSE_TRACKER_BETA = 0.08
+MAX_POSE_PROJECTION_MS = 33
+POSE_TRACKER_RESET_GAP_MS = 250
+
+
+class PoseOverlayTracker:
+    """Smooth overlay landmarks without changing the pose used for matching."""
+
+    def __init__(
+        self,
+        *,
+        alpha=POSE_TRACKER_ALPHA,
+        beta=POSE_TRACKER_BETA,
+        max_projection_ms=MAX_POSE_PROJECTION_MS,
+        reset_gap_ms=POSE_TRACKER_RESET_GAP_MS,
+    ):
+        self.alpha = float(alpha)
+        self.beta = float(beta)
+        self.max_projection_ms = int(max_projection_ms)
+        self.reset_gap_ms = int(reset_gap_ms)
+        self.reset()
+
+    def reset(self):
+        self._landmarks = []
+        self._positions = []
+        self._velocities = []
+        self._timestamp_ms = -1
+
+    def update(self, landmarks, timestamp_ms):
+        target = [
+            [float(coordinate) for coordinate in landmark]
+            for landmark in (landmarks or [])
+        ]
+        if not target:
+            self.reset()
+            return False
+
+        timestamp_ms = int(timestamp_ms)
+        should_reset = (
+            not self._positions
+            or len(target) != len(self._positions)
+            or timestamp_ms < 0
+            or self._timestamp_ms < 0
+            or timestamp_ms - self._timestamp_ms > self.reset_gap_ms
+        )
+        if should_reset:
+            self._landmarks = target
+            self._positions = [landmark[:2] for landmark in target]
+            self._velocities = [[0.0, 0.0] for _ in target]
+            self._timestamp_ms = timestamp_ms
+            return True
+
+        elapsed_ms = timestamp_ms - self._timestamp_ms
+        if elapsed_ms <= 0:
+            return False
+
+        elapsed_seconds = elapsed_ms / 1000.0
+        positions = []
+        velocities = []
+        for index, landmark in enumerate(target):
+            if len(landmark) < 2 or len(self._positions[index]) < 2:
+                positions.append(landmark[:2])
+                velocities.append([0.0, 0.0])
+                continue
+
+            landmark_position = []
+            landmark_velocity = []
+            for coordinate in range(2):
+                projected = (
+                    self._positions[index][coordinate]
+                    + self._velocities[index][coordinate] * elapsed_seconds
+                )
+                residual = landmark[coordinate] - projected
+                landmark_position.append(projected + self.alpha * residual)
+                landmark_velocity.append(
+                    self._velocities[index][coordinate]
+                    + self.beta * residual / elapsed_seconds
+                )
+            positions.append(landmark_position)
+            velocities.append(landmark_velocity)
+
+        self._landmarks = target
+        self._positions = positions
+        self._velocities = velocities
+        self._timestamp_ms = timestamp_ms
+        return True
+
+    def sample(self, timestamp_ms=None):
+        if not self._landmarks:
+            return []
+
+        projection_ms = 0
+        if timestamp_ms is not None and self._timestamp_ms >= 0:
+            projection_ms = min(
+                self.max_projection_ms,
+                max(0, int(timestamp_ms) - self._timestamp_ms),
+            )
+        projection_seconds = projection_ms / 1000.0
+
+        result = []
+        for index, landmark in enumerate(self._landmarks):
+            rendered = list(landmark)
+            for coordinate in range(min(2, len(rendered))):
+                value = (
+                    self._positions[index][coordinate]
+                    + self._velocities[index][coordinate] * projection_seconds
+                )
+                rendered[coordinate] = min(1.0, max(0.0, value))
+            result.append(rendered)
+        return result
 
 
 class CameraOverlayWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, smooth_pose=False):
         super().__init__(parent)
         self._frame_image = QImage()
         self._draw_rect = QRectF()
         self._landmarks = []
         self._visibility = []
+        self._render_joints = None
+        self._smooth_pose = bool(smooth_pose)
+        self._pose_tracker = PoseOverlayTracker()
+        self._preview_timestamp_ms = -1
         self._frame_log_emitted = False
         self._paint_log_emitted = False
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.hide()
 
-    def set_frame(self, image):
+    def set_frame(self, image, timestamp_ms=None):
         if not isinstance(image, QImage) or image.isNull():
             self._frame_image = QImage()
             self._draw_rect = QRectF()
             self.update()
             return
-
-        self._frame_image = image
+        self._frame_image = image.mirrored(True, False)
+        if timestamp_ms is not None:
+            self._preview_timestamp_ms = int(timestamp_ms)
+            if self._smooth_pose:
+                self._landmarks = self._pose_tracker.sample(
+                    self._preview_timestamp_ms
+                )
         if not self._frame_log_emitted:
             log_debug(f"[overlay] received first synced frame {image.width()}x{image.height()}")
             self._frame_log_emitted = True
@@ -40,14 +165,38 @@ class CameraOverlayWidget(QWidget):
             log_verbose("[overlay] cleared pose payload")
             self._landmarks = []
             self._visibility = []
+            self._render_joints = None
+            self._pose_tracker.reset()
             self.update()
             return
 
         landmarks = payload.get("landmarks")
         visibility = payload.get("visibility")
-        self._landmarks = landmarks if landmarks is not None else []
-        self._visibility = visibility if visibility is not None else []
-        count = len(self._landmarks)
+        target_landmarks = [
+            [float(coordinate) for coordinate in landmark]
+            for landmark in (landmarks if landmarks is not None else [])
+        ]
+        target_visibility = [
+            float(value) for value in (visibility if visibility is not None else [])
+        ]
+        self._render_joints = (
+            tuple(payload.get("renderJoints", []))
+            if "renderJoints" in payload
+            else None
+        )
+        timestamp_ms = int(payload.get("timestampMs", -1))
+        if self._smooth_pose:
+            self._pose_tracker.update(target_landmarks, timestamp_ms)
+            self._landmarks = self._pose_tracker.sample(
+                self._preview_timestamp_ms
+                if self._preview_timestamp_ms >= 0
+                else timestamp_ms
+            )
+        else:
+            self._landmarks = target_landmarks
+        self._visibility = target_visibility
+
+        count = len(target_landmarks)
         log_verbose(f"[overlay] received pose payload with {count} landmarks")
         self.update()
 
@@ -55,6 +204,8 @@ class CameraOverlayWidget(QWidget):
         log_debug("[overlay] clearing stored landmarks")
         self._landmarks = []
         self._visibility = []
+        self._render_joints = None
+        self._pose_tracker.reset()
         self.update()
 
     def clear_frame(self):
@@ -63,6 +214,8 @@ class CameraOverlayWidget(QWidget):
         self._draw_rect = QRectF()
         self._frame_log_emitted = False
         self._paint_log_emitted = False
+        self._preview_timestamp_ms = -1
+        self._pose_tracker.reset()
         self.update()
 
     def paintEvent(self, _event):
@@ -101,24 +254,33 @@ class CameraOverlayWidget(QWidget):
         line_pen.setWidth(LINE_WIDTH)
         painter.setPen(line_pen)
 
-        for start_idx, end_idx in POSE_CONNECTIONS:
+        connections = (
+            POSE_CONNECTIONS
+            if self._render_joints is None
+            else connections_for_angle_joints(self._render_joints)
+        )
+        for start_idx, end_idx in connections:
             start_point = self._point_for_index(start_idx)
             end_point = self._point_for_index(end_idx)
             if start_point is None or end_point is None:
                 continue
-            painter.drawLine(*start_point, *end_point)
+            painter.drawLine(QLineF(*start_point, *end_point))
 
         point_pen = QPen(QColor(255, 255, 255, 220))
         point_pen.setWidth(2)
         painter.setPen(point_pen)
         painter.setBrush(QColor(86, 255, 176, 230))
 
-        for index in range(len(self._landmarks)):
+        landmarks = (
+            range(len(self._landmarks))
+            if self._render_joints is None
+            else landmarks_for_angle_joints(self._render_joints)
+        )
+        for index in landmarks:
             point = self._point_for_index(index)
             if point is None:
                 continue
-            x, y = point
-            painter.drawEllipse(x - POINT_RADIUS, y - POINT_RADIUS, POINT_RADIUS * 2, POINT_RADIUS * 2)
+            painter.drawEllipse(QPointF(*point), POINT_RADIUS, POINT_RADIUS)
 
         painter.restore()
 
@@ -148,10 +310,10 @@ class CameraOverlayWidget(QWidget):
         if max_x < min_x or max_y < min_y:
             return None
 
-        x = draw_rect.left() + landmark_x * draw_rect.width()
+        x = draw_rect.left() + (1.0 - landmark_x) * draw_rect.width()
         y = draw_rect.top() + landmark_y * draw_rect.height()
-        x = round(min(max(x, min_x), max_x))
-        y = round(min(max(y, min_y), max_y))
+        x = min(max(x, min_x), max_x)
+        y = min(max(y, min_y), max_y)
         return x, y
 
     def _aspect_fit_rect(self):

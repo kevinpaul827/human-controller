@@ -151,6 +151,7 @@ class ProfileManager:
                 f"Gesture binding not found: {gesture_id}"
             )
         del profile.key_bindings[gesture_id]
+        profile.match_thresholds.pop(gesture_id, None)
         self.save(profile)
         return profile
 

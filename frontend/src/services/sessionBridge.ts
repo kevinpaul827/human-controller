@@ -5,6 +5,9 @@ import type {
   SessionProfileData,
   SessionPreviewBounds,
   SessionStatusEvent,
+  GestureMatchEvent,
+  GestureMatchListener,
+  OverlayVisibilityListener,
 } from "../types/session";
 
 import { getQtWebChannel } from "./qtWebChannel";
@@ -30,7 +33,12 @@ type QtSessionBridgeObject = {
   ) => SessionProfileResult | Promise<SessionProfileResult> | void;
   startSession: () => void | Promise<void>;
   stopSession: () => void | Promise<void>;
-  getSessionState?: () => SessionStatusEvent["state"];
+  getSessionState?: (
+    callback?: (state: SessionStatusEvent["state"]) => void,
+  ) =>
+    | SessionStatusEvent["state"]
+    | Promise<SessionStatusEvent["state"]>
+    | void;
   getLoadedSessionGestures?: (
     callback?: (gestures: SessionGestureMapping[]) => void,
   ) => SessionGestureMapping[] | Promise<SessionGestureMapping[]> | void;
@@ -42,8 +50,15 @@ type QtSessionBridgeObject = {
     devicePixelRatio: number,
   ) => void | Promise<void>;
   openCameraSettings?: () => void | Promise<void>;
+  openAccessibilitySettings?: () => void | Promise<void>;
+  setOverlayVisible?: (visible: boolean) => void | Promise<void>;
+  getOverlayVisible?: (
+    callback?: (visible: boolean) => void,
+  ) => boolean | Promise<boolean> | void;
   sessionStatusChanged?: QtSignal<SessionStatusEvent>;
   previewAspectRatioChanged?: QtSignal<number>;
+  gestureMatchUpdated?: QtSignal<GestureMatchEvent>;
+  overlayVisibilityChanged?: QtSignal<boolean>;
 };
 
 const BRIDGE_NAME = "sessionBridge";
@@ -99,6 +114,8 @@ const invokeWithResult = <T>(
             }
           },
         );
+      } else if (maybePromise !== undefined) {
+        settle(maybePromise as T);
       }
     } catch (error) {
       if (!settled) {
@@ -119,7 +136,7 @@ const sessionBridge: SessionBridge = {
   async loadProfile(patientId) {
     const bridge = await getSessionBridgeOrThrow();
     if (!bridge.loadProfile) {
-      throw new Error("Profile session loading is unavailable in this build.");
+      throw new Error("Profile-aware sessions are unavailable in this build.");
     }
     return parseProfileResult(
       await invokeWithResult<SessionProfileResult>((callback) =>
@@ -172,6 +189,26 @@ const sessionBridge: SessionBridge = {
     await bridge.openCameraSettings();
   },
 
+  async openAccessibilitySettings() {
+    const bridge = await getSessionBridgeOrThrow();
+
+    if (!bridge.openAccessibilitySettings) {
+      throw new Error(
+        "Desktop accessibility settings are unavailable in this build.",
+      );
+    }
+
+    await bridge.openAccessibilitySettings();
+  },
+
+  async setOverlayVisible(visible) {
+    const bridge = await getSessionBridgeOrThrow();
+    if (!bridge.setOverlayVisible) {
+      throw new Error("Desktop game overlay is unavailable in this build.");
+    }
+    await bridge.setOverlayVisible(visible);
+  },
+
   onSessionStatus(listener) {
     let active = true;
     let unsubscribe = () => {};
@@ -191,9 +228,16 @@ const sessionBridge: SessionBridge = {
         unsubscribe = () => {
           bridge.sessionStatusChanged?.disconnect?.(listener);
         };
-        const currentState = bridge.getSessionState?.();
-        if (active && currentState) {
-          listener({ state: currentState });
+        if (bridge.getSessionState) {
+          void invokeWithResult<SessionStatusEvent["state"]>((callback) =>
+            bridge.getSessionState?.(callback),
+          )
+            .then((currentState) => {
+              if (active && currentState) {
+                listener({ state: currentState });
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch((error: Error) => {
@@ -230,6 +274,48 @@ const sessionBridge: SessionBridge = {
       })
       .catch(() => {});
 
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  },
+
+  onGestureMatch(listener: GestureMatchListener) {
+    let active = true;
+    let unsubscribe = () => {};
+    void getSessionBridgeOrThrow()
+      .then((bridge) => {
+        if (!active || !bridge.gestureMatchUpdated) return;
+        bridge.gestureMatchUpdated.connect(listener);
+        unsubscribe = () => bridge.gestureMatchUpdated?.disconnect?.(listener);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  },
+
+  onOverlayVisibility(listener: OverlayVisibilityListener) {
+    let active = true;
+    let unsubscribe = () => {};
+    void getSessionBridgeOrThrow()
+      .then((bridge) => {
+        if (!active || !bridge.overlayVisibilityChanged) return;
+        bridge.overlayVisibilityChanged.connect(listener);
+        unsubscribe = () =>
+          bridge.overlayVisibilityChanged?.disconnect?.(listener);
+        if (bridge.getOverlayVisible) {
+          void invokeWithResult<boolean>((callback) =>
+            bridge.getOverlayVisible?.(callback),
+          )
+            .then((visible) => {
+              if (active) listener(Boolean(visible));
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
     return () => {
       active = false;
       unsubscribe();

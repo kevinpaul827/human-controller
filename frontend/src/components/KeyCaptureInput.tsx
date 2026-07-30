@@ -1,5 +1,5 @@
+import { BrutalInput } from "@/components/ui/brutal-input";
 import { formatKey, normaliseKey } from "../utils/keyboard";
-import styles from "../styles/patientCard.module.css";
 
 type KeyCaptureInputProps = {
   value: string;
@@ -14,9 +14,8 @@ const KeyCaptureInput = ({
   ariaLabel,
   disabled = false,
 }: KeyCaptureInputProps) => (
-  <input
+  <BrutalInput
     aria-label={ariaLabel}
-    className={styles.bindingInput}
     value={value ? formatKey(value) : ""}
     placeholder="Click, then press a key"
     readOnly

@@ -12,9 +12,17 @@ export type CalibrateStatusEvent = {
 
 export type CalibrateStatusListener = (event: CalibrateStatusEvent) => void;
 export type CalibrateAspectRatioListener = (aspectRatio: number) => void;
+export type CapturePhase =
+  | "idle"
+  | "countdown"
+  | "waiting"
+  | "recording"
+  | "captured";
 export type CalibrationUpdateEvent = {
   repCount: number;
   capturing: boolean;
+  phase: CapturePhase;
+  countdownRemaining: number;
 };
 export type CalibrationUpdateListener = (event: CalibrationUpdateEvent) => void;
 
@@ -53,8 +61,11 @@ export interface CalibrateBridge {
   stopCalibrate(): Promise<void>;
   startCalibration(): Promise<void>;
   captureRep(): Promise<CapturedRep>;
+  startRep(recordingSeconds: number): Promise<void>;
+  cancelRep(): Promise<void>;
+  stopRep(): Promise<CapturedRep>;
   resetRep(): Promise<void>;
-  saveRep(name: string): Promise<SavedRepResult>;
+  saveRep(name: string, gestureId?: string): Promise<SavedRepResult>;
   listSavedGestures(): Promise<SavedGestureSummary[]>;
   getLoadedSessionGestures(): Promise<SavedGestureSummary[]>;
   loadSavedGesture(gestureId: string): Promise<LoadSavedGestureResult>;

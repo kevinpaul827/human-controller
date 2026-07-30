@@ -17,6 +17,7 @@ type UseDesktopCameraPreviewOptions = {
   bridge: DesktopCameraPreviewBridge;
   isLive: boolean;
   defaultAspectRatio?: number;
+  trackElapsed?: boolean;
 };
 
 const DEFAULT_ASPECT_RATIO = 4 / 3;
@@ -25,6 +26,7 @@ const useDesktopCameraPreview = ({
   bridge,
   isLive,
   defaultAspectRatio = DEFAULT_ASPECT_RATIO,
+  trackElapsed = true,
 }: UseDesktopCameraPreviewOptions) => {
   const [elapsed, setElapsed] = useState(0);
   const [previewAspectRatio, setPreviewAspectRatio] =
@@ -32,7 +34,7 @@ const useDesktopCameraPreview = ({
   const previewViewportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!isLive) {
+    if (!isLive || !trackElapsed) {
       return;
     }
 
@@ -41,7 +43,7 @@ const useDesktopCameraPreview = ({
     }, 100);
 
     return () => window.clearInterval(intervalId);
-  }, [isLive]);
+  }, [isLive, trackElapsed]);
 
   useEffect(() => {
     const panel = previewViewportRef.current;
