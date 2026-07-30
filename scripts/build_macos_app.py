@@ -102,6 +102,7 @@ app = BUNDLE(
     info_plist={
         "CFBundleDisplayName": "Human Controller",
         "CFBundleName": "Human Controller",
+        "LSUIElement": True,
         "NSCameraUsageDescription": "This app uses the camera to show the live session preview.",
         "NSPrincipalClass": "NSApplication",
         "NSHighResolutionCapable": True,

@@ -1,14 +1,15 @@
+import sys
+
 from PySide6.QtCore import QPoint, QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import QLabel, QPushButton, QSizeGrip, QWidget
 
 from .camera_overlay_widget import CameraOverlayWidget
+from .logging_utils import log_info
 from .platforms import configure_overlay_window
 
 
 class PictureInPictureWindow(QWidget):
-
-
     visibilityChanged = Signal(bool)
 
     def __init__(self):
@@ -20,6 +21,11 @@ class PictureInPictureWindow(QWidget):
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.WindowDoesNotAcceptFocus
         )
+        if sys.platform == "darwin":
+            self.setAttribute(
+                Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow,
+                True,
+            )
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setMinimumSize(240, 160)
@@ -62,6 +68,7 @@ class PictureInPictureWindow(QWidget):
         self._drag_offset = QPoint()
         self._dragging = False
         self._placed_once = False
+        self._native_overlay_configured = False
         self._settings = QSettings("Human Controller", "Human Controller")
 
         saved_geometry = self._settings.value("pictureInPicture/geometry")
@@ -149,10 +156,25 @@ class PictureInPictureWindow(QWidget):
             self._placed_once = True
         self.preview.show()
         self.show()
-        configure_overlay_window(self)
-        QTimer.singleShot(0, lambda: configure_overlay_window(self))
+        self._native_overlay_configured = False
+        self._configure_native_overlay()
+        QTimer.singleShot(0, self._finalize_native_overlay_configuration)
         self.raise_()
         self.visibilityChanged.emit(True)
+
+    def _configure_native_overlay(self):
+        if configure_overlay_window(self):
+            self._native_overlay_configured = True
+
+    def _finalize_native_overlay_configuration(self):
+        if not self.isVisible():
+            return
+        self._configure_native_overlay()
+        if sys.platform == "darwin" and not self._native_overlay_configured:
+            log_info(
+                "[overlay] warning: native always-on-top configuration failed; "
+                "the session overlay may not appear above full-screen apps"
+            )
 
     def hide_overlay(self):
         self._save_geometry()
@@ -222,6 +244,5 @@ class PictureInPictureWindow(QWidget):
         super().mouseReleaseEvent(event)
 
     def closeEvent(self, event):
-
         self.hide_overlay()
         event.ignore()

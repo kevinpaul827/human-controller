@@ -129,6 +129,7 @@ from app import main_window
 
 # Do not leak the lightweight import stub into overlay-specific test modules.
 sys.modules.pop("app.overlay_constants", None)
+sys.modules.pop("app.picture_in_picture_window", None)
 
 
 class FrontendPathTests(unittest.TestCase):
@@ -148,6 +149,7 @@ class FrontendPathTests(unittest.TestCase):
 
 
 class MainEntryPointTests(unittest.TestCase):
+    @patch("app.main.configure_macos_activation_policy")
     @patch("app.main.QApplication")
     @patch("app.main.QMessageBox.critical")
     @patch("app.main.sys.exit")
@@ -156,6 +158,7 @@ class MainEntryPointTests(unittest.TestCase):
         exit_mock,
         critical_mock,
         app_ctor_mock,
+        activation_policy_mock,
     ):
         exit_mock.side_effect = SystemExit(1)
 
@@ -168,9 +171,11 @@ class MainEntryPointTests(unittest.TestCase):
                     main.main()
 
         app_ctor_mock.assert_called_once()
+        activation_policy_mock.assert_called_once_with()
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
+    @patch("app.main.configure_macos_activation_policy")
     @patch("app.main.MainWindow", side_effect=RuntimeError("backend failed"))
     @patch("app.main.QApplication")
     @patch("app.main.QMessageBox.critical")
@@ -181,6 +186,7 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock,
         app_ctor_mock,
         _window_ctor_mock,
+        activation_policy_mock,
     ):
         exit_mock.side_effect = SystemExit(1)
 
@@ -190,9 +196,11 @@ class MainEntryPointTests(unittest.TestCase):
                     main.main()
 
         app_ctor_mock.assert_called_once()
+        activation_policy_mock.assert_called_once_with()
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
+    @patch("app.main.configure_macos_activation_policy")
     @patch("app.main.MainWindow")
     @patch("app.main.QApplication")
     @patch("app.main.QMessageBox.critical")
@@ -203,6 +211,7 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock,
         app_ctor_mock,
         window_ctor_mock,
+        activation_policy_mock,
     ):
         fake_app = MagicMock()
         fake_app.exec.return_value = 0
@@ -215,8 +224,44 @@ class MainEntryPointTests(unittest.TestCase):
                 self.assertEqual(main.main(), 0)
 
         critical_mock.assert_not_called()
+        activation_policy_mock.assert_called_once_with()
         window_ctor_mock.assert_called_once()
         fake_window.show.assert_called_once()
         fake_app.exec.assert_called_once()
         fake_window.shutdown.assert_called_once()
         exit_mock.assert_not_called()
+
+
+class MacOSActivationPolicyTests(unittest.TestCase):
+    def test_accessory_policy_is_applied_on_macos(self):
+        appkit = MagicMock()
+        appkit.NSApplicationActivationPolicyAccessory = 1
+        native_application = appkit.NSApplication.sharedApplication.return_value
+        native_application.setActivationPolicy_.return_value = True
+
+        with patch.object(main.sys, "platform", "darwin"):
+            self.assertTrue(main.configure_macos_activation_policy(appkit))
+
+        native_application.setActivationPolicy_.assert_called_once_with(1)
+
+    def test_activation_policy_is_unchanged_on_windows(self):
+        appkit = MagicMock()
+
+        with patch.object(main.sys, "platform", "win32"):
+            self.assertFalse(main.configure_macos_activation_policy(appkit))
+
+        appkit.NSApplication.sharedApplication.assert_not_called()
+
+    def test_activation_policy_failure_is_visible(self):
+        appkit = MagicMock()
+        appkit.NSApplicationActivationPolicyAccessory = 1
+        native_application = appkit.NSApplication.sharedApplication.return_value
+        native_application.setActivationPolicy_.return_value = False
+
+        with patch.object(main.sys, "platform", "darwin"):
+            with patch("app.main.log_info") as log_mock:
+                self.assertFalse(main.configure_macos_activation_policy(appkit))
+
+        log_mock.assert_called_once_with(
+            "[macos] accessory activation policy was rejected"
+        )

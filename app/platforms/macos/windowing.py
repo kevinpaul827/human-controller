@@ -16,6 +16,9 @@ def configure_overlay_window(qt_window) -> bool:
 
 
 def _overlay_window_level(appkit) -> int:
+    screen_saver_level = getattr(appkit, "NSScreenSaverWindowLevel", None)
+    if screen_saver_level is not None:
+        return int(screen_saver_level)
     return int(getattr(appkit, "NSFloatingWindowLevel", 3))
 
 
@@ -38,12 +41,27 @@ def configure_fullscreen_overlay(qt_window, appkit=None, objc_module=None) -> bo
         if native_window is None:
             return False
 
+        nonactivating_panel = getattr(
+            appkit, "NSWindowStyleMaskNonactivatingPanel", None
+        )
+        style_mask = getattr(native_window, "styleMask", None)
+        set_style_mask = getattr(native_window, "setStyleMask_", None)
+        if (
+            nonactivating_panel is not None
+            and callable(style_mask)
+            and callable(set_style_mask)
+        ):
+            set_style_mask(int(style_mask()) | int(nonactivating_panel))
+
         behavior = int(native_window.collectionBehavior())
         behavior &= ~int(
             getattr(appkit, "NSWindowCollectionBehaviorMoveToActiveSpace", 0)
         )
         behavior |= int(appkit.NSWindowCollectionBehaviorCanJoinAllSpaces)
         behavior |= int(appkit.NSWindowCollectionBehaviorIgnoresCycle)
+        behavior |= int(
+            getattr(appkit, "NSWindowCollectionBehaviorStationary", 0)
+        )
 
         join_all_apps = getattr(
             appkit, "NSWindowCollectionBehaviorCanJoinAllApplications", None
@@ -69,6 +87,15 @@ def configure_fullscreen_overlay(qt_window, appkit=None, objc_module=None) -> bo
             max(existing_level, _overlay_window_level(appkit))
         )
         native_window.setHidesOnDeactivate_(False)
+        order_front_regardless = getattr(
+            native_window, "orderFrontRegardless", None
+        )
+        if callable(order_front_regardless):
+            order_front_regardless()
+        else:
+            order_front = getattr(native_window, "orderFront_", None)
+            if callable(order_front):
+                order_front(None)
         native_class = (
             str(native_window.className())
             if hasattr(native_window, "className")

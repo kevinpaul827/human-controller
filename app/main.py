@@ -2,6 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from .logging_utils import log_info
 from .main_window import (
     MainWindow,
     frontend_source_exists,
@@ -9,8 +10,37 @@ from .main_window import (
 )
 
 
+def configure_macos_activation_policy(appkit=None) -> bool:
+    if sys.platform != "darwin":
+        return False
+
+    try:
+        if appkit is None:
+            import AppKit as appkit_module
+
+            appkit = appkit_module
+
+        native_application = appkit.NSApplication.sharedApplication()
+        configured = bool(
+            native_application.setActivationPolicy_(
+                appkit.NSApplicationActivationPolicyAccessory
+            )
+        )
+    except Exception as error:
+        log_info(
+            "[macos] failed to enable accessory activation policy: "
+            f"{error!r}"
+        )
+        return False
+
+    if not configured:
+        log_info("[macos] accessory activation policy was rejected")
+    return configured
+
+
 def main():
     app = QApplication(sys.argv)
+    configure_macos_activation_policy()
 
     if sys.platform not in {"darwin", "win32"}:
         QMessageBox.critical(

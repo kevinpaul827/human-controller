@@ -38,6 +38,7 @@ class SessionBridge(QObject):
         self.preview_bounds = (0, 0, 0, 0)
         self.picture_in_picture = None
         self.overlay_requested = True
+        self._applying_overlay_visibility = False
         self.camera = camera_manager
         self.state_bridge = (
             profile_manager
@@ -76,8 +77,10 @@ class SessionBridge(QObject):
         )
 
     def handle_overlay_visibility_changed(self, visible):
-        self.overlay_requested = bool(visible)
-        self.overlayVisibilityChanged.emit(bool(visible))
+        visible = bool(visible)
+        if not self._applying_overlay_visibility:
+            self.overlay_requested = visible
+        self.overlayVisibilityChanged.emit(visible)
 
     def apply_overlay_visibility(self):
         if self.picture_in_picture is None:
@@ -88,10 +91,14 @@ class SessionBridge(QObject):
             and self.state == SessionState.LIVE
             and self.check_camera_ownership()
         )
-        if should_show:
-            self.picture_in_picture.show_overlay()
-        else:
-            self.picture_in_picture.hide_overlay()
+        self._applying_overlay_visibility = True
+        try:
+            if should_show:
+                self.picture_in_picture.show_overlay()
+            else:
+                self.picture_in_picture.hide_overlay()
+        finally:
+            self._applying_overlay_visibility = False
 
     def set_state(self, state):
         self.state = state
