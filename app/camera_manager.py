@@ -7,6 +7,7 @@ from PySide6.QtMultimedia import QCamera, QMediaCaptureSession, QMediaDevices, Q
 
 from backend.matching_engine import AngleKey, TemplateBuilder
 from backend.matching_engine.core.angles import reduce_joints
+from backend.perception.models import normalize_pose_model
 
 from .calibration_capture import CalibrationCaptureController, CapturePhase
 from .gesture_matcher import GestureMatcher
@@ -44,6 +45,7 @@ class CameraManager(QObject):
     calibrationUpdated = Signal(dict)
     previewAspectRatioChanged = Signal(float)
     processFrame = Signal(object, int)
+    configurePoseModel = Signal(str)
     closePoseProcessor = Signal()
 
     def __init__(self, gestures_dir=None, key_injector=None):
@@ -80,6 +82,10 @@ class CameraManager(QObject):
         self.pose_processor.moveToThread(self.pose_thread)
 
         self.processFrame.connect(self.pose_processor.process_frame, Qt.ConnectionType.QueuedConnection)
+        self.configurePoseModel.connect(
+            self.pose_processor.configure_model,
+            Qt.ConnectionType.QueuedConnection,
+        )
         self.pose_processor.poseEstimated.connect(self.handle_pose_estimated)
         self.pose_processor.processingFinished.connect(self.handle_processing_finished)
         self.pose_processor.errorOccurred.connect(self.handle_pose_error)
@@ -180,6 +186,10 @@ class CameraManager(QObject):
     @Slot("QVariantMap")
     def configure_runtime(self, configuration):
         self._release_injected_keys()
+        settings = dict(configuration.get("settings", {}))
+        self.configurePoseModel.emit(
+            normalize_pose_model(settings.get("poseModel"))
+        )
         if self.active_bridge == "session":
             self.gestureMatchUpdated.emit(
                 {
@@ -206,7 +216,7 @@ class CameraManager(QObject):
         }
         self.trigger_controller.configure(
             bindings,
-            dict(configuration.get("settings", {})),
+            settings,
             match_thresholds,
         )
         self.gesture_matcher.set_active_gestures(

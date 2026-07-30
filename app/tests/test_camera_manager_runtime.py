@@ -74,6 +74,7 @@ class RuntimeHarness:
         self.active_bridge = "session"
         self.gestureMatchUpdated = FakeSignal()
         self.frameProcessed = FakeSignal()
+        self.configurePoseModel = FakeSignal()
         self.trigger_controller = FakeTriggerController()
         self.gesture_matcher = FakeGestureMatcher()
         self.release_count = 0
@@ -179,6 +180,32 @@ class CameraManagerRuntimeTests(unittest.TestCase):
         self.assertEqual(
             camera.gestureMatchUpdated.emissions[0][0]["keyAction"],
             "reset",
+        )
+        self.assertEqual(camera.configurePoseModel.emissions, [("lite",)])
+
+    def test_runtime_configuration_selects_and_normalizes_pose_model(self) -> None:
+        camera = RuntimeHarness()
+
+        CameraManager.configure_runtime(
+            camera,
+            {
+                "bindings": {},
+                "matchThresholds": {},
+                "settings": {"matchThreshold": 75, "poseModel": "HEAVY"},
+            },
+        )
+        CameraManager.configure_runtime(
+            camera,
+            {
+                "bindings": {},
+                "matchThresholds": {},
+                "settings": {"matchThreshold": 75, "poseModel": "unknown"},
+            },
+        )
+
+        self.assertEqual(
+            camera.configurePoseModel.emissions,
+            [("heavy",), ("lite",)],
         )
 
     def test_pose_payload_keeps_raw_matching_data_timestamp_and_arm_filter(self) -> None:

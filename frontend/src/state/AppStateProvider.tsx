@@ -40,6 +40,7 @@ const DEFAULT_SETTINGS: RuntimeSettings = {
   holdDuration: 1.5,
   cooldown: 0.5,
   smoothing: 2,
+  poseModel: "lite",
 };
 
 const initialState = (): Persisted => ({
@@ -283,6 +284,19 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
           ) ?? null)
         : null,
     [state.selectedPatientId, state.patients],
+  );
+
+  const updateSetting = useCallback(
+    <K extends keyof RuntimeSettings>(key: K, setting: RuntimeSettings[K]) =>
+      setState((current) =>
+        current.settings[key] === setting
+          ? current
+          : {
+              ...current,
+              settings: { ...current.settings, [key]: setting },
+            },
+      ),
+    [],
   );
 
   const value = useMemo(
@@ -657,8 +671,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
         }
       },
 
-      saveSettings: (settings: RuntimeSettings) =>
-        setState((current) => ({ ...current, settings })),
+      updateSetting,
 
       undo: () => {
         if (undoSnapshot.current) {
@@ -685,6 +698,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
       hasUnsavedChanges,
       readiness,
       undoLabel,
+      updateSetting,
       withUndo,
       gestureById,
     ],

@@ -10,7 +10,24 @@ DIST_DIR = ROOT / "dist"
 PYINSTALLER_CONFIG_DIR = ROOT / ".pyinstaller"
 SPEC_PATH = ROOT / "human_controller.spec"
 FRONTEND_PATH = ROOT / "frontend" / "dist" / "index.html"
-POSE_MODEL_PATH = ROOT / "backend" / "perception" / "pose_landmarker_lite.task"
+POSE_MODEL_NAMES = (
+    "pose_landmarker_lite.task",
+    "pose_landmarker_full.task",
+    "pose_landmarker_heavy.task",
+)
+POSE_MODEL_PATHS = tuple(
+    ROOT / "backend" / "perception" / name for name in POSE_MODEL_NAMES
+)
+BUNDLED_POSE_MODEL_PATHS = tuple(
+    DIST_DIR
+    / "Human Controller.app"
+    / "Contents"
+    / "Resources"
+    / "backend"
+    / "perception"
+    / name
+    for name in POSE_MODEL_NAMES
+)
 MEDIAPIPE_LIBRARY_IN_BUNDLE = (
     DIST_DIR
     / "Human Controller.app"
@@ -41,6 +58,8 @@ a = Analysis(
     datas=[
         ("frontend/dist", "frontend/dist"),
         ("backend/perception/pose_landmarker_lite.task", "backend/perception"),
+        ("backend/perception/pose_landmarker_full.task", "backend/perception"),
+        ("backend/perception/pose_landmarker_heavy.task", "backend/perception"),
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
@@ -104,8 +123,10 @@ def main() -> int:
 
     # Pose estimation needs the MediaPipe task file at runtime. Packaging would
     # succeed without it, but the app would later fail when the camera flow starts.
-    if not POSE_MODEL_PATH.exists():
-        print(f"Backend model asset is missing: {POSE_MODEL_PATH}")
+    missing_models = [path for path in POSE_MODEL_PATHS if not path.exists()]
+    if missing_models:
+        for path in missing_models:
+            print(f"Backend model asset is missing: {path}")
         return 1
 
     if shutil.which("pyinstaller") is None and not (ROOT / ".venv" / "bin" / "pyinstaller").exists():
@@ -142,6 +163,14 @@ def main() -> int:
             "Build failed validation: MediaPipe's native library was not "
             f"bundled at {MEDIAPIPE_LIBRARY_IN_BUNDLE}"
         )
+        return 1
+
+    missing_bundled_models = [
+        path for path in BUNDLED_POSE_MODEL_PATHS if not path.exists()
+    ]
+    if missing_bundled_models:
+        for path in missing_bundled_models:
+            print(f"Build failed validation: pose model is missing: {path}")
         return 1
 
     print(f"Created macOS app bundle at: {DIST_DIR / 'Human Controller.app'}")

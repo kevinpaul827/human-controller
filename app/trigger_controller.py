@@ -10,6 +10,7 @@ DEFAULT_SETTINGS = {
     "holdDuration": 1.5,
     "cooldown": 0.5,
     "smoothing": 2,
+    "poseModel": "lite",
 }
 
 

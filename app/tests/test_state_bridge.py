@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from app.gesture_store import GestureStore
 from app.profile_manager import ProfileManager
@@ -31,6 +32,59 @@ class StateBridgeThresholdTests(unittest.TestCase):
         self.assertEqual(saved["bindings"][0]["matchThreshold"], 63)
         self.assertEqual(runtime["bindings"], {"elbow": "W"})
         self.assertEqual(runtime["matchThresholds"], {"elbow": 63})
+
+    def test_pose_model_defaults_to_lite(self):
+        self.assertEqual(self.bridge.getState()["settings"]["poseModel"], "lite")
+        self.assertEqual(
+            self.bridge.runtime_configuration()["settings"]["poseModel"],
+            "lite",
+        )
+
+    def test_pose_model_round_trips_into_runtime_configuration(self):
+        current = self.bridge.getState()
+        current["settings"]["poseModel"] = "heavy"
+        runtime_updates = []
+        self.bridge.runtimeConfigurationChanged.connect(runtime_updates.append)
+
+        saved = self.bridge.saveState(current)
+
+        self.assertEqual(saved["settings"]["poseModel"], "heavy")
+        self.assertEqual(
+            self.bridge.runtime_configuration()["settings"]["poseModel"],
+            "heavy",
+        )
+        self.assertEqual(runtime_updates[-1]["settings"]["poseModel"], "heavy")
+
+    def test_invalid_pose_model_falls_back_to_lite(self):
+        current = self.bridge.getState()
+        current["settings"]["poseModel"] = "unsupported"
+
+        saved = self.bridge.saveState(current)
+
+        self.assertEqual(saved["settings"]["poseModel"], "lite")
+        self.assertEqual(
+            self.bridge.runtime_configuration()["settings"]["poseModel"],
+            "lite",
+        )
+
+    @patch("app.state_bridge.device_pose_recommendation")
+    def test_pose_model_recommendation_is_read_only(self, recommend):
+        recommend.return_value = {
+            "poseModel": "full",
+            "ramGb": 8.0,
+            "physicalCpuCount": 4,
+            "logicalCpuCount": 8,
+        }
+        runtime_updates = []
+        state_updates = []
+        self.bridge.runtimeConfigurationChanged.connect(runtime_updates.append)
+        self.bridge.stateChanged.connect(state_updates.append)
+
+        result = self.bridge.recommendPoseModel()
+
+        self.assertEqual(result["poseModel"], "full")
+        self.assertEqual(runtime_updates, [])
+        self.assertEqual(state_updates, [])
 
     def test_legacy_binding_uses_global_threshold_as_its_default(self):
         current = self.bridge.getState()

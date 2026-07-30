@@ -1,10 +1,17 @@
 import { getQtWebChannel } from "./qtWebChannel";
-import type { DesktopState } from "@/types/desktopState";
+import type {
+  DesktopState,
+  PoseModel,
+  PoseModelRecommendation,
+} from "@/types/desktopState";
 
 type QtStateBridge = {
   getState: (
     callback?: (state: DesktopState) => void,
   ) => DesktopState | Promise<DesktopState> | void;
+  recommendPoseModel: (
+    callback?: (result: PoseModelRecommendation) => void,
+  ) => PoseModelRecommendation | Promise<PoseModelRecommendation> | void;
   saveState: (
     state: DesktopState,
     callback?: (result: DesktopState) => void,
@@ -29,6 +36,10 @@ type QtStateBridge = {
     gestureId: string,
     callback?: (state: DesktopState) => void,
   ) => DesktopState | Promise<DesktopState> | void;
+};
+
+type NavigatorWithMemory = Navigator & {
+  deviceMemory?: number;
 };
 
 let bridgePromise: Promise<QtStateBridge> | null = null;
@@ -77,11 +88,57 @@ const invokeWithResult = <T>(
     }
   });
 
+const browserPoseModelRecommendation = (): PoseModelRecommendation => {
+  const detectedLogicalCpus = navigator.hardwareConcurrency;
+  const logicalCpuCount =
+    Number.isFinite(detectedLogicalCpus) && detectedLogicalCpus > 0
+      ? Math.floor(detectedLogicalCpus)
+      : null;
+  const ram = (navigator as NavigatorWithMemory).deviceMemory;
+  const ramGb =
+    typeof ram === "number" && Number.isFinite(ram) && ram > 0 ? ram : null;
+  const physicalCpuCount = null;
+  let poseModel: PoseModel = "lite";
+  if (
+    ramGb !== null &&
+    logicalCpuCount !== null &&
+    ramGb >= 15 &&
+    logicalCpuCount >= 12
+  ) {
+    poseModel = "heavy";
+  } else if (
+    ramGb !== null &&
+    logicalCpuCount !== null &&
+    ramGb >= 7 &&
+    logicalCpuCount >= 6
+  ) {
+    poseModel = "full";
+  }
+  return {
+    poseModel,
+    ramGb,
+    physicalCpuCount,
+    logicalCpuCount,
+  };
+};
+
+const isDesktopRuntime = () =>
+  Boolean(window.qt?.webChannelTransport && window.QWebChannel);
+
 export const desktopStateBridge = {
   async getState() {
     const bridge = await getBridge();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.getState(callback),
+    );
+  },
+  async recommendPoseModel() {
+    if (!isDesktopRuntime()) {
+      return browserPoseModelRecommendation();
+    }
+    const bridge = await getBridge();
+    return invokeWithResult<PoseModelRecommendation>((callback) =>
+      bridge.recommendPoseModel(callback),
     );
   },
   async saveState(state: DesktopState) {
