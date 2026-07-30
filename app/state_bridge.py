@@ -6,6 +6,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from backend.perception.models import normalize_pose_model
+
+from .device_capabilities import device_pose_recommendation
 from .gesture_store import GestureStore
 from .profile_manager import PatientProfile, ProfileManager
 from .trigger_controller import DEFAULT_SETTINGS
@@ -61,7 +64,9 @@ class StateBridge(QObject):
                 defaults.update(payload)
         except (OSError, json.JSONDecodeError):
             pass
-        defaults["settings"] = {**DEFAULT_SETTINGS, **defaults.get("settings", {})}
+        settings = {**DEFAULT_SETTINGS, **defaults.get("settings", {})}
+        settings["poseModel"] = normalize_pose_model(settings.get("poseModel"))
+        defaults["settings"] = settings
         return defaults
 
     def _write_ui_state(self, payload: dict) -> None:
@@ -157,6 +162,10 @@ class StateBridge(QObject):
     def getState(self):
         return self._snapshot()
 
+    @Slot(result="QVariantMap")
+    def recommendPoseModel(self):
+        return device_pose_recommendation()
+
     @Slot("QVariantMap", result="QVariantMap")
     def saveState(self, payload):
         current = self._read_ui_state()
@@ -190,12 +199,14 @@ class StateBridge(QObject):
         pending = [
             item for item in payload.get("gestures", []) if not item.get("calibratedAt")
         ]
+        settings = {**DEFAULT_SETTINGS, **payload.get("settings", {})}
+        settings["poseModel"] = normalize_pose_model(settings.get("poseModel"))
         ui = {
             "presets": payload.get("presets", current.get("presets", [])),
             "activePresetId": payload.get("activePresetId"),
             "selectedPatientId": selected_id,
             "pendingGestures": pending,
-            "settings": {**DEFAULT_SETTINGS, **payload.get("settings", {})},
+            "settings": settings,
         }
         self._write_ui_state(ui)
         return self._emit_updates()

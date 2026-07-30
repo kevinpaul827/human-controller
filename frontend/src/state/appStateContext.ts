@@ -63,7 +63,10 @@ export type AppStateValue = {
   deletePatient: (patientId: string) => Promise<void>;
   clearPatientSelection: () => Promise<void>;
   refreshState: () => Promise<void>;
-  saveSettings: (settings: RuntimeSettings) => void;
+  updateSetting: <K extends keyof RuntimeSettings>(
+    key: K,
+    value: RuntimeSettings[K],
+  ) => void;
   undo: () => void;
   dismissUndo: () => void;
 };
