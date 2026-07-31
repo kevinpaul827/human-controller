@@ -19,7 +19,15 @@ def smoke_imports():
         RunningMode,
     )
 
-    native_library = files("mediapipe.tasks.c").joinpath("libmediapipe.dylib")
+    if sys.platform == "win32":
+        library_name = "libmediapipe.dll"
+    elif sys.platform == "darwin":
+        library_name = "libmediapipe.dylib"
+    else:
+        raise RuntimeError("Operating system not supported")
+        
+
+    native_library = files("mediapipe.tasks.c").joinpath(library_name)
     if not native_library.is_file():
         raise RuntimeError(f"Bundled MediaPipe library is missing: {native_library}")
 
