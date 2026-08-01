@@ -7,13 +7,7 @@ from app.key_injector import (
     KeyInjector,
 )
 from app.platforms.macos.key_injection import MacOSKeyboardBackend
-from app.platforms.windows.key_injection import (
-    INPUT,
-    KEYEVENTF_EXTENDEDKEY,
-    KEYEVENTF_KEYUP,
-    KEYEVENTF_SCANCODE,
-    WindowsKeyboardBackend,
-)
+from app.platforms.windows.key_injection import WindowsKeyboardBackend
 
 
 class FakeBackend:
