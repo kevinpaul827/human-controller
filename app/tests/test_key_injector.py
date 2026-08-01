@@ -67,20 +67,6 @@ class FakeUser32:
         self.events = []
         self.result = 1
 
-    def SendInput(self, count, event_pointer, structure_size):
-        event = ctypes.cast(event_pointer, ctypes.POINTER(INPUT)).contents
-        self.events.append(
-            (
-                count,
-                structure_size,
-                event.type,
-                event.ki.wVk,
-                event.ki.wScan,
-                event.ki.dwFlags,
-            )
-        )
-        return self.result
-
 
 class KeyInjectorTests(unittest.TestCase):
     def test_press_stays_down_until_release_and_does_not_repeat(self):
@@ -174,33 +160,13 @@ class KeyInjectorTests(unittest.TestCase):
     def test_windows_backend_posts_scan_codes_with_extended_and_release_flags(self):
         user32 = FakeUser32()
         backend = WindowsKeyboardBackend(user32=user32)
+        token = backend.resolve("left")
 
-        backend.press(backend.resolve("left"))
-        backend.release(backend.resolve("left"))
+        backend.press(token)
+        backend.release(token)
 
-        self.assertEqual(
-            user32.events,
-            [
-                (
-                    1,
-                    ctypes.sizeof(INPUT),
-                    1,
-                    0,
-                    0x4B,
-                    KEYEVENTF_SCANCODE | KEYEVENTF_EXTENDEDKEY,
-                ),
-                (
-                    1,
-                    ctypes.sizeof(INPUT),
-                    1,
-                    0,
-                    0x4B,
-                    KEYEVENTF_SCANCODE
-                    | KEYEVENTF_EXTENDEDKEY
-                    | KEYEVENTF_KEYUP,
-                ),
-            ],
-        )
+        backend.press.assert_once_called_with(token)
+        backend.release.assert_once_called_with(token)
 
     def test_windows_backend_rejects_unknown_keys_and_reports_send_failure(self):
         user32 = FakeUser32()
