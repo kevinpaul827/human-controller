@@ -36,4 +36,4 @@ jobs:
         run: pip install -r app/requirements.txt
 
       - name: Run app checks
-        run: make app-check
+        run: xvfb-run -a make app-check
