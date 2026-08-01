@@ -73,11 +73,20 @@ python3 -m app.main
 
 ## Build the App
 
-After following the setup instructions to finish the installation, you can build the desktop app for macOS:
+After following the setup instructions to finish the installation, you can build the desktop app:
+
+macOS:
 
 ```bash
 make macos-app
 open "dist/Human Controller.app"
+```
+
+Windows Powershell:
+
+```powershell
+python -m PyInstaller run_app.spec --clean
+dist/HumanController/"Human Controller".exe
 ```
 
 `make macos-app` creates `dist/Human Controller.app`.
