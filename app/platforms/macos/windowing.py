@@ -2,7 +2,43 @@ from __future__ import annotations
 
 import sys
 
-from app.logging_utils import log_debug
+from app.logging_utils import log_debug, log_info
+
+
+def set_overlay_activation_policy(enabled: bool, appkit=None) -> bool:
+    if sys.platform != "darwin":
+        return False
+
+    policy_name = "accessory" if enabled else "regular"
+    try:
+        if appkit is None:
+            import AppKit as appkit_module
+
+            appkit = appkit_module
+
+        native_application = appkit.NSApplication.sharedApplication()
+        requested_policy = (
+            appkit.NSApplicationActivationPolicyAccessory
+            if enabled
+            else appkit.NSApplicationActivationPolicyRegular
+        )
+        current_policy = native_application.activationPolicy()
+        if current_policy == requested_policy:
+            return True
+
+        configured = bool(
+            native_application.setActivationPolicy_(requested_policy)
+        )
+    except Exception as error:
+        log_info(
+            f"[macos] failed to enable {policy_name} activation policy: "
+            f"{error!r}"
+        )
+        return False
+
+    if not configured:
+        log_info(f"[macos] {policy_name} activation policy was rejected")
+    return configured
 
 
 def configure_overlay_window(qt_window) -> bool:

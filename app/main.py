@@ -10,37 +10,29 @@ from .main_window import (
 )
 
 
-def configure_macos_activation_policy(appkit=None) -> bool:
+def install_macos_menu_bar(app, window):
     if sys.platform != "darwin":
-        return False
+        return None
+
+    from .macos_menu_bar import MacOSMenuBar
 
     try:
-        if appkit is None:
-            import AppKit as appkit_module
-
-            appkit = appkit_module
-
-        native_application = appkit.NSApplication.sharedApplication()
-        configured = bool(
-            native_application.setActivationPolicy_(
-                appkit.NSApplicationActivationPolicyAccessory
-            )
-        )
+        menu_bar = MacOSMenuBar(app, window)
+        installed = menu_bar.install()
     except Exception as error:
-        log_info(
-            "[macos] failed to enable accessory activation policy: "
-            f"{error!r}"
-        )
-        return False
+        log_info(f"[macos] failed to install menu bar: {error!r}")
+        return None
 
-    if not configured:
-        log_info("[macos] accessory activation policy was rejected")
-    return configured
+    if not installed:
+        return None
+
+    app.setQuitOnLastWindowClosed(False)
+    window.set_hide_on_close(True)
+    return menu_bar
 
 
 def main():
     app = QApplication(sys.argv)
-    configure_macos_activation_policy()
 
     if sys.platform not in {"darwin", "win32"}:
         QMessageBox.critical(
@@ -66,11 +58,14 @@ def main():
         QMessageBox.critical(None, "Error", str(error))
         sys.exit(1)
 
-    window.show()
-
+    menu_bar = None
     try:
+        menu_bar = install_macos_menu_bar(app, window)
+        window.show()
         return app.exec()
     finally:
+        if menu_bar is not None:
+            menu_bar.shutdown()
         window.shutdown()
 
 

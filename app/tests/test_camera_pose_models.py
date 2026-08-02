@@ -105,6 +105,9 @@ class PoseProcessorModelTests(unittest.TestCase):
 
 
 class PoseModelPackagingTests(unittest.TestCase):
+    def test_packaged_app_starts_as_a_regular_application(self):
+        self.assertNotIn("LSUIElement", build_macos_app.SPEC_TEMPLATE)
+
     def test_packager_requires_and_bundles_every_model(self):
         expected_names = {
             "pose_landmarker_lite.task",

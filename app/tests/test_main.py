@@ -1,8 +1,19 @@
 import unittest
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 import sys
 from unittest.mock import MagicMock, patch
+
+
+_app_modules_before = {
+    name: module
+    for name, module in sys.modules.items()
+    if name == "app" or name.startswith("app.")
+}
+_app_package = sys.modules.get("app")
+_app_attributes_before = (
+    dict(vars(_app_package)) if _app_package is not None else {}
+)
 
 
 def _install_pyside6_stub():
@@ -117,9 +128,6 @@ try:
 except Exception:
     _install_pyside6_stub()
 
-# These entrypoint tests only care about startup/error handling in app.main.
-# Stubbing PoseProcessor keeps the import lightweight so the tests do not need
-# numpy, OpenCV, or MediaPipe just to import the window module graph.
 _install_pose_processor_stub()
 _install_overlay_constants_stub()
 _install_picture_in_picture_stub()
@@ -127,9 +135,19 @@ _install_picture_in_picture_stub()
 from app import main
 from app import main_window
 
-# Do not leak the lightweight import stub into overlay-specific test modules.
-sys.modules.pop("app.overlay_constants", None)
-sys.modules.pop("app.picture_in_picture_window", None)
+for module_name in list(sys.modules):
+    if (
+        module_name == "app" or module_name.startswith("app.")
+    ) and module_name not in _app_modules_before:
+        sys.modules.pop(module_name, None)
+for module_name, module in _app_modules_before.items():
+    sys.modules[module_name] = module
+if _app_package is not None:
+    for attribute in list(vars(_app_package)):
+        if attribute not in _app_attributes_before:
+            delattr(_app_package, attribute)
+    for attribute, value in _app_attributes_before.items():
+        setattr(_app_package, attribute, value)
 
 
 class FrontendPathTests(unittest.TestCase):
@@ -149,119 +167,204 @@ class FrontendPathTests(unittest.TestCase):
 
 
 class MainEntryPointTests(unittest.TestCase):
-    @patch("app.main.configure_macos_activation_policy")
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch.object(main, "QApplication")
+    @patch.object(main.QMessageBox, "critical")
+    @patch.object(main.sys, "exit")
     def test_main_exits_with_error_when_frontend_is_missing(
         self,
         exit_mock,
         critical_mock,
         app_ctor_mock,
-        activation_policy_mock,
     ):
         exit_mock.side_effect = SystemExit(1)
 
-        with patch("app.main.frontend_source_exists", return_value=False):
-            with patch(
-                "app.main.frontend_source_for_display",
+        with patch.object(main, "frontend_source_exists", return_value=False):
+            with patch.object(
+                main,
+                "frontend_source_for_display",
                 return_value="/tmp/does-not-exist/index.html",
             ):
                 with self.assertRaises(SystemExit):
                     main.main()
 
         app_ctor_mock.assert_called_once()
-        activation_policy_mock.assert_called_once_with()
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch("app.main.configure_macos_activation_policy")
-    @patch("app.main.MainWindow", side_effect=RuntimeError("backend failed"))
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch.object(main, "MainWindow", side_effect=RuntimeError("backend failed"))
+    @patch.object(main, "QApplication")
+    @patch.object(main.QMessageBox, "critical")
+    @patch.object(main.sys, "exit")
     def test_main_exits_with_error_when_window_startup_fails(
         self,
         exit_mock,
         critical_mock,
         app_ctor_mock,
         _window_ctor_mock,
-        activation_policy_mock,
     ):
         exit_mock.side_effect = SystemExit(1)
 
         with patch.object(main.sys, "platform", "darwin"):
-            with patch("app.main.frontend_source_exists", return_value=True):
+            with patch.object(main, "frontend_source_exists", return_value=True):
                 with self.assertRaises(SystemExit):
                     main.main()
 
         app_ctor_mock.assert_called_once()
-        activation_policy_mock.assert_called_once_with()
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch("app.main.configure_macos_activation_policy")
-    @patch("app.main.MainWindow")
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch.object(main, "install_macos_menu_bar")
+    @patch.object(main, "MainWindow")
+    @patch.object(main, "QApplication")
+    @patch.object(main.QMessageBox, "critical")
+    @patch.object(main.sys, "exit")
     def test_main_starts_window_when_frontend_exists(
         self,
         exit_mock,
         critical_mock,
         app_ctor_mock,
         window_ctor_mock,
-        activation_policy_mock,
+        install_menu_bar_mock,
     ):
         fake_app = MagicMock()
         fake_app.exec.return_value = 0
         fake_window = MagicMock()
+        fake_menu_bar = MagicMock()
         app_ctor_mock.return_value = fake_app
         window_ctor_mock.return_value = fake_window
+        install_menu_bar_mock.return_value = fake_menu_bar
 
         with patch.object(main.sys, "platform", "darwin"):
-            with patch("app.main.frontend_source_exists", return_value=True):
+            with patch.object(main, "frontend_source_exists", return_value=True):
                 self.assertEqual(main.main(), 0)
 
         critical_mock.assert_not_called()
-        activation_policy_mock.assert_called_once_with()
         window_ctor_mock.assert_called_once()
+        install_menu_bar_mock.assert_called_once_with(fake_app, fake_window)
         fake_window.show.assert_called_once()
         fake_app.exec.assert_called_once()
+        fake_menu_bar.shutdown.assert_called_once()
         fake_window.shutdown.assert_called_once()
         exit_mock.assert_not_called()
 
 
-class MacOSActivationPolicyTests(unittest.TestCase):
-    def test_accessory_policy_is_applied_on_macos(self):
-        appkit = MagicMock()
-        appkit.NSApplicationActivationPolicyAccessory = 1
-        native_application = appkit.NSApplication.sharedApplication.return_value
-        native_application.setActivationPolicy_.return_value = True
+class MacOSMenuBarInstallationTests(unittest.TestCase):
+    @patch("app.macos_menu_bar.MacOSMenuBar")
+    def test_successful_install_enables_close_to_hide(self, controller_class):
+        app = MagicMock()
+        window = MagicMock()
+        controller = controller_class.return_value
+        controller.install.return_value = True
 
         with patch.object(main.sys, "platform", "darwin"):
-            self.assertTrue(main.configure_macos_activation_policy(appkit))
+            self.assertIs(main.install_macos_menu_bar(app, window), controller)
 
-        native_application.setActivationPolicy_.assert_called_once_with(1)
+        controller_class.assert_called_once_with(app, window)
+        app.setQuitOnLastWindowClosed.assert_called_once_with(False)
+        window.set_hide_on_close.assert_called_once_with(True)
 
-    def test_activation_policy_is_unchanged_on_windows(self):
-        appkit = MagicMock()
+    @patch("app.macos_menu_bar.MacOSMenuBar")
+    def test_failed_install_keeps_normal_close_behavior(self, controller_class):
+        app = MagicMock()
+        window = MagicMock()
+        controller_class.return_value.install.return_value = False
+
+        with patch.object(main.sys, "platform", "darwin"):
+            self.assertIsNone(main.install_macos_menu_bar(app, window))
+
+        app.setQuitOnLastWindowClosed.assert_not_called()
+        window.set_hide_on_close.assert_not_called()
+
+    @patch.object(main, "log_info")
+    @patch("app.macos_menu_bar.MacOSMenuBar", side_effect=RuntimeError("tray"))
+    def test_install_error_keeps_normal_close_behavior(
+        self,
+        _controller_class,
+        log_info,
+    ):
+        app = MagicMock()
+        window = MagicMock()
+
+        with patch.object(main.sys, "platform", "darwin"):
+            self.assertIsNone(main.install_macos_menu_bar(app, window))
+
+        app.setQuitOnLastWindowClosed.assert_not_called()
+        window.set_hide_on_close.assert_not_called()
+        log_info.assert_called_once()
+
+    def test_non_macos_does_not_install_menu_bar(self):
+        app = MagicMock()
+        window = MagicMock()
 
         with patch.object(main.sys, "platform", "win32"):
-            self.assertFalse(main.configure_macos_activation_policy(appkit))
+            self.assertIsNone(main.install_macos_menu_bar(app, window))
 
-        appkit.NSApplication.sharedApplication.assert_not_called()
+        app.setQuitOnLastWindowClosed.assert_not_called()
+        window.set_hide_on_close.assert_not_called()
 
-    def test_activation_policy_failure_is_visible(self):
-        appkit = MagicMock()
-        appkit.NSApplicationActivationPolicyAccessory = 1
-        native_application = appkit.NSApplication.sharedApplication.return_value
-        native_application.setActivationPolicy_.return_value = False
 
-        with patch.object(main.sys, "platform", "darwin"):
-            with patch("app.main.log_info") as log_mock:
-                self.assertFalse(main.configure_macos_activation_policy(appkit))
-
-        log_mock.assert_called_once_with(
-            "[macos] accessory activation policy was rejected"
+class MainWindowCloseTests(unittest.TestCase):
+    def test_close_hides_without_shutdown_when_menu_bar_is_installed(self):
+        window = SimpleNamespace(
+            _hide_on_close=True,
+            hide=MagicMock(),
+            shutdown=MagicMock(),
+            picture_in_picture=MagicMock(),
         )
+        window.picture_in_picture.isVisible.return_value = True
+        event = MagicMock()
+
+        main_window.MainWindow.closeEvent(window, event)
+
+        window.hide.assert_called_once()
+        event.ignore.assert_called_once()
+        window.shutdown.assert_not_called()
+
+    def test_close_quits_when_picture_in_picture_is_not_visible(self):
+        window = SimpleNamespace(
+            _hide_on_close=True,
+            hide=MagicMock(),
+            shutdown=MagicMock(),
+            picture_in_picture=MagicMock(),
+        )
+        window.picture_in_picture.isVisible.return_value = False
+        event = MagicMock()
+        application = MagicMock()
+
+        with (
+            patch.object(
+                main_window.QMainWindow,
+                "closeEvent",
+                create=True,
+            ) as base_close,
+            patch.object(
+                main_window.QApplication,
+                "instance",
+                return_value=application,
+                create=True,
+            ),
+        ):
+            main_window.MainWindow.closeEvent(window, event)
+
+        window.shutdown.assert_called_once()
+        base_close.assert_called_once_with(window, event)
+        application.quit.assert_called_once()
+
+    def test_windows_close_preserves_normal_shutdown_path(self):
+        window = SimpleNamespace(
+            _hide_on_close=False,
+            hide=MagicMock(),
+            shutdown=MagicMock(),
+            picture_in_picture=MagicMock(),
+        )
+        event = MagicMock()
+
+        with patch.object(
+            main_window.QMainWindow,
+            "closeEvent",
+            create=True,
+        ) as base_close:
+            main_window.MainWindow.closeEvent(window, event)
+
+        window.shutdown.assert_called_once()
+        base_close.assert_called_once_with(window, event)

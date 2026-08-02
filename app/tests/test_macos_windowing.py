@@ -1,8 +1,14 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from app.platforms.macos.windowing import configure_fullscreen_overlay
-from app.platforms.windowing import configure_overlay_window
+from app.platforms.macos.windowing import (
+    configure_fullscreen_overlay,
+    set_overlay_activation_policy as set_macos_overlay_activation_policy,
+)
+from app.platforms.windowing import (
+    configure_overlay_window,
+    set_overlay_activation_policy,
+)
 
 
 class FakeQtWindow:
@@ -116,6 +122,102 @@ class LegacyAppKit:
 
 
 class MacOSWindowingTests(unittest.TestCase):
+    @patch("app.platforms.windowing.sys.platform", "darwin")
+    @patch("PySide6.QtGui.QGuiApplication.platformName", return_value="cocoa")
+    @patch(
+        "app.platforms.macos.windowing.set_overlay_activation_policy",
+        return_value=True,
+    )
+    def test_policy_router_delegates_on_macos_cocoa(
+        self,
+        set_macos_policy,
+        _platform_name,
+    ):
+        self.assertTrue(set_overlay_activation_policy(True))
+
+        set_macos_policy.assert_called_once_with(True)
+
+    @patch("app.platforms.windowing.sys.platform", "darwin")
+    @patch("PySide6.QtGui.QGuiApplication.platformName", return_value="minimal")
+    @patch("app.platforms.macos.windowing.set_overlay_activation_policy")
+    def test_policy_router_skips_minimal_qt_platform(
+        self,
+        set_macos_policy,
+        _platform_name,
+    ):
+        self.assertFalse(set_overlay_activation_policy(True))
+
+        set_macos_policy.assert_not_called()
+
+    @patch("app.platforms.windowing.sys.platform", "win32")
+    @patch("app.platforms.macos.windowing.set_overlay_activation_policy")
+    def test_policy_router_skips_non_macos(self, set_macos_policy):
+        self.assertFalse(set_overlay_activation_policy(True))
+
+        set_macos_policy.assert_not_called()
+
+    @patch("app.platforms.macos.windowing.sys.platform", "darwin")
+    def test_overlay_policy_switches_to_accessory(self):
+        appkit = MagicMock()
+        appkit.NSApplicationActivationPolicyRegular = 0
+        appkit.NSApplicationActivationPolicyAccessory = 1
+        native_application = appkit.NSApplication.sharedApplication.return_value
+        native_application.activationPolicy.return_value = 0
+        native_application.setActivationPolicy_.return_value = True
+
+        self.assertTrue(set_macos_overlay_activation_policy(True, appkit))
+
+        native_application.setActivationPolicy_.assert_called_once_with(1)
+
+    @patch("app.platforms.macos.windowing.sys.platform", "darwin")
+    def test_overlay_policy_restores_regular_mode(self):
+        appkit = MagicMock()
+        appkit.NSApplicationActivationPolicyRegular = 0
+        appkit.NSApplicationActivationPolicyAccessory = 1
+        native_application = appkit.NSApplication.sharedApplication.return_value
+        native_application.activationPolicy.return_value = 1
+        native_application.setActivationPolicy_.return_value = True
+
+        self.assertTrue(set_macos_overlay_activation_policy(False, appkit))
+
+        native_application.setActivationPolicy_.assert_called_once_with(0)
+
+    @patch("app.platforms.macos.windowing.sys.platform", "darwin")
+    def test_overlay_policy_is_idempotent(self):
+        appkit = MagicMock()
+        appkit.NSApplicationActivationPolicyRegular = 0
+        appkit.NSApplicationActivationPolicyAccessory = 1
+        native_application = appkit.NSApplication.sharedApplication.return_value
+        native_application.activationPolicy.return_value = 1
+
+        self.assertTrue(set_macos_overlay_activation_policy(True, appkit))
+
+        native_application.setActivationPolicy_.assert_not_called()
+
+    @patch("app.platforms.macos.windowing.sys.platform", "darwin")
+    @patch("app.platforms.macos.windowing.log_info")
+    def test_overlay_policy_rejection_is_visible(self, log_info):
+        appkit = MagicMock()
+        appkit.NSApplicationActivationPolicyRegular = 0
+        appkit.NSApplicationActivationPolicyAccessory = 1
+        native_application = appkit.NSApplication.sharedApplication.return_value
+        native_application.activationPolicy.return_value = 0
+        native_application.setActivationPolicy_.return_value = False
+
+        self.assertFalse(set_macos_overlay_activation_policy(True, appkit))
+
+        log_info.assert_called_once_with(
+            "[macos] accessory activation policy was rejected"
+        )
+
+    @patch("app.platforms.macos.windowing.sys.platform", "linux")
+    def test_overlay_policy_is_unchanged_off_macos(self):
+        appkit = MagicMock()
+
+        self.assertFalse(set_macos_overlay_activation_policy(True, appkit))
+
+        appkit.NSApplication.sharedApplication.assert_not_called()
+
     @patch("app.platforms.windowing.sys.platform", "darwin")
     @patch("PySide6.QtGui.QGuiApplication.platformName", return_value="offscreen")
     def test_offscreen_qt_platform_skips_native_window_configuration(

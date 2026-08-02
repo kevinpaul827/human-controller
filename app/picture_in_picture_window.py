@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QLabel, QPushButton, QSizeGrip, QWidget
 
 from .camera_overlay_widget import CameraOverlayWidget
 from .logging_utils import log_info
-from .platforms import configure_overlay_window
+from .platforms import configure_overlay_window, set_overlay_activation_policy
 
 
 class PictureInPictureWindow(QWidget):
@@ -155,6 +155,12 @@ class PictureInPictureWindow(QWidget):
             self._place_near_bottom_right()
             self._placed_once = True
         self.preview.show()
+        activation_policy_configured = set_overlay_activation_policy(True)
+        if sys.platform == "darwin" and not activation_policy_configured:
+            log_info(
+                "[overlay] warning: accessory activation policy failed; "
+                "the session overlay may not appear above full-screen apps"
+            )
         self.show()
         self._native_overlay_configured = False
         self._configure_native_overlay()
@@ -179,12 +185,14 @@ class PictureInPictureWindow(QWidget):
     def hide_overlay(self):
         self._save_geometry()
         self.hide()
+        set_overlay_activation_policy(False)
         self.visibilityChanged.emit(False)
 
     def shutdown(self):
         self._save_geometry()
         self.clear()
         self.hide()
+        set_overlay_activation_policy(False)
 
     def _place_near_bottom_right(self):
         screen = QGuiApplication.screenAt(QCursor.pos())

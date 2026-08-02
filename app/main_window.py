@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QApplication, QMainWindow
 
 from .backend_process import BackendProcessManager
 from .app_paths import user_data_dir
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
         self.backend_manager = None
         self._shutdown_complete = False
+        self._hide_on_close = False
 
         self.frontend = QWebEngineView()
         self.data_dir = user_data_dir()
@@ -130,6 +131,17 @@ class MainWindow(QMainWindow):
         if self.backend_manager is not None:
             self.backend_manager.stop()
 
+    def set_hide_on_close(self, enabled):
+        self._hide_on_close = bool(enabled)
+
     def closeEvent(self, event):
+        if self._hide_on_close and self.picture_in_picture.isVisible():
+            self.hide()
+            event.ignore()
+            return
         self.shutdown()
-        super().closeEvent(event)
+        QMainWindow.closeEvent(self, event)
+        if self._hide_on_close:
+            application = QApplication.instance()
+            if application is not None:
+                application.quit()
