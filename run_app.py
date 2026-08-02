@@ -1,10 +1,7 @@
 import sys
 
-from app.main import main as app_main
-from backend.dev_server import main as backend_main
-
-
 BACKEND_HELPER_FLAG = "--backend-helper"
+PIP_HELPER_FLAG = "--pip-helper"
 SMOKE_IMPORTS_FLAG = "--smoke-imports"
 SMOKE_BROWSER_INPUT_FLAG = "--smoke-browser-input"
 
@@ -25,7 +22,17 @@ def smoke_imports():
 
 
 def main():
+    if PIP_HELPER_FLAG in sys.argv[1:]:
+        from app.platforms.macos.pip_helper import run_pip_helper_from_argv
+
+        flag_index = sys.argv.index(PIP_HELPER_FLAG)
+        raise SystemExit(
+            run_pip_helper_from_argv(sys.argv[flag_index + 1 :])
+        )
+
     if BACKEND_HELPER_FLAG in sys.argv[1:]:
+        from backend.dev_server import main as backend_main
+
         backend_main()
         return
 
@@ -44,6 +51,8 @@ def main():
                 f"{SMOKE_BROWSER_INPUT_FLAG} requires an output path"
             ) from exc
         raise SystemExit(run_browser_input_smoke(result_path))
+
+    from app.main import main as app_main
 
     app_main()
 

@@ -1,17 +1,15 @@
 import sys
 
-from PySide6.QtCore import QPoint, QSettings, Qt, QTimer, Signal
+from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication
-from PySide6.QtWidgets import QLabel, QPushButton, QSizeGrip, QWidget
+from PySide6.QtWidgets import QLabel, QSizeGrip, QWidget
 
 from .camera_overlay_widget import CameraOverlayWidget
 from .logging_utils import log_info
-from .platforms import configure_overlay_window, set_overlay_activation_policy
+from .platforms import configure_overlay_window
 
 
 class PictureInPictureWindow(QWidget):
-    visibilityChanged = Signal(bool)
-
     def __init__(self):
         super().__init__(None)
         self.setWindowTitle("Human Controller Camera")
@@ -36,17 +34,6 @@ class PictureInPictureWindow(QWidget):
         self.preview.setAttribute(
             Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
         )
-
-        self.close_button = QPushButton("×", self)
-        self.close_button.setToolTip("Hide camera overlay")
-        self.close_button.setFixedSize(30, 30)
-        self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.close_button.setStyleSheet(
-            "QPushButton { background: rgba(0, 0, 0, 190); color: white; "
-            "border: 2px solid white; font-size: 20px; font-weight: bold; } "
-            "QPushButton:hover { background: #d62828; }"
-        )
-        self.close_button.clicked.connect(self.hide_overlay)
 
         self.match_badge = QLabel(self)
         self.match_badge.setAttribute(
@@ -155,18 +142,11 @@ class PictureInPictureWindow(QWidget):
             self._place_near_bottom_right()
             self._placed_once = True
         self.preview.show()
-        activation_policy_configured = set_overlay_activation_policy(True)
-        if sys.platform == "darwin" and not activation_policy_configured:
-            log_info(
-                "[overlay] warning: accessory activation policy failed; "
-                "the session overlay may not appear above full-screen apps"
-            )
         self.show()
         self._native_overlay_configured = False
         self._configure_native_overlay()
         QTimer.singleShot(0, self._finalize_native_overlay_configuration)
         self.raise_()
-        self.visibilityChanged.emit(True)
 
     def _configure_native_overlay(self):
         if configure_overlay_window(self):
@@ -185,14 +165,11 @@ class PictureInPictureWindow(QWidget):
     def hide_overlay(self):
         self._save_geometry()
         self.hide()
-        set_overlay_activation_policy(False)
-        self.visibilityChanged.emit(False)
 
     def shutdown(self):
         self._save_geometry()
         self.clear()
         self.hide()
-        set_overlay_activation_policy(False)
 
     def _place_near_bottom_right(self):
         screen = QGuiApplication.screenAt(QCursor.pos())
@@ -220,10 +197,8 @@ class PictureInPictureWindow(QWidget):
             grip_size.width(),
             grip_size.height(),
         )
-        self.close_button.move(self.width() - self.close_button.width() - 8, 8)
         self._position_match_badge()
         self.preview.lower()
-        self.close_button.raise_()
         self.match_badge.raise_()
         self.size_grip.raise_()
         super().resizeEvent(event)
@@ -252,5 +227,4 @@ class PictureInPictureWindow(QWidget):
         super().mouseReleaseEvent(event)
 
     def closeEvent(self, event):
-        self.hide_overlay()
         event.ignore()

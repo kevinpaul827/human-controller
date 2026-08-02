@@ -25,7 +25,6 @@ class SessionBridge(QObject):
     previewAspectRatioChanged = Signal(float)
     poseEstimated = Signal(dict)
     gestureMatchUpdated = Signal(dict)
-    overlayVisibilityChanged = Signal(bool)
 
     def __init__(
         self,
@@ -37,8 +36,6 @@ class SessionBridge(QObject):
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
         self.picture_in_picture = None
-        self.overlay_requested = True
-        self._applying_overlay_visibility = False
         self.camera = camera_manager
         self.state_bridge = (
             profile_manager
@@ -72,33 +69,19 @@ class SessionBridge(QObject):
 
     def attach_picture_in_picture(self, window):
         self.picture_in_picture = window
-        self.picture_in_picture.visibilityChanged.connect(
-            self.handle_overlay_visibility_changed
-        )
-
-    def handle_overlay_visibility_changed(self, visible):
-        visible = bool(visible)
-        if not self._applying_overlay_visibility:
-            self.overlay_requested = visible
-        self.overlayVisibilityChanged.emit(visible)
 
     def apply_overlay_visibility(self):
         if self.picture_in_picture is None:
             return
 
         should_show = (
-            self.overlay_requested
-            and self.state == SessionState.LIVE
+            self.state == SessionState.LIVE
             and self.check_camera_ownership()
         )
-        self._applying_overlay_visibility = True
-        try:
-            if should_show:
-                self.picture_in_picture.show_overlay()
-            else:
-                self.picture_in_picture.hide_overlay()
-        finally:
-            self._applying_overlay_visibility = False
+        if should_show:
+            self.picture_in_picture.show_overlay()
+        else:
+            self.picture_in_picture.hide_overlay()
 
     def set_state(self, state):
         self.state = state
@@ -261,8 +244,6 @@ class SessionBridge(QObject):
 
     @Slot()
     def startSession(self):
-        # Keep the original no-arg contract used by existing session UI.
-        self.overlay_requested = True
         self.camera.start(self.BRIDGE)
 
     @Slot()
@@ -274,18 +255,6 @@ class SessionBridge(QObject):
             self.set_state(SessionState.IDLE)
             self.clear_preview()
             self.apply_overlay_visibility()
-
-    @Slot(bool)
-    def setOverlayVisible(self, visible):
-        self.overlay_requested = bool(visible)
-        self.apply_overlay_visibility()
-
-    @Slot(result=bool)
-    def getOverlayVisible(self):
-        return bool(
-            self.picture_in_picture is not None
-            and self.picture_in_picture.isVisible()
-        )
 
     @Slot(result=str)
     def getSessionState(self):

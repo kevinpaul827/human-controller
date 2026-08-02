@@ -29,23 +29,21 @@ class FakeCamera:
 
 class FakeOverlayWindow:
     def __init__(self) -> None:
-        self.visibilityChanged = FakeSignal()
         self.visible = False
         self.show_count = 0
         self.hide_count = 0
+        self.clear_count = 0
 
     def show_overlay(self) -> None:
         self.visible = True
         self.show_count += 1
-        self.visibilityChanged.emit(True)
 
     def hide_overlay(self) -> None:
         self.visible = False
         self.hide_count += 1
-        self.visibilityChanged.emit(False)
 
-    def isVisible(self) -> bool:
-        return self.visible
+    def clear(self) -> None:
+        self.clear_count += 1
 
 
 class SessionOverlayVisibilityTests(unittest.TestCase):
@@ -56,7 +54,7 @@ class SessionOverlayVisibilityTests(unittest.TestCase):
         self.bridge.attach_picture_in_picture(self.window)
         self.bridge.state = SessionState.LIVE
 
-    def test_temporary_ownership_loss_does_not_erase_overlay_request(self) -> None:
+    def test_overlay_follows_live_session_camera_ownership(self) -> None:
         self.bridge.apply_overlay_visibility()
         self.assertTrue(self.window.visible)
 
@@ -64,7 +62,6 @@ class SessionOverlayVisibilityTests(unittest.TestCase):
         self.bridge.apply_overlay_visibility()
 
         self.assertFalse(self.window.visible)
-        self.assertTrue(self.bridge.overlay_requested)
 
         self.camera.active_bridge = "session"
         self.bridge.apply_overlay_visibility()
@@ -72,13 +69,33 @@ class SessionOverlayVisibilityTests(unittest.TestCase):
         self.assertTrue(self.window.visible)
         self.assertEqual(self.window.show_count, 2)
 
-    def test_direct_window_close_updates_overlay_request(self) -> None:
+    def test_idle_and_error_states_hide_overlay(self) -> None:
         self.bridge.apply_overlay_visibility()
+        self.assertTrue(self.window.visible)
 
-        self.window.hide_overlay()
-
+        self.bridge.state = SessionState.IDLE
+        self.bridge.apply_overlay_visibility()
         self.assertFalse(self.window.visible)
-        self.assertFalse(self.bridge.overlay_requested)
+
+        self.bridge.state = SessionState.ERROR
+        self.bridge.apply_overlay_visibility()
+        self.assertFalse(self.window.visible)
+
+    def test_manual_visibility_api_is_not_exposed(self) -> None:
+        self.assertFalse(hasattr(self.bridge, "setOverlayVisible"))
+        self.assertFalse(hasattr(self.bridge, "getOverlayVisible"))
+
+    def test_camera_start_and_stop_control_overlay_automatically(self) -> None:
+        self.bridge.state = SessionState.IDLE
+
+        self.bridge.handle_camera_started("session")
+        self.assertEqual(self.bridge.state, SessionState.LIVE)
+        self.assertTrue(self.window.visible)
+
+        self.bridge.handle_camera_stopped("session")
+        self.assertEqual(self.bridge.state, SessionState.IDLE)
+        self.assertFalse(self.window.visible)
+        self.assertEqual(self.window.clear_count, 1)
 
 
 if __name__ == "__main__":

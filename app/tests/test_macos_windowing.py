@@ -5,10 +5,7 @@ from app.platforms.macos.windowing import (
     configure_fullscreen_overlay,
     set_overlay_activation_policy as set_macos_overlay_activation_policy,
 )
-from app.platforms.windowing import (
-    configure_overlay_window,
-    set_overlay_activation_policy,
-)
+from app.platforms.windowing import configure_overlay_window
 
 
 class FakeQtWindow:
@@ -122,40 +119,6 @@ class LegacyAppKit:
 
 
 class MacOSWindowingTests(unittest.TestCase):
-    @patch("app.platforms.windowing.sys.platform", "darwin")
-    @patch("PySide6.QtGui.QGuiApplication.platformName", return_value="cocoa")
-    @patch(
-        "app.platforms.macos.windowing.set_overlay_activation_policy",
-        return_value=True,
-    )
-    def test_policy_router_delegates_on_macos_cocoa(
-        self,
-        set_macos_policy,
-        _platform_name,
-    ):
-        self.assertTrue(set_overlay_activation_policy(True))
-
-        set_macos_policy.assert_called_once_with(True)
-
-    @patch("app.platforms.windowing.sys.platform", "darwin")
-    @patch("PySide6.QtGui.QGuiApplication.platformName", return_value="minimal")
-    @patch("app.platforms.macos.windowing.set_overlay_activation_policy")
-    def test_policy_router_skips_minimal_qt_platform(
-        self,
-        set_macos_policy,
-        _platform_name,
-    ):
-        self.assertFalse(set_overlay_activation_policy(True))
-
-        set_macos_policy.assert_not_called()
-
-    @patch("app.platforms.windowing.sys.platform", "win32")
-    @patch("app.platforms.macos.windowing.set_overlay_activation_policy")
-    def test_policy_router_skips_non_macos(self, set_macos_policy):
-        self.assertFalse(set_overlay_activation_policy(True))
-
-        set_macos_policy.assert_not_called()
-
     @patch("app.platforms.macos.windowing.sys.platform", "darwin")
     def test_overlay_policy_switches_to_accessory(self):
         appkit = MagicMock()

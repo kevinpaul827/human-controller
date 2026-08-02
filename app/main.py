@@ -2,33 +2,11 @@ import sys
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .logging_utils import log_info
 from .main_window import (
     MainWindow,
     frontend_source_exists,
     frontend_source_for_display,
 )
-
-
-def install_macos_menu_bar(app, window):
-    if sys.platform != "darwin":
-        return None
-
-    from .macos_menu_bar import MacOSMenuBar
-
-    try:
-        menu_bar = MacOSMenuBar(app, window)
-        installed = menu_bar.install()
-    except Exception as error:
-        log_info(f"[macos] failed to install menu bar: {error!r}")
-        return None
-
-    if not installed:
-        return None
-
-    app.setQuitOnLastWindowClosed(False)
-    window.set_hide_on_close(True)
-    return menu_bar
 
 
 def main():
@@ -58,14 +36,10 @@ def main():
         QMessageBox.critical(None, "Error", str(error))
         sys.exit(1)
 
-    menu_bar = None
     try:
-        menu_bar = install_macos_menu_bar(app, window)
         window.show()
         return app.exec()
     finally:
-        if menu_bar is not None:
-            menu_bar.shutdown()
         window.shutdown()
 
 

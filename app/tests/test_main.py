@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
+from types import ModuleType
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -213,7 +213,6 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch.object(main, "install_macos_menu_bar")
     @patch.object(main, "MainWindow")
     @patch.object(main, "QApplication")
     @patch.object(main.QMessageBox, "critical")
@@ -224,15 +223,12 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock,
         app_ctor_mock,
         window_ctor_mock,
-        install_menu_bar_mock,
     ):
         fake_app = MagicMock()
         fake_app.exec.return_value = 0
         fake_window = MagicMock()
-        fake_menu_bar = MagicMock()
         app_ctor_mock.return_value = fake_app
         window_ctor_mock.return_value = fake_window
-        install_menu_bar_mock.return_value = fake_menu_bar
 
         with patch.object(main.sys, "platform", "darwin"):
             with patch.object(main, "frontend_source_exists", return_value=True):
@@ -240,123 +236,15 @@ class MainEntryPointTests(unittest.TestCase):
 
         critical_mock.assert_not_called()
         window_ctor_mock.assert_called_once()
-        install_menu_bar_mock.assert_called_once_with(fake_app, fake_window)
         fake_window.show.assert_called_once()
         fake_app.exec.assert_called_once()
-        fake_menu_bar.shutdown.assert_called_once()
         fake_window.shutdown.assert_called_once()
         exit_mock.assert_not_called()
 
 
-class MacOSMenuBarInstallationTests(unittest.TestCase):
-    @patch("app.macos_menu_bar.MacOSMenuBar")
-    def test_successful_install_enables_close_to_hide(self, controller_class):
-        app = MagicMock()
-        window = MagicMock()
-        controller = controller_class.return_value
-        controller.install.return_value = True
-
-        with patch.object(main.sys, "platform", "darwin"):
-            self.assertIs(main.install_macos_menu_bar(app, window), controller)
-
-        controller_class.assert_called_once_with(app, window)
-        app.setQuitOnLastWindowClosed.assert_called_once_with(False)
-        window.set_hide_on_close.assert_called_once_with(True)
-
-    @patch("app.macos_menu_bar.MacOSMenuBar")
-    def test_failed_install_keeps_normal_close_behavior(self, controller_class):
-        app = MagicMock()
-        window = MagicMock()
-        controller_class.return_value.install.return_value = False
-
-        with patch.object(main.sys, "platform", "darwin"):
-            self.assertIsNone(main.install_macos_menu_bar(app, window))
-
-        app.setQuitOnLastWindowClosed.assert_not_called()
-        window.set_hide_on_close.assert_not_called()
-
-    @patch.object(main, "log_info")
-    @patch("app.macos_menu_bar.MacOSMenuBar", side_effect=RuntimeError("tray"))
-    def test_install_error_keeps_normal_close_behavior(
-        self,
-        _controller_class,
-        log_info,
-    ):
-        app = MagicMock()
-        window = MagicMock()
-
-        with patch.object(main.sys, "platform", "darwin"):
-            self.assertIsNone(main.install_macos_menu_bar(app, window))
-
-        app.setQuitOnLastWindowClosed.assert_not_called()
-        window.set_hide_on_close.assert_not_called()
-        log_info.assert_called_once()
-
-    def test_non_macos_does_not_install_menu_bar(self):
-        app = MagicMock()
-        window = MagicMock()
-
-        with patch.object(main.sys, "platform", "win32"):
-            self.assertIsNone(main.install_macos_menu_bar(app, window))
-
-        app.setQuitOnLastWindowClosed.assert_not_called()
-        window.set_hide_on_close.assert_not_called()
-
-
 class MainWindowCloseTests(unittest.TestCase):
-    def test_close_hides_without_shutdown_when_menu_bar_is_installed(self):
-        window = SimpleNamespace(
-            _hide_on_close=True,
-            hide=MagicMock(),
-            shutdown=MagicMock(),
-            picture_in_picture=MagicMock(),
-        )
-        window.picture_in_picture.isVisible.return_value = True
-        event = MagicMock()
-
-        main_window.MainWindow.closeEvent(window, event)
-
-        window.hide.assert_called_once()
-        event.ignore.assert_called_once()
-        window.shutdown.assert_not_called()
-
-    def test_close_quits_when_picture_in_picture_is_not_visible(self):
-        window = SimpleNamespace(
-            _hide_on_close=True,
-            hide=MagicMock(),
-            shutdown=MagicMock(),
-            picture_in_picture=MagicMock(),
-        )
-        window.picture_in_picture.isVisible.return_value = False
-        event = MagicMock()
-        application = MagicMock()
-
-        with (
-            patch.object(
-                main_window.QMainWindow,
-                "closeEvent",
-                create=True,
-            ) as base_close,
-            patch.object(
-                main_window.QApplication,
-                "instance",
-                return_value=application,
-                create=True,
-            ),
-        ):
-            main_window.MainWindow.closeEvent(window, event)
-
-        window.shutdown.assert_called_once()
-        base_close.assert_called_once_with(window, event)
-        application.quit.assert_called_once()
-
-    def test_windows_close_preserves_normal_shutdown_path(self):
-        window = SimpleNamespace(
-            _hide_on_close=False,
-            hide=MagicMock(),
-            shutdown=MagicMock(),
-            picture_in_picture=MagicMock(),
-        )
+    def test_close_uses_normal_shutdown_path(self):
+        window = MagicMock()
         event = MagicMock()
 
         with patch.object(

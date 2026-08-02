@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -40,11 +40,6 @@ class PictureInPictureWindowTests(unittest.TestCase):
                 "configure_overlay_window",
                 return_value=True,
             ) as configure,
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                return_value=True,
-            ),
             patch.object(picture_in_picture_module, "log_info") as log_info,
         ):
             window = PictureInPictureWindow()
@@ -63,11 +58,6 @@ class PictureInPictureWindowTests(unittest.TestCase):
                 "configure_overlay_window",
                 side_effect=[False, True],
             ) as configure,
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                return_value=True,
-            ),
             patch.object(picture_in_picture_module, "log_info") as log_info,
         ):
             window = PictureInPictureWindow()
@@ -84,11 +74,6 @@ class PictureInPictureWindowTests(unittest.TestCase):
                 picture_in_picture_module,
                 "configure_overlay_window",
                 return_value=False,
-            ),
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                return_value=True,
             ),
             patch.object(picture_in_picture_module, "log_info") as log_info,
         ):
@@ -110,11 +95,6 @@ class PictureInPictureWindowTests(unittest.TestCase):
                 "configure_overlay_window",
                 return_value=True,
             ) as configure,
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                return_value=True,
-            ),
         ):
             window = PictureInPictureWindow()
             window.show_overlay()
@@ -124,106 +104,16 @@ class PictureInPictureWindowTests(unittest.TestCase):
         self.assertFalse(window.isVisible())
         configure.assert_called_once_with(window)
 
-    def test_activation_policy_follows_overlay_visibility(self) -> None:
-        with (
-            patch.object(picture_in_picture_module.sys, "platform", "darwin"),
-            patch.object(
-                picture_in_picture_module,
-                "configure_overlay_window",
-                return_value=True,
-            ),
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                return_value=True,
-            ) as set_policy,
-        ):
-            window = PictureInPictureWindow()
-            window.show_overlay()
-            self.application.processEvents()
-            window.hide_overlay()
+    def test_close_event_does_not_dismiss_live_overlay(self) -> None:
+        window = PictureInPictureWindow()
+        window.show()
+        event = MagicMock()
 
-        self.assertEqual(set_policy.call_args_list, [call(True), call(False)])
+        window.closeEvent(event)
 
-    def test_shutdown_restores_regular_activation_policy(self) -> None:
-        with patch.object(
-            picture_in_picture_module,
-            "set_overlay_activation_policy",
-            return_value=True,
-        ) as set_policy:
-            window = PictureInPictureWindow()
-            window.shutdown()
-
-        set_policy.assert_called_once_with(False)
-
-    def test_policy_transition_wraps_show_and_hide(self) -> None:
-        events = []
-
-        def record_policy(enabled):
-            events.append(("policy", enabled))
-            return True
-
-        with (
-            patch.object(picture_in_picture_module.sys, "platform", "darwin"),
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                side_effect=record_policy,
-            ),
-            patch.object(
-                picture_in_picture_module,
-                "configure_overlay_window",
-                side_effect=lambda _window: events.append(("configure", True))
-                or True,
-            ),
-        ):
-            window = PictureInPictureWindow()
-            with patch.object(
-                window,
-                "show",
-                side_effect=lambda: events.append(("show", True)),
-            ):
-                window.show_overlay()
-            with patch.object(
-                window,
-                "hide",
-                side_effect=lambda: events.append(("hide", True)),
-            ):
-                window.hide_overlay()
-
-        self.assertEqual(
-            events,
-            [
-                ("policy", True),
-                ("show", True),
-                ("configure", True),
-                ("hide", True),
-                ("policy", False),
-            ],
-        )
-
-    def test_policy_failure_reports_fullscreen_limitation(self) -> None:
-        with (
-            patch.object(picture_in_picture_module.sys, "platform", "darwin"),
-            patch.object(
-                picture_in_picture_module,
-                "set_overlay_activation_policy",
-                return_value=False,
-            ),
-            patch.object(
-                picture_in_picture_module,
-                "configure_overlay_window",
-                return_value=True,
-            ),
-            patch.object(picture_in_picture_module, "log_info") as log_info,
-        ):
-            window = PictureInPictureWindow()
-            window.show_overlay()
-            self.application.processEvents()
-
-        log_info.assert_called_once()
-        self.assertIn("accessory activation policy failed", log_info.call_args.args[0])
-
+        event.ignore.assert_called_once()
+        self.assertTrue(window.isVisible())
+        self.assertFalse(hasattr(window, "close_button"))
 
 if __name__ == "__main__":
     unittest.main()

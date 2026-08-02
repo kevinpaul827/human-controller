@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWidgets import QMainWindow
 
 from .backend_process import BackendProcessManager
 from .app_paths import user_data_dir
@@ -13,7 +13,7 @@ from .calibrate_bridge import CalibrateBridge
 from .camera_manager import CameraManager
 from .camera_overlay_widget import CameraOverlayWidget
 from .gesture_store import GestureStore
-from .picture_in_picture_window import PictureInPictureWindow
+from .pip_factory import create_picture_in_picture
 from .profile_bridge import ProfileBridge
 from .profile_manager import ProfileManager
 from .session_bridge import SessionBridge
@@ -64,7 +64,6 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
         self.backend_manager = None
         self._shutdown_complete = False
-        self._hide_on_close = False
 
         self.frontend = QWebEngineView()
         self.data_dir = user_data_dir()
@@ -72,7 +71,7 @@ class MainWindow(QMainWindow):
         self.profile_manager = ProfileManager(self.data_dir / "profiles")
         self.camera_manager = CameraManager(self.gesture_store.gestures_dir)
         self.preview = CameraOverlayWidget(self.frontend)
-        self.picture_in_picture = PictureInPictureWindow()
+        self.picture_in_picture = create_picture_in_picture()
         self.channel = QWebChannel()
 
         self.preview.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -131,17 +130,6 @@ class MainWindow(QMainWindow):
         if self.backend_manager is not None:
             self.backend_manager.stop()
 
-    def set_hide_on_close(self, enabled):
-        self._hide_on_close = bool(enabled)
-
     def closeEvent(self, event):
-        if self._hide_on_close and self.picture_in_picture.isVisible():
-            self.hide()
-            event.ignore()
-            return
         self.shutdown()
         QMainWindow.closeEvent(self, event)
-        if self._hide_on_close:
-            application = QApplication.instance()
-            if application is not None:
-                application.quit()
