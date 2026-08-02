@@ -7,18 +7,15 @@ SMOKE_BROWSER_INPUT_FLAG = "--smoke-browser-input"
 
 
 def smoke_imports():
-    from importlib.resources import files
-
-    import mediapipe.tasks.c
+    import mediapipe.python._framework_bindings as framework_bindings
     from mediapipe.tasks.python.vision import (
         PoseLandmarker,
         PoseLandmarkerOptions,
         RunningMode,
     )
 
-    native_library = files("mediapipe.tasks.c").joinpath("libmediapipe.dylib")
-    if not native_library.is_file():
-        raise RuntimeError(f"Bundled MediaPipe library is missing: {native_library}")
+    if not getattr(framework_bindings, "__file__", None):
+        raise RuntimeError("Bundled MediaPipe native extension is missing.")
 
 
 def main():
