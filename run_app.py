@@ -6,16 +6,37 @@ SMOKE_IMPORTS_FLAG = "--smoke-imports"
 SMOKE_BROWSER_INPUT_FLAG = "--smoke-browser-input"
 
 
-def smoke_imports():
+def _load_current_mediapipe_native_runtime():
+    import mediapipe.tasks.c
+    from mediapipe.tasks.python.core import mediapipe_c_bindings
+
+    mediapipe_c_bindings.load_raw_library()
+
+
+def _load_legacy_mediapipe_native_runtime():
     import mediapipe.python._framework_bindings as framework_bindings
+
+    if not getattr(framework_bindings, "__file__", None):
+        raise RuntimeError("Bundled MediaPipe native extension is missing.")
+
+
+def _load_mediapipe_native_runtime():
+    try:
+        _load_current_mediapipe_native_runtime()
+    except ModuleNotFoundError as error:
+        if error.name != "mediapipe.tasks.c":
+            raise
+        _load_legacy_mediapipe_native_runtime()
+
+
+def smoke_imports():
     from mediapipe.tasks.python.vision import (
         PoseLandmarker,
         PoseLandmarkerOptions,
         RunningMode,
     )
 
-    if not getattr(framework_bindings, "__file__", None):
-        raise RuntimeError("Bundled MediaPipe native extension is missing.")
+    _load_mediapipe_native_runtime()
 
 
 def main():

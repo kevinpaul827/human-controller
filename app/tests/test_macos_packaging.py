@@ -29,6 +29,9 @@ class MacOSHelperPackagingTests(unittest.TestCase):
             / "MacOS"
             / "Human Controller PiP"
         )
+        self.mediapipe_dir = (
+            self.app_bundle / "Contents" / "Frameworks" / "mediapipe"
+        )
         self.source_executable.parent.mkdir(parents=True)
         (self.app_bundle / "Contents" / "Frameworks").mkdir()
         (self.app_bundle / "Contents" / "Resources").mkdir()
@@ -49,6 +52,11 @@ class MacOSHelperPackagingTests(unittest.TestCase):
                 build_macos_app,
                 "PIP_HELPER_EXECUTABLE_PATH",
                 self.helper_executable,
+            ),
+            patch.object(
+                build_macos_app,
+                "MEDIAPIPE_DIR_IN_BUNDLE",
+                self.mediapipe_dir,
             ),
         )
         for path_patch in self.path_patches:
@@ -179,6 +187,36 @@ class MacOSHelperPackagingTests(unittest.TestCase):
         self.assertIn(
             'bundle_identifier="au.edu.unsw.capstone.date.human-controller"',
             build_macos_app.SPEC_TEMPLATE,
+        )
+
+    def test_finds_current_mediapipe_c_library_layout(self):
+        native_library = (
+            self.mediapipe_dir / "tasks" / "c" / "libmediapipe.dylib"
+        )
+        native_library.parent.mkdir(parents=True)
+        native_library.touch()
+
+        found = build_macos_app.find_bundled_mediapipe_native_libraries()
+
+        self.assertEqual(found, [native_library])
+
+    def test_finds_legacy_mediapipe_framework_bindings_layout(self):
+        native_library = (
+            self.mediapipe_dir
+            / "python"
+            / "_framework_bindings.cpython-311-darwin.so"
+        )
+        native_library.parent.mkdir(parents=True)
+        native_library.touch()
+
+        found = build_macos_app.find_bundled_mediapipe_native_libraries()
+
+        self.assertEqual(found, [native_library])
+
+    def test_rejects_bundle_without_a_supported_mediapipe_library(self):
+        self.assertEqual(
+            build_macos_app.find_bundled_mediapipe_native_libraries(),
+            [],
         )
 
 

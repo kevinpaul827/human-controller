@@ -29,13 +29,16 @@ BUNDLED_POSE_MODEL_PATHS = tuple(
     / name
     for name in POSE_MODEL_NAMES
 )
-MEDIAPIPE_BINDINGS_DIR_IN_BUNDLE = (
+MEDIAPIPE_DIR_IN_BUNDLE = (
     DIST_DIR
     / "Human Controller.app"
     / "Contents"
     / "Frameworks"
     / "mediapipe"
-    / "python"
+)
+MEDIAPIPE_NATIVE_LIBRARY_PATTERNS = (
+    "tasks/c/libmediapipe.dylib",
+    "python/_framework_bindings*.so",
 )
 APP_BUNDLE_PATH = DIST_DIR / "Human Controller.app"
 PIP_HELPER_APP_PATH = (
@@ -190,6 +193,17 @@ def create_pip_helper_bundle() -> bool:
     return True
 
 
+def find_bundled_mediapipe_native_libraries() -> list[Path]:
+    return sorted(
+        {
+            path
+            for pattern in MEDIAPIPE_NATIVE_LIBRARY_PATTERNS
+            for path in MEDIAPIPE_DIR_IN_BUNDLE.glob(pattern)
+            if path.is_file()
+        }
+    )
+
+
 def main() -> int:
     if sys.platform != "darwin":
         print("This builder is only intended for macOS.")
@@ -241,13 +255,14 @@ def main() -> int:
     if not create_pip_helper_bundle():
         return 1
 
-    bundled_mediapipe_bindings = sorted(
-        MEDIAPIPE_BINDINGS_DIR_IN_BUNDLE.glob("_framework_bindings*.so")
-    )
-    if not bundled_mediapipe_bindings:
+    if not find_bundled_mediapipe_native_libraries():
+        expected_locations = ", ".join(
+            str(MEDIAPIPE_DIR_IN_BUNDLE / pattern)
+            for pattern in MEDIAPIPE_NATIVE_LIBRARY_PATTERNS
+        )
         print(
-            "Build failed validation: MediaPipe's native extension was not "
-            f"bundled in {MEDIAPIPE_BINDINGS_DIR_IN_BUNDLE}"
+            "Build failed validation: no supported MediaPipe native library "
+            f"was bundled. Expected one of: {expected_locations}"
         )
         return 1
 
