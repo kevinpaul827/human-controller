@@ -11,7 +11,6 @@ DIST_DIR = ROOT / "dist"
 PYINSTALLER_CONFIG_DIR = ROOT / ".pyinstaller"
 SPEC_PATH = ROOT / "human_controller.spec"
 FRONTEND_PATH = ROOT / "frontend" / "dist" / "index.html"
-PYTHON_EXT_SUFFIX = f".cpython-{sys.version_info.major}{sys.version_info.minor}-darwin.so"
 POSE_MODEL_NAMES = (
     "pose_landmarker_lite.task",
     "pose_landmarker_full.task",
@@ -30,14 +29,13 @@ BUNDLED_POSE_MODEL_PATHS = tuple(
     / name
     for name in POSE_MODEL_NAMES
 )
-MEDIAPIPE_BINDINGS_IN_BUNDLE = (
+MEDIAPIPE_BINDINGS_DIR_IN_BUNDLE = (
     DIST_DIR
     / "Human Controller.app"
     / "Contents"
     / "Frameworks"
     / "mediapipe"
     / "python"
-    / f"_framework_bindings{PYTHON_EXT_SUFFIX}"
 )
 APP_BUNDLE_PATH = DIST_DIR / "Human Controller.app"
 PIP_HELPER_APP_PATH = (
@@ -243,10 +241,13 @@ def main() -> int:
     if not create_pip_helper_bundle():
         return 1
 
-    if not MEDIAPIPE_BINDINGS_IN_BUNDLE.exists():
+    bundled_mediapipe_bindings = sorted(
+        MEDIAPIPE_BINDINGS_DIR_IN_BUNDLE.glob("_framework_bindings*.so")
+    )
+    if not bundled_mediapipe_bindings:
         print(
             "Build failed validation: MediaPipe's native extension was not "
-            f"bundled at {MEDIAPIPE_BINDINGS_IN_BUNDLE}"
+            f"bundled in {MEDIAPIPE_BINDINGS_DIR_IN_BUNDLE}"
         )
         return 1
 
