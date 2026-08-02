@@ -1,39 +1,56 @@
 import sys
 
-from app.main import main as app_main
-from backend.dev_server import main as backend_main
-
-
 BACKEND_HELPER_FLAG = "--backend-helper"
+PIP_HELPER_FLAG = "--pip-helper"
 SMOKE_IMPORTS_FLAG = "--smoke-imports"
 SMOKE_BROWSER_INPUT_FLAG = "--smoke-browser-input"
 
 
-def smoke_imports():
-    from importlib.resources import files
-
+def _load_current_mediapipe_native_runtime():
     import mediapipe.tasks.c
+    from mediapipe.tasks.python.core import mediapipe_c_bindings
+
+    mediapipe_c_bindings.load_raw_library()
+
+
+def _load_legacy_mediapipe_native_runtime():
+    import mediapipe.python._framework_bindings as framework_bindings
+
+    if not getattr(framework_bindings, "__file__", None):
+        raise RuntimeError("Bundled MediaPipe native extension is missing.")
+
+
+def _load_mediapipe_native_runtime():
+    try:
+        _load_current_mediapipe_native_runtime()
+    except ModuleNotFoundError as error:
+        if error.name != "mediapipe.tasks.c":
+            raise
+        _load_legacy_mediapipe_native_runtime()
+
+
+def smoke_imports():
     from mediapipe.tasks.python.vision import (
         PoseLandmarker,
         PoseLandmarkerOptions,
         RunningMode,
     )
 
-    if sys.platform == "win32":
-        library_name = "libmediapipe.dll"
-    elif sys.platform == "darwin":
-        library_name = "libmediapipe.dylib"
-    else:
-        raise RuntimeError("Operating system not supported")
-        
-
-    native_library = files("mediapipe.tasks.c").joinpath(library_name)
-    if not native_library.is_file():
-        raise RuntimeError(f"Bundled MediaPipe library is missing: {native_library}")
+    _load_mediapipe_native_runtime()
 
 
 def main():
+    if PIP_HELPER_FLAG in sys.argv[1:]:
+        from app.platforms.macos.pip_helper import run_pip_helper_from_argv
+
+        flag_index = sys.argv.index(PIP_HELPER_FLAG)
+        raise SystemExit(
+            run_pip_helper_from_argv(sys.argv[flag_index + 1 :])
+        )
+
     if BACKEND_HELPER_FLAG in sys.argv[1:]:
+        from backend.dev_server import main as backend_main
+
         backend_main()
         return
 
@@ -52,6 +69,8 @@ def main():
                 f"{SMOKE_BROWSER_INPUT_FLAG} requires an output path"
             ) from exc
         raise SystemExit(run_browser_input_smoke(result_path))
+
+    from app.main import main as app_main
 
     app_main()
 

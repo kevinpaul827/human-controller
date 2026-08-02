@@ -36,9 +36,8 @@ def main():
         QMessageBox.critical(None, "Error", str(error))
         sys.exit(1)
 
-    window.show()
-
     try:
+        window.show()
         return app.exec()
     finally:
         window.shutdown()

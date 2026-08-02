@@ -28,7 +28,6 @@ const SessionCamera = () => {
     null,
   );
   const [starting, setStarting] = useState(false);
-  const [overlayVisible, setOverlayVisible] = useState(false);
   const isLive = sessionState === "live";
   const { elapsed, setElapsed } = useDesktopCameraPreview({
     bridge: sessionBridge,
@@ -41,7 +40,6 @@ const SessionCamera = () => {
       if (event.state === "error") {
         setElapsed(0);
         setLatestMatch(null);
-        setOverlayVisible(false);
         setSessionState("idle");
         setErrorEvent(event);
         return;
@@ -50,7 +48,6 @@ const SessionCamera = () => {
       if (event.state === "idle") {
         setElapsed(0);
         setLatestMatch(null);
-        setOverlayVisible(false);
       }
       setErrorEvent(null);
       setSessionState(event.state);
@@ -88,15 +85,10 @@ const SessionCamera = () => {
     [],
   );
 
-  useEffect(() => sessionBridge.onOverlayVisibility(setOverlayVisible), []);
-
   useEffect(() => {
     setStarting(false);
     setLatestMatch(null);
     setProfileWarning(null);
-    return () => {
-      void sessionBridge.stopSession().catch(() => {});
-    };
   }, [activeProfile?.patientId]);
 
   const handleStartSession = async () => {
@@ -142,7 +134,6 @@ const SessionCamera = () => {
       await sessionBridge.stopSession();
       setSessionState("idle");
       setLatestMatch(null);
-      setOverlayVisible(false);
       return true;
     } catch (error) {
       setSessionState("error");
@@ -171,20 +162,6 @@ const SessionCamera = () => {
           error instanceof Error
             ? error.message
             : "Unable to open desktop camera settings.",
-      });
-    }
-  };
-
-  const handleToggleOverlay = async () => {
-    try {
-      await sessionBridge.setOverlayVisible(!overlayVisible);
-    } catch (error) {
-      setErrorEvent({
-        state: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to change the desktop game overlay.",
       });
     }
   };
@@ -241,17 +218,6 @@ const SessionCamera = () => {
                     : ""}
           </span>
           <div className="flex shrink-0 gap-2">
-            {isLive ? (
-              <BrutalButton
-                variant="outline"
-                size="lg"
-                onClick={handleToggleOverlay}
-                aria-pressed={overlayVisible}
-              >
-                <PictureInPicture2 aria-hidden="true" />
-                {overlayVisible ? "Hide overlay" : "Show overlay"}
-              </BrutalButton>
-            ) : null}
             <BrutalButton
               variant={isLive ? "destructive" : "primary"}
               size="lg"

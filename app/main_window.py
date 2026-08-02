@@ -13,7 +13,7 @@ from .calibrate_bridge import CalibrateBridge
 from .camera_manager import CameraManager
 from .camera_overlay_widget import CameraOverlayWidget
 from .gesture_store import GestureStore
-from .picture_in_picture_window import PictureInPictureWindow
+from .pip_factory import create_picture_in_picture
 from .profile_bridge import ProfileBridge
 from .profile_manager import ProfileManager
 from .session_bridge import SessionBridge
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self.profile_manager = ProfileManager(self.data_dir / "profiles")
         self.camera_manager = CameraManager(self.gesture_store.gestures_dir)
         self.preview = CameraOverlayWidget(self.frontend)
-        self.picture_in_picture = PictureInPictureWindow()
+        self.picture_in_picture = create_picture_in_picture()
         self.channel = QWebChannel()
 
         self.preview.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -132,4 +132,4 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.shutdown()
-        super().closeEvent(event)
+        QMainWindow.closeEvent(self, event)

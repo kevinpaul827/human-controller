@@ -25,7 +25,6 @@ class SessionBridge(QObject):
     previewAspectRatioChanged = Signal(float)
     poseEstimated = Signal(dict)
     gestureMatchUpdated = Signal(dict)
-    overlayVisibilityChanged = Signal(bool)
 
     def __init__(
         self,
@@ -37,7 +36,6 @@ class SessionBridge(QObject):
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)
         self.picture_in_picture = None
-        self.overlay_requested = True
         self.camera = camera_manager
         self.state_bridge = (
             profile_manager
@@ -71,21 +69,13 @@ class SessionBridge(QObject):
 
     def attach_picture_in_picture(self, window):
         self.picture_in_picture = window
-        self.picture_in_picture.visibilityChanged.connect(
-            self.handle_overlay_visibility_changed
-        )
-
-    def handle_overlay_visibility_changed(self, visible):
-        self.overlay_requested = bool(visible)
-        self.overlayVisibilityChanged.emit(bool(visible))
 
     def apply_overlay_visibility(self):
         if self.picture_in_picture is None:
             return
 
         should_show = (
-            self.overlay_requested
-            and self.state == SessionState.LIVE
+            self.state == SessionState.LIVE
             and self.check_camera_ownership()
         )
         if should_show:
@@ -254,8 +244,6 @@ class SessionBridge(QObject):
 
     @Slot()
     def startSession(self):
-        # Keep the original no-arg contract used by existing session UI.
-        self.overlay_requested = True
         self.camera.start(self.BRIDGE)
 
     @Slot()
@@ -267,18 +255,6 @@ class SessionBridge(QObject):
             self.set_state(SessionState.IDLE)
             self.clear_preview()
             self.apply_overlay_visibility()
-
-    @Slot(bool)
-    def setOverlayVisible(self, visible):
-        self.overlay_requested = bool(visible)
-        self.apply_overlay_visibility()
-
-    @Slot(result=bool)
-    def getOverlayVisible(self):
-        return bool(
-            self.picture_in_picture is not None
-            and self.picture_in_picture.isVisible()
-        )
 
     @Slot(result=str)
     def getSessionState(self):

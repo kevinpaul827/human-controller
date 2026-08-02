@@ -1,4 +1,5 @@
 import os
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -28,15 +29,29 @@ BUNDLED_POSE_MODEL_PATHS = tuple(
     / name
     for name in POSE_MODEL_NAMES
 )
-MEDIAPIPE_LIBRARY_IN_BUNDLE = (
+MEDIAPIPE_DIR_IN_BUNDLE = (
     DIST_DIR
     / "Human Controller.app"
     / "Contents"
     / "Frameworks"
     / "mediapipe"
-    / "tasks"
-    / "c"
-    / "libmediapipe.dylib"
+)
+MEDIAPIPE_NATIVE_LIBRARY_PATTERNS = (
+    "tasks/c/libmediapipe.dylib",
+    "python/_framework_bindings*.so",
+)
+APP_BUNDLE_PATH = DIST_DIR / "Human Controller.app"
+PIP_HELPER_APP_PATH = (
+    APP_BUNDLE_PATH
+    / "Contents"
+    / "Helpers"
+    / "Human Controller PiP.app"
+)
+PIP_HELPER_EXECUTABLE_PATH = (
+    PIP_HELPER_APP_PATH
+    / "Contents"
+    / "MacOS"
+    / "Human Controller PiP"
 )
 
 # This helper is the "package the whole desktop app" script.
@@ -49,6 +64,7 @@ from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 hiddenimports = collect_submodules("PySide6")
 hiddenimports += collect_submodules("app")
 hiddenimports += collect_submodules("backend")
+hiddenimports += collect_submodules("psutil")
 mediapipe_binaries = collect_dynamic_libs("mediapipe")
 
 a = Analysis(
@@ -110,6 +126,84 @@ app = BUNDLE(
 """
 
 
+def create_pip_helper_bundle() -> bool:
+    source_executable = (
+        APP_BUNDLE_PATH / "Contents" / "MacOS" / "Human Controller"
+    )
+    helper_contents = PIP_HELPER_APP_PATH / "Contents"
+    helper_macos = helper_contents / "MacOS"
+    try:
+        shutil.rmtree(PIP_HELPER_APP_PATH, ignore_errors=True)
+        helper_macos.mkdir(parents=True)
+        shutil.copy2(source_executable, PIP_HELPER_EXECUTABLE_PATH)
+        os.symlink(
+            "../../../Frameworks",
+            helper_contents / "Frameworks",
+            target_is_directory=True,
+        )
+        os.symlink(
+            "../../../Resources",
+            helper_contents / "Resources",
+            target_is_directory=True,
+        )
+        with (helper_contents / "Info.plist").open("wb") as plist_file:
+            plistlib.dump(
+                {
+                    "CFBundleDisplayName": "Human Controller PiP",
+                    "CFBundleExecutable": "Human Controller PiP",
+                    "CFBundleIdentifier": (
+                        "au.edu.unsw.capstone.date.human-controller.pip"
+                    ),
+                    "CFBundleName": "Human Controller PiP",
+                    "CFBundlePackageType": "APPL",
+                    "CFBundleShortVersionString": "1.0",
+                    "CFBundleVersion": "1",
+                    "LSUIElement": True,
+                    "NSHighResolutionCapable": True,
+                    "NSPrincipalClass": "NSApplication",
+                },
+                plist_file,
+            )
+    except OSError as error:
+        print(f"Failed to create PiP helper bundle: {error}")
+        return False
+
+    for bundle in (PIP_HELPER_APP_PATH, APP_BUNDLE_PATH):
+        result = subprocess.run(
+            ["codesign", "--force", "--sign", "-", str(bundle)],
+            check=False,
+        )
+        if result.returncode != 0:
+            print(f"Failed to sign app bundle: {bundle}")
+            return False
+
+    verification = subprocess.run(
+        [
+            "codesign",
+            "--verify",
+            "--deep",
+            "--strict",
+            str(APP_BUNDLE_PATH),
+        ],
+        check=False,
+    )
+    if verification.returncode != 0:
+        print("Failed to verify the signed app bundle.")
+        return False
+    return True
+
+
+def find_bundled_mediapipe_native_libraries() -> list[Path]:
+    return sorted(
+        {
+            path
+            for pattern in MEDIAPIPE_NATIVE_LIBRARY_PATTERNS
+            for path in MEDIAPIPE_DIR_IN_BUNDLE.glob(pattern)
+            if path.is_file()
+        }
+    )
+
+
 def main() -> int:
     if sys.platform != "darwin":
         print("This builder is only intended for macOS.")
@@ -158,10 +252,17 @@ def main() -> int:
     if result.returncode != 0:
         return result.returncode
 
-    if not MEDIAPIPE_LIBRARY_IN_BUNDLE.exists():
+    if not create_pip_helper_bundle():
+        return 1
+
+    if not find_bundled_mediapipe_native_libraries():
+        expected_locations = ", ".join(
+            str(MEDIAPIPE_DIR_IN_BUNDLE / pattern)
+            for pattern in MEDIAPIPE_NATIVE_LIBRARY_PATTERNS
+        )
         print(
-            "Build failed validation: MediaPipe's native library was not "
-            f"bundled at {MEDIAPIPE_LIBRARY_IN_BUNDLE}"
+            "Build failed validation: no supported MediaPipe native library "
+            f"was bundled. Expected one of: {expected_locations}"
         )
         return 1
 
@@ -173,7 +274,7 @@ def main() -> int:
             print(f"Build failed validation: pose model is missing: {path}")
         return 1
 
-    print(f"Created macOS app bundle at: {DIST_DIR / 'Human Controller.app'}")
+    print(f"Created macOS app bundle at: {APP_BUNDLE_PATH}")
     print('Launch it with: open "dist/Human Controller.app"')
     return 0
 
