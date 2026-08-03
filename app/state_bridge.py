@@ -54,7 +54,7 @@ class StateBridge(QObject):
         defaults = {
             "presets": [],
             "activePresetId": None,
-            "selectedPatientId": DEFAULT_PATIENTS[0][0],
+            "selectedPatientId": None,
             "pendingGestures": [],
             "settings": dict(DEFAULT_SETTINGS),
         }
@@ -84,8 +84,12 @@ class StateBridge(QObject):
         if selected_id is None:
             return None
         return next(
-            (profile for profile in profiles if profile.patient_id == selected_id),
-            profiles[0] if profiles else None,
+            (
+                profile
+                for profile in profiles
+                if profile.patient_id == selected_id
+            ),
+            None,
         )
 
     def _emit_updates(self) -> dict:
@@ -238,10 +242,7 @@ class StateBridge(QObject):
         self.profile_manager.delete(str(patient_id))
         ui = self._read_ui_state()
         if ui.get("selectedPatientId") == patient_id:
-            remaining = self.profile_manager.list_profiles()
-            ui["selectedPatientId"] = (
-                remaining[0].patient_id if remaining else None
-            )
+            ui["selectedPatientId"] = None
             ui["activePresetId"] = None
             self._write_ui_state(ui)
         return self._emit_updates()
@@ -259,8 +260,7 @@ class StateBridge(QObject):
         ui = self._read_ui_state()
         selected_id = ui.get("selectedPatientId")
         if selected_id and not self.profile_manager.exists(str(selected_id)):
-            profiles = self.profile_manager.list_profiles()
-            ui["selectedPatientId"] = profiles[0].patient_id if profiles else None
+            ui["selectedPatientId"] = None
             ui["activePresetId"] = None
             self._write_ui_state(ui)
         return self._emit_updates()

@@ -47,7 +47,7 @@ const initialState = (): Persisted => ({
   gestures: SAMPLE_GESTURES,
   bindings: SAMPLE_BINDINGS,
   presets: SAMPLE_PRESETS,
-  selectedPatientId: SAMPLE_PATIENTS[0]?.patientId ?? null,
+  selectedPatientId: null,
   activePresetId: null,
   patients: SAMPLE_PATIENTS,
   settings: DEFAULT_SETTINGS,
@@ -633,20 +633,14 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
             (patient) => patient.patientId !== patientId,
           );
           const deletingSelected = current.selectedPatientId === patientId;
-          const nextSelected = deletingSelected ? (patients[0] ?? null) : null;
           return {
             ...current,
             patients,
             selectedPatientId: deletingSelected
-              ? (nextSelected?.patientId ?? null)
+              ? null
               : current.selectedPatientId,
             activePresetId: deletingSelected ? null : current.activePresetId,
-            bindings: deletingSelected
-              ? bindingsForPatient(
-                  nextSelected,
-                  current.settings.matchThreshold,
-                )
-              : current.bindings,
+            bindings: deletingSelected ? [] : current.bindings,
           };
         });
       },

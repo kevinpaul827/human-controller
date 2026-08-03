@@ -22,6 +22,8 @@ class StateBridgeThresholdTests(unittest.TestCase):
 
     def test_binding_thresholds_round_trip_into_runtime_configuration(self):
         current = self.bridge.getState()
+        patient_id = current["patients"][0]["patientId"]
+        current["selectedPatientId"] = patient_id
         current["bindings"] = [
             {"gestureId": "elbow", "key": "W", "matchThreshold": 63}
         ]
@@ -88,6 +90,8 @@ class StateBridgeThresholdTests(unittest.TestCase):
 
     def test_legacy_binding_uses_global_threshold_as_its_default(self):
         current = self.bridge.getState()
+        patient_id = current["patients"][0]["patientId"]
+        current["selectedPatientId"] = patient_id
         current["settings"]["matchThreshold"] = 71
         current["bindings"] = [{"gestureId": "elbow", "key": "W"}]
 
@@ -116,13 +120,20 @@ class StateBridgeThresholdTests(unittest.TestCase):
 
         self.assertIs(bridge.profile_manager, manager)
 
-    def test_delete_selected_profile_selects_remaining_profile(self):
+    def test_fresh_state_starts_unassigned(self):
+        snapshot = self.bridge.getState()
+
+        self.assertIsNone(snapshot["selectedPatientId"])
+        self.assertTrue(snapshot["patients"])
+
+    def test_delete_selected_profile_clears_selection(self):
         current = self.bridge.getState()
-        selected_id = current["selectedPatientId"]
+        selected_id = current["patients"][0]["patientId"]
+        self.bridge.selectPatient(selected_id)
 
         updated = self.bridge.deleteProfile(selected_id)
 
-        self.assertNotEqual(updated["selectedPatientId"], selected_id)
+        self.assertIsNone(updated["selectedPatientId"])
         self.assertTrue(updated["patients"])
 
     def test_delete_all_profiles_produces_empty_runtime(self):

@@ -7,8 +7,13 @@ import { initialsOf } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const ProfileSwitcher = () => {
-  const { patients, selectedPatient, selectPatient, createPatient } =
-    useAppState();
+  const {
+    patients,
+    selectedPatient,
+    selectPatient,
+    createPatient,
+    clearPatientSelection,
+  } = useAppState();
   const [createOpen, setCreateOpen] = useState(false);
 
   const createProfile = async (patientName: string, notes: string) => {
@@ -29,22 +34,24 @@ const ProfileSwitcher = () => {
       <DropdownMenu.Root>
         <DropdownMenu.Trigger
           className={cn(
-            "flex shrink-0 cursor-pointer items-center gap-2 rounded-sm border border-hairline bg-surface-muted py-1 pr-2 pl-1",
-            "transition-[translate,box-shadow] duration-100",
-            "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-brutal-sm active:translate-x-1 active:translate-y-1 active:shadow-none",
+            "inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-sm border-2 bg-surface px-2 text-sm font-bold",
+            "shadow-brutal-sm transition-[translate,box-shadow] duration-100",
+            "hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none",
+            "active:translate-x-1 active:translate-y-1 active:shadow-none",
+            "outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
           )}
         >
           <span
             aria-hidden="true"
-            className="flex size-7 items-center justify-center rounded-sm border border-hairline bg-surface font-mono text-xs font-bold text-foreground"
+            className="flex size-6 items-center justify-center rounded-sm border-2 bg-surface-muted font-mono text-[0.65rem] font-bold"
           >
             {selectedPatient ? (
               initialsOf(selectedPatient.patientName)
             ) : (
-              <UserRound className="size-4" />
+              <UserRound className="size-3.5" />
             )}
           </span>
-          <span className="text-sm font-bold">
+          <span className="max-w-[9rem] truncate">
             {selectedPatient?.patientName ?? "Select profile"}
           </span>
           <ChevronsUpDown
@@ -65,10 +72,21 @@ const ProfileSwitcher = () => {
             {patients.map((patient) => (
               <DropdownMenu.Item
                 key={patient.patientId}
-                onSelect={() => void selectPatient(patient.patientId)}
+                onSelect={() => {
+                  if (patient.patientId === selectedPatient?.patientId) {
+                    void clearPatientSelection();
+                    return;
+                  }
+                  void selectPatient(patient.patientId);
+                }}
                 className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm font-semibold outline-none data-[highlighted]:bg-surface-muted"
               >
-                <UserRound className="size-4 shrink-0" aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className="flex size-5 items-center justify-center rounded-sm border font-mono text-[0.6rem] font-bold"
+                >
+                  {initialsOf(patient.patientName)}
+                </span>
                 <span className="flex-1 truncate">{patient.patientName}</span>
                 {patient.patientId === selectedPatient?.patientId ? (
                   <Check className="size-4 shrink-0" aria-hidden="true" />

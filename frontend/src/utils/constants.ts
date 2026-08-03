@@ -10,6 +10,7 @@ export const NAV_ITEMS = [
   { label: "Session", path: ROUTES.session },
   { label: "Profiles", path: ROUTES.profiles },
   { label: "Library", path: ROUTES.library },
+  { label: "Calibration", path: ROUTES.calibrate },
   { label: "Settings", path: ROUTES.settings },
 ];
 
