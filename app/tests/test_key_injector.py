@@ -212,16 +212,16 @@ class KeyInjectorTests(unittest.TestCase):
             ],
         )
 
-    # def test_windows_backend_rejects_unknown_keys_and_reports_send_failure(self):
-    #     user32 = FakeUser32()
-    #     backend = WindowsKeyboardBackend(user32=user32)
+    def test_windows_backend_rejects_unknown_keys_and_reports_send_failure(self):
+        user32 = FakeUser32()
+        backend = WindowsKeyboardBackend(user32=user32)
 
-    #     with self.assertRaises(KeyInjectionError):
-    #         backend.resolve("[")
+        with self.assertRaises(KeyInjectionError):
+            backend.resolve("[")
 
-    #     user32.result = 0
-    #     with self.assertRaisesRegex(KeyInjectionError, "Windows could not send"):
-    #         backend.press(backend.resolve("w"))
+        user32.result = 0
+        with self.assertRaisesRegex(KeyInjectionError, "Windows could not send"):
+            backend.press(backend.resolve("w"))
 
 
 if __name__ == "__main__":
