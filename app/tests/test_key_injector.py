@@ -8,11 +8,11 @@ from app.key_injector import (
 )
 from app.platforms.macos.key_injection import MacOSKeyboardBackend
 from app.platforms.windows.key_injection import (
+    WindowsKeyboardBackend,
     INPUT,
     KEYEVENTF_EXTENDEDKEY,
     KEYEVENTF_KEYUP,
-    KEYEVENTF_SCANCODE,
-    WindowsKeyboardBackend,
+    KEYEVENTF_SCANCODE
 )
 
 
@@ -75,16 +75,18 @@ class FakeUser32:
 
     def SendInput(self, count, event_pointer, structure_size):
         event = ctypes.cast(event_pointer, ctypes.POINTER(INPUT)).contents
+
         self.events.append(
             (
                 count,
                 structure_size,
                 event.type,
-                event.ki.wVk,
-                event.ki.wScan,
-                event.ki.dwFlags,
+                event.union.ki.wVk,
+                event.union.ki.wScan,
+                event.union.ki.dwFlags,
             )
         )
+
         return self.result
 
 
@@ -180,9 +182,10 @@ class KeyInjectorTests(unittest.TestCase):
     def test_windows_backend_posts_scan_codes_with_extended_and_release_flags(self):
         user32 = FakeUser32()
         backend = WindowsKeyboardBackend(user32=user32)
+        token = backend.resolve("left")
 
-        backend.press(backend.resolve("left"))
-        backend.release(backend.resolve("left"))
+        backend.press(token)
+        backend.release(token)
 
         self.assertEqual(
             user32.events,
