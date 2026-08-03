@@ -10,7 +10,6 @@ from app.platforms.macos.key_injection import MacOSKeyboardBackend
 from app.platforms.windows.key_injection import (
     WindowsKeyboardBackend,
     INPUT,
-    INPUT_KEYBOARD,
     KEYEVENTF_EXTENDEDKEY,
     KEYEVENTF_KEYUP,
     KEYEVENTF_SCANCODE
