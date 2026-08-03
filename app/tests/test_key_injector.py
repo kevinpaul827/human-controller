@@ -7,7 +7,14 @@ from app.key_injector import (
     KeyInjector,
 )
 from app.platforms.macos.key_injection import MacOSKeyboardBackend
-from app.platforms.windows.key_injection import WindowsKeyboardBackend
+from app.platforms.windows.key_injection import (
+    WindowsKeyboardBackend,
+    INPUT,
+    INPUT_KEYBOARD,
+    KEYEVENTF_EXTENDEDKEY,
+    KEYEVENTF_KEYUP,
+    KEYEVENTF_SCANCODE
+)
 
 
 class FakeBackend:
@@ -66,6 +73,22 @@ class FakeUser32:
     def __init__(self):
         self.events = []
         self.result = 1
+
+    def SendInput(self, count, event_pointer, structure_size):
+        event = ctypes.cast(event_pointer, ctypes.POINTER(INPUT)).contents
+
+        self.events.append(
+            (
+                count,
+                structure_size,
+                event.type,
+                event.union.ki.wVk,
+                event.union.ki.wScan,
+                event.union.ki.dwFlags,
+            )
+        )
+
+        return self.result
 
 
 class KeyInjectorTests(unittest.TestCase):
@@ -157,16 +180,37 @@ class KeyInjectorTests(unittest.TestCase):
 
         self.assertEqual(quartz.calls.count(("request",)), 1)
 
-    # def test_windows_backend_posts_scan_codes_with_extended_and_release_flags(self):
-    #     user32 = FakeUser32()
-    #     backend = WindowsKeyboardBackend(user32=user32)
-    #     token = backend.resolve("left")
+    def test_windows_backend_posts_scan_codes_with_extended_and_release_flags(self):
+        user32 = FakeUser32()
+        backend = WindowsKeyboardBackend(user32=user32)
+        token = backend.resolve("left")
 
-    #     backend.press(token)
-    #     backend.release(token)
+        backend.press(token)
+        backend.release(token)
 
-    #     backend.press.assert_once_called_with(token)
-    #     backend.release.assert_once_called_with(token)
+        self.assertEqual(
+            user32.events,
+            [
+                (
+                    1,
+                    ctypes.sizeof(INPUT),
+                    1,
+                    0,
+                    0x4B,
+                    KEYEVENTF_SCANCODE | KEYEVENTF_EXTENDEDKEY,
+                ),
+                (
+                    1,
+                    ctypes.sizeof(INPUT),
+                    1,
+                    0,
+                    0x4B,
+                    KEYEVENTF_SCANCODE
+                    | KEYEVENTF_EXTENDEDKEY
+                    | KEYEVENTF_KEYUP,
+                ),
+            ],
+        )
 
     # def test_windows_backend_rejects_unknown_keys_and_reports_send_failure(self):
     #     user32 = FakeUser32()
