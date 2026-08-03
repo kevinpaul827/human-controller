@@ -42,3 +42,28 @@ jobs:
 
       - name: Run typecheck
         run: npm run typecheck
+
+      - name: Detect frontend tests
+        id: frontend-tests
+        run: |
+          if find tests -type f ! -name '.gitkeep' ! -name 'README.md' | grep -q .; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run frontend test coverage
+        if: steps.frontend-tests.outputs.has_tests == 'true'
+        run: npm run test:coverage
+
+      - name: Upload frontend coverage artifact
+        if: steps.frontend-tests.outputs.has_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          if-no-files-found: error
+
+      - name: Note missing frontend tests
+        if: steps.frontend-tests.outputs.has_tests != 'true'
+        run: echo "No frontend tests found in frontend/tests yet; skipping coverage step."

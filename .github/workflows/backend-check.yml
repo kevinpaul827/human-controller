@@ -37,6 +37,14 @@ jobs:
       - name: Install backend dependencies
         run: |
           pip install -r backend/matching_engine/requirements.txt
+          pip install coverage
 
-      - name: Run backend checks
-        run: make backend-check
+      - name: Run backend coverage
+        run: make backend-coverage
+
+      - name: Upload backend coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage-backend.xml
+          if-no-files-found: error
