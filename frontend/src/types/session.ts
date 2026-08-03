@@ -34,7 +34,6 @@ export type GestureMatchEvent = {
   keyAction?: "press" | "release" | "reset";
 };
 export type GestureMatchListener = (event: GestureMatchEvent) => void;
-export type OverlayVisibilityListener = (visible: boolean) => void;
 
 export type SessionGestureMapping = {
   gestureId: string;
@@ -56,9 +55,7 @@ export interface SessionBridge {
   updatePreviewBounds(bounds: SessionPreviewBounds): Promise<void>;
   openCameraSettings(): Promise<void>;
   openAccessibilitySettings(): Promise<void>;
-  setOverlayVisible(visible: boolean): Promise<void>;
   onSessionStatus(listener: SessionStatusListener): () => void;
   onPreviewAspectRatio(listener: SessionAspectRatioListener): () => void;
   onGestureMatch(listener: GestureMatchListener): () => void;
-  onOverlayVisibility(listener: OverlayVisibilityListener): () => void;
 }

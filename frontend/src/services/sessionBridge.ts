@@ -7,7 +7,6 @@ import type {
   SessionStatusEvent,
   GestureMatchEvent,
   GestureMatchListener,
-  OverlayVisibilityListener,
 } from "../types/session";
 
 import { getQtWebChannel } from "./qtWebChannel";
@@ -51,14 +50,9 @@ type QtSessionBridgeObject = {
   ) => void | Promise<void>;
   openCameraSettings?: () => void | Promise<void>;
   openAccessibilitySettings?: () => void | Promise<void>;
-  setOverlayVisible?: (visible: boolean) => void | Promise<void>;
-  getOverlayVisible?: (
-    callback?: (visible: boolean) => void,
-  ) => boolean | Promise<boolean> | void;
   sessionStatusChanged?: QtSignal<SessionStatusEvent>;
   previewAspectRatioChanged?: QtSignal<number>;
   gestureMatchUpdated?: QtSignal<GestureMatchEvent>;
-  overlayVisibilityChanged?: QtSignal<boolean>;
 };
 
 const BRIDGE_NAME = "sessionBridge";
@@ -201,14 +195,6 @@ const sessionBridge: SessionBridge = {
     await bridge.openAccessibilitySettings();
   },
 
-  async setOverlayVisible(visible) {
-    const bridge = await getSessionBridgeOrThrow();
-    if (!bridge.setOverlayVisible) {
-      throw new Error("Desktop game overlay is unavailable in this build.");
-    }
-    await bridge.setOverlayVisible(visible);
-  },
-
   onSessionStatus(listener) {
     let active = true;
     let unsubscribe = () => {};
@@ -288,32 +274,6 @@ const sessionBridge: SessionBridge = {
         if (!active || !bridge.gestureMatchUpdated) return;
         bridge.gestureMatchUpdated.connect(listener);
         unsubscribe = () => bridge.gestureMatchUpdated?.disconnect?.(listener);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  },
-
-  onOverlayVisibility(listener: OverlayVisibilityListener) {
-    let active = true;
-    let unsubscribe = () => {};
-    void getSessionBridgeOrThrow()
-      .then((bridge) => {
-        if (!active || !bridge.overlayVisibilityChanged) return;
-        bridge.overlayVisibilityChanged.connect(listener);
-        unsubscribe = () =>
-          bridge.overlayVisibilityChanged?.disconnect?.(listener);
-        if (bridge.getOverlayVisible) {
-          void invokeWithResult<boolean>((callback) =>
-            bridge.getOverlayVisible?.(callback),
-          )
-            .then((visible) => {
-              if (active) listener(Boolean(visible));
-            })
-            .catch(() => {});
-        }
       })
       .catch(() => {});
     return () => {

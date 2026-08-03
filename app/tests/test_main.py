@@ -5,6 +5,17 @@ import sys
 from unittest.mock import MagicMock, patch
 
 
+_app_modules_before = {
+    name: module
+    for name, module in sys.modules.items()
+    if name == "app" or name.startswith("app.")
+}
+_app_package = sys.modules.get("app")
+_app_attributes_before = (
+    dict(vars(_app_package)) if _app_package is not None else {}
+)
+
+
 def _install_pyside6_stub():
     for module_name in list(sys.modules):
         if module_name == "PySide6" or module_name.startswith("PySide6."):
@@ -117,9 +128,6 @@ try:
 except Exception:
     _install_pyside6_stub()
 
-# These entrypoint tests only care about startup/error handling in app.main.
-# Stubbing PoseProcessor keeps the import lightweight so the tests do not need
-# numpy, OpenCV, or MediaPipe just to import the window module graph.
 _install_pose_processor_stub()
 _install_overlay_constants_stub()
 _install_picture_in_picture_stub()
@@ -127,8 +135,19 @@ _install_picture_in_picture_stub()
 from app import main
 from app import main_window
 
-# Do not leak the lightweight import stub into overlay-specific test modules.
-sys.modules.pop("app.overlay_constants", None)
+for module_name in list(sys.modules):
+    if (
+        module_name == "app" or module_name.startswith("app.")
+    ) and module_name not in _app_modules_before:
+        sys.modules.pop(module_name, None)
+for module_name, module in _app_modules_before.items():
+    sys.modules[module_name] = module
+if _app_package is not None:
+    for attribute in list(vars(_app_package)):
+        if attribute not in _app_attributes_before:
+            delattr(_app_package, attribute)
+    for attribute, value in _app_attributes_before.items():
+        setattr(_app_package, attribute, value)
 
 
 class FrontendPathTests(unittest.TestCase):
@@ -148,9 +167,9 @@ class FrontendPathTests(unittest.TestCase):
 
 
 class MainEntryPointTests(unittest.TestCase):
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch.object(main, "QApplication")
+    @patch.object(main.QMessageBox, "critical")
+    @patch.object(main.sys, "exit")
     def test_main_exits_with_error_when_frontend_is_missing(
         self,
         exit_mock,
@@ -159,9 +178,10 @@ class MainEntryPointTests(unittest.TestCase):
     ):
         exit_mock.side_effect = SystemExit(1)
 
-        with patch("app.main.frontend_source_exists", return_value=False):
-            with patch(
-                "app.main.frontend_source_for_display",
+        with patch.object(main, "frontend_source_exists", return_value=False):
+            with patch.object(
+                main,
+                "frontend_source_for_display",
                 return_value="/tmp/does-not-exist/index.html",
             ):
                 with self.assertRaises(SystemExit):
@@ -171,10 +191,10 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch("app.main.MainWindow", side_effect=RuntimeError("backend failed"))
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch.object(main, "MainWindow", side_effect=RuntimeError("backend failed"))
+    @patch.object(main, "QApplication")
+    @patch.object(main.QMessageBox, "critical")
+    @patch.object(main.sys, "exit")
     def test_main_exits_with_error_when_window_startup_fails(
         self,
         exit_mock,
@@ -185,7 +205,7 @@ class MainEntryPointTests(unittest.TestCase):
         exit_mock.side_effect = SystemExit(1)
 
         with patch.object(main.sys, "platform", "darwin"):
-            with patch("app.main.frontend_source_exists", return_value=True):
+            with patch.object(main, "frontend_source_exists", return_value=True):
                 with self.assertRaises(SystemExit):
                     main.main()
 
@@ -193,10 +213,10 @@ class MainEntryPointTests(unittest.TestCase):
         critical_mock.assert_called_once()
         exit_mock.assert_called_once_with(1)
 
-    @patch("app.main.MainWindow")
-    @patch("app.main.QApplication")
-    @patch("app.main.QMessageBox.critical")
-    @patch("app.main.sys.exit")
+    @patch.object(main, "MainWindow")
+    @patch.object(main, "QApplication")
+    @patch.object(main.QMessageBox, "critical")
+    @patch.object(main.sys, "exit")
     def test_main_starts_window_when_frontend_exists(
         self,
         exit_mock,
@@ -211,7 +231,7 @@ class MainEntryPointTests(unittest.TestCase):
         window_ctor_mock.return_value = fake_window
 
         with patch.object(main.sys, "platform", "darwin"):
-            with patch("app.main.frontend_source_exists", return_value=True):
+            with patch.object(main, "frontend_source_exists", return_value=True):
                 self.assertEqual(main.main(), 0)
 
         critical_mock.assert_not_called()
@@ -220,3 +240,19 @@ class MainEntryPointTests(unittest.TestCase):
         fake_app.exec.assert_called_once()
         fake_window.shutdown.assert_called_once()
         exit_mock.assert_not_called()
+
+
+class MainWindowCloseTests(unittest.TestCase):
+    def test_close_uses_normal_shutdown_path(self):
+        window = MagicMock()
+        event = MagicMock()
+
+        with patch.object(
+            main_window.QMainWindow,
+            "closeEvent",
+            create=True,
+        ) as base_close:
+            main_window.MainWindow.closeEvent(window, event)
+
+        window.shutdown.assert_called_once()
+        base_close.assert_called_once_with(window, event)
