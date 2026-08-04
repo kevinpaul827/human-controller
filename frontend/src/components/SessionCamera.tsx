@@ -110,7 +110,7 @@ const SessionCamera = () => {
         );
         if (profileData.gestures.length === 0) {
           setProfileWarning(
-            "This profile has no usable movement key bindings yet.",
+            "This profile has no usable movement key bindings. Please add key bindings or calibrate new gestures.",
           );
         } else if (profileData.missingGestureIds.length > 0) {
           setProfileWarning(
@@ -223,7 +223,7 @@ const SessionCamera = () => {
                   ? profileWarning
                   : needsCalibration && !isLive
                     ? activeProfile
-                      ? "This profile has no usable movement key bindings yet."
+                      ? "This profile has no usable movement key bindings. Please add key bindings or calibrate new gestures."
                       : "No patient selected. Add a binding, go to calibration, or choose a profile."
                     : isLive
                       ? "Waiting for a movement"
