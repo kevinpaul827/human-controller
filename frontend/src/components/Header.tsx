@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Gamepad2, Library, Settings, Users } from "lucide-react";
+import { Crosshair, Gamepad2, Library, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, ROUTES } from "@/utils/constants";
 import ProfileSwitcher from "./ProfileSwitcher";
@@ -8,6 +8,7 @@ const navIcons: Record<string, typeof Gamepad2> = {
   [ROUTES.library]: Library,
   [ROUTES.session]: Gamepad2,
   [ROUTES.profiles]: Users,
+  [ROUTES.calibrate]: Crosshair,
   [ROUTES.settings]: Settings,
 };
 

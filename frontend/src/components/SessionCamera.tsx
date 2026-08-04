@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { PictureInPicture2, Play, Square } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Crosshair, PictureInPicture2, Play, Square } from "lucide-react";
 import SessionCameraErrorModal from "./modals/SessionCameraErrorModal";
 import { BrutalButton } from "@/components/ui/brutal-button";
 import { BrutalBadge } from "@/components/ui/brutal-badge";
@@ -12,15 +13,19 @@ import {
   BrutalCardHeader,
   BrutalCardTitle,
 } from "@/components/ui/brutal-card";
+import { useAppState } from "@/state/appStateContext";
 import sessionBridge from "../services/sessionBridge";
 import type {
   GestureMatchEvent,
   SessionStatusEvent,
   SessionState,
 } from "../types/session";
+import { ROUTES } from "@/utils/constants";
 
 const SessionCamera = () => {
+  const navigate = useNavigate();
   const { activeProfile } = useActiveProfile();
+  const { bindings } = useAppState();
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [errorEvent, setErrorEvent] = useState<SessionStatusEvent | null>(null);
   const [profileWarning, setProfileWarning] = useState<string | null>(null);
@@ -29,6 +34,9 @@ const SessionCamera = () => {
   );
   const [starting, setStarting] = useState(false);
   const isLive = sessionState === "live";
+  const needsCalibration =
+    !activeProfile ||
+    !bindings.some((binding) => Boolean(binding.gesture.calibratedAt));
   const { elapsed, setElapsed } = useDesktopCameraPreview({
     bridge: sessionBridge,
     isLive,
@@ -102,7 +110,7 @@ const SessionCamera = () => {
         );
         if (profileData.gestures.length === 0) {
           setProfileWarning(
-            "This profile has no usable movement key bindings yet.",
+            "This profile has no usable movement key bindings. Please add key bindings or calibrate new gestures.",
           );
         } else if (profileData.missingGestureIds.length > 0) {
           setProfileWarning(
@@ -205,37 +213,56 @@ const SessionCamera = () => {
           </div>
         </BrutalCardContent>
 
-        <BrutalCardFooter className="flex-wrap justify-between gap-3">
-          <span className="min-w-0 flex-1 text-sm font-bold text-muted-foreground">
+        <BrutalCardFooter className="flex-col items-stretch gap-3">
+          <span className="min-w-0 text-sm font-bold text-muted-foreground">
             {latestMatch?.triggered
               ? `${latestMatch.name ?? "Movement"} → ${latestMatch.key} held`
               : latestMatch
                 ? `Recognising ${latestMatch.name ?? "movement"}…`
                 : profileWarning
                   ? profileWarning
-                  : isLive
-                    ? "Waiting for a movement"
-                    : ""}
+                  : needsCalibration && !isLive
+                    ? activeProfile
+                      ? "This profile has no usable movement key bindings. Please add key bindings or calibrate new gestures."
+                      : "No patient selected. Add a binding, go to calibration, or choose a profile."
+                    : isLive
+                      ? "Waiting for a movement"
+                      : ""}
           </span>
-          <div className="flex shrink-0 gap-2">
-            <BrutalButton
-              variant={isLive ? "destructive" : "primary"}
-              size="lg"
-              disabled={starting}
-              onClick={isLive ? handleStopSession : handleStartSession}
-            >
-              {isLive ? (
-                <>
-                  <Square aria-hidden="true" />
-                  Stop session
-                </>
-              ) : (
-                <>
+          <div className="flex flex-col gap-2">
+            {isLive ? (
+              <BrutalButton
+                variant="destructive"
+                size="md"
+                className="w-full"
+                onClick={handleStopSession}
+              >
+                <Square aria-hidden="true" />
+                Stop session
+              </BrutalButton>
+            ) : (
+              <>
+                <BrutalButton
+                  variant="primary"
+                  size="md"
+                  className="w-full"
+                  disabled={needsCalibration || starting}
+                  onClick={handleStartSession}
+                >
                   <Play aria-hidden="true" />
                   {starting ? "Starting…" : "Start session"}
-                </>
-              )}
-            </BrutalButton>
+                </BrutalButton>
+                <BrutalButton
+                  variant="outline"
+                  size="md"
+                  className="w-full"
+                  onClick={() => navigate(ROUTES.calibrate)}
+                >
+                  <Crosshair aria-hidden="true" />
+                  Go to calibration
+                </BrutalButton>
+              </>
+            )}
           </div>
         </BrutalCardFooter>
       </BrutalCard>
