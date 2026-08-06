@@ -25,6 +25,9 @@ on:
 jobs:
   macos-app-build:
     runs-on: macos-latest
+    
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -80,3 +83,13 @@ jobs:
           name: human-controller-macos-app
           path: dist/Human Controller-macOS.zip
           if-no-files-found: error
+          
+      - name: Publish to GitHub Releases
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Main Build
+          body: "Automated build from the latest commit on the main branch."
+          files: "dist/Human Controller-macOS.zip"
+          prerelease: true
