@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-import app.pip_factory as pip_factory
+import app.platforms.picture_in_picture as pip_factory
 
 
 class PictureInPictureFactoryTests(unittest.TestCase):
-    @patch("app.picture_in_picture_window.PictureInPictureWindow")
+    @patch("app.ui.picture_in_picture_window.PictureInPictureWindow")
     def test_windows_uses_existing_in_process_window(self, window_class):
         window = MagicMock()
         window_class.return_value = window

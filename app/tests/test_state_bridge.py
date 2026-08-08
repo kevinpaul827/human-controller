@@ -5,9 +5,9 @@ import math
 from pathlib import Path
 from unittest.mock import patch
 
-from app.gesture_store import GestureStore
+from app.bridges.state_bridge import StateBridge
+from app.gestures.gesture_store import GestureStore
 from app.profile_manager import ProfileManager
-from app.state_bridge import StateBridge
 
 
 class StateBridgeThresholdTests(unittest.TestCase):
@@ -109,7 +109,7 @@ class StateBridgeThresholdTests(unittest.TestCase):
             "lite",
         )
 
-    @patch("app.state_bridge.device_pose_recommendation")
+    @patch("app.bridges.state_bridge.device_pose_recommendation")
     def test_pose_model_recommendation_is_read_only(self, recommend):
         recommend.return_value = {
             "poseModel": "full",

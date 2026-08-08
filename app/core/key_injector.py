@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import time
 
-from .platforms import create_keyboard_backend
-from .platforms.key_injection import KeyInjectionError
+from ..platforms import create_keyboard_backend
+from ..platforms.key_injection import KeyInjectionError
 
 
 DEFAULT_KEY_PRESS_SECONDS = 0.12

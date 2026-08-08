@@ -4,11 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QApplication
-
-from .key_injector import KeyInjector
+from ..core.key_injector import KeyInjector
 
 
 HTML = """
@@ -53,6 +49,10 @@ HTML = """
 
 
 def run_browser_input_smoke(result_path: str) -> int:
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWidgets import QApplication
+
     app = QApplication(sys.argv)
     view = QWebEngineView()
     view.resize(640, 360)

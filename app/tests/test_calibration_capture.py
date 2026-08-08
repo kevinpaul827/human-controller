@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from app.calibration_capture import CalibrationCaptureController, CapturePhase
+from app.calibration.calibration_capture import CalibrationCaptureController, CapturePhase
 
 
 def _pose(offset=0.0):

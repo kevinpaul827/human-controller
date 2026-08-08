@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import ValidationError
 
 from app.profile_manager import PatientProfile, ProfileManager
-from app.profile_manager.exceptions import (
+from app.profile_manager.profile_exceptions import (
     ProfileAlreadyExistsError,
     ProfileNotFoundError,
     ProfileValidationError,

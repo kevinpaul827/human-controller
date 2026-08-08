@@ -2,7 +2,7 @@ from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
-from .logging_utils import log_debug, log_verbose
+from ..utils.logging_utils import log_debug, log_verbose
 from .overlay_constants import (
     MIN_VISIBILITY,
     POSE_CONNECTIONS,

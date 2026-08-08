@@ -1,6 +1,6 @@
 import unittest
 
-from app.session_bridge import SessionBridge, SessionState
+from app.bridges.session_bridge import SessionBridge, SessionState
 
 
 class FakeSignal:

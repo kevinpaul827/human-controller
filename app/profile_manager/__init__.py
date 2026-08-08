@@ -1,12 +1,12 @@
-from .exceptions import (
+from .profile_exceptions import (
     ProfileAlreadyExistsError,
     ProfileConflictError,
     ProfileError,
     ProfileNotFoundError,
     ProfileValidationError,
 )
-from .manager import ProfileManager
-from .models import CURRENT_SCHEMA_VERSION, PatientProfile
+from .profile_manager import ProfileManager
+from .profile_models import CURRENT_SCHEMA_VERSION, PatientProfile
 
 __all__ = [
     "CURRENT_SCHEMA_VERSION",

@@ -59,7 +59,7 @@ def main():
         return
 
     if SMOKE_BROWSER_INPUT_FLAG in sys.argv[1:]:
-        from app.browser_input_smoke import run_browser_input_smoke
+        from app.dev.browser_input_smoke import run_browser_input_smoke
 
         flag_index = sys.argv.index(SMOKE_BROWSER_INPUT_FLAG)
         try:

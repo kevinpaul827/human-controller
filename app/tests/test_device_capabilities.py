@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.device_capabilities import (
+from app.utils.device_capabilities import (
     GIBIBYTE,
     device_pose_recommendation,
     select_pose_model,
@@ -32,8 +32,8 @@ class DeviceCapabilitiesTests(unittest.TestCase):
         self.assertEqual(select_pose_model(None, 8), "lite")
         self.assertEqual(select_pose_model(16, None, None), "lite")
 
-    @patch("app.device_capabilities.psutil.cpu_count")
-    @patch("app.device_capabilities.psutil.virtual_memory")
+    @patch("app.utils.device_capabilities.psutil.cpu_count")
+    @patch("app.utils.device_capabilities.psutil.virtual_memory")
     def test_device_recommendation_reports_detected_hardware(
         self,
         virtual_memory,
@@ -54,8 +54,8 @@ class DeviceCapabilitiesTests(unittest.TestCase):
             },
         )
 
-    @patch("app.device_capabilities.psutil.cpu_count")
-    @patch("app.device_capabilities.psutil.virtual_memory")
+    @patch("app.utils.device_capabilities.psutil.cpu_count")
+    @patch("app.utils.device_capabilities.psutil.virtual_memory")
     def test_missing_physical_count_is_reported_as_unknown(
         self,
         virtual_memory,
@@ -70,8 +70,8 @@ class DeviceCapabilitiesTests(unittest.TestCase):
         self.assertIsNone(recommendation["physicalCpuCount"])
         self.assertEqual(recommendation["logicalCpuCount"], 6)
 
-    @patch("app.device_capabilities.psutil.cpu_count", return_value=8)
-    @patch("app.device_capabilities.psutil.virtual_memory")
+    @patch("app.utils.device_capabilities.psutil.cpu_count", return_value=8)
+    @patch("app.utils.device_capabilities.psutil.virtual_memory")
     def test_invalid_memory_is_reported_as_unknown(
         self,
         virtual_memory,

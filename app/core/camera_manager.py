@@ -10,13 +10,13 @@ from backend.matching_engine import AngleKey, TemplateBuilder
 from backend.matching_engine.core.angles import reduce_joints
 from backend.perception.models import normalize_pose_model
 
-from .bridge_types import CalibrationUpdatePayload, GestureMatchPayload, PosePayload
-from .calibration_capture import CalibrationCaptureController, CapturePhase
-from .gesture_matcher import GestureMatcher
-from .gesture_regions import infer_gesture_regions
-from .gesture_store import SavedGesture
+from ..bridges.bridge_types import CalibrationUpdatePayload, GestureMatchPayload, PosePayload
+from ..calibration.calibration_capture import CalibrationCaptureController, CapturePhase
+from ..gestures.gesture_matcher import GestureMatcher
+from ..gestures.gesture_regions import infer_gesture_regions
+from ..gestures.gesture_store import SavedGesture
+from ..utils.logging_utils import log_debug, log_info, log_verbose
 from .key_injector import KeyInjectionError, KeyInjector
-from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
 from .runtime_configuration import RuntimeConfiguration
 from .trigger_controller import TriggerController

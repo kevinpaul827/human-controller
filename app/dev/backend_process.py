@@ -12,7 +12,7 @@ from collections import deque
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 BACKEND_HELPER_FLAG = "--backend-helper"
 BACKEND_RELOAD_FLAG = "HUMAN_CONTROLLER_BACKEND_RELOAD"
 BACKEND_RUNNER_ENV = "HUMAN_CONTROLLER_BACKEND_RUNNER"

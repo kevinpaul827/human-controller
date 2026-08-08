@@ -11,7 +11,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QImage
 
-from app.logging_utils import log_info
+from app.utils.logging_utils import log_info
 
 from .pip_protocol import (
     PIP_HELPER_FLAG,

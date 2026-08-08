@@ -2,7 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .main_window import (
+from .ui.main_window import (
     MainWindow,
     frontend_source_exists,
     frontend_source_for_display,

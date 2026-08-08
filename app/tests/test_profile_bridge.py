@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 from uuid import UUID
 
-from app.gesture_store import GestureStore
-from app.profile_bridge import ProfileBridge
+from app.bridges.profile_bridge import ProfileBridge
+from app.gestures.gesture_store import GestureStore
 from app.profile_manager import ProfileManager
 
 

@@ -2,7 +2,7 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-from app.backend_process import (
+from app.dev.backend_process import (
     BACKEND_HELPER_FLAG,
     BACKEND_RELOAD_FLAG,
     BACKEND_RUNNER_ENV,
@@ -39,14 +39,14 @@ class BackendProcessCommandTests(unittest.TestCase):
             ["/tmp/dev-python", "/tmp/human-controller/scripts/run_backend_dev.py"],
         )
 
-    @patch("app.backend_process.subprocess.run")
+    @patch("app.dev.backend_process.subprocess.run")
     def test_windows_stop_terminates_the_backend_process_tree(self, run):
         manager = BackendProcessManager()
         process = Mock(pid=1234)
         process.poll.return_value = None
         manager.process = process
 
-        with patch("app.backend_process.os.name", "nt"):
+        with patch("app.dev.backend_process.os.name", "nt"):
             manager.stop()
 
         run.assert_called_once_with(

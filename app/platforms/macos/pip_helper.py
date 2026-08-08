@@ -5,8 +5,8 @@ import sys
 from PySide6.QtCore import QObject, QSocketNotifier, QTimer
 from PySide6.QtWidgets import QApplication
 
-from app.logging_utils import log_info
-from app.picture_in_picture_window import PictureInPictureWindow
+from app.ui.picture_in_picture_window import PictureInPictureWindow
+from app.utils.logging_utils import log_info
 
 from .pip_protocol import (
     PROTOCOL_VERSION,

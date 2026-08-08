@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app.app_paths import DATA_DIR_ENV, user_data_dir
+from app.utils.app_paths import DATA_DIR_ENV, user_data_dir
 
 
 class AppPathsTests(unittest.TestCase):

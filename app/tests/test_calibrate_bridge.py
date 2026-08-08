@@ -1,6 +1,6 @@
 import unittest
 
-from app.calibrate_bridge import CalibrateBridge
+from app.bridges.calibration_bridge import CalibrateBridge
 
 
 class FakeSignal:

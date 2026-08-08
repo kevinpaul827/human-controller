@@ -7,17 +7,17 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
 
-from .backend_process import BackendProcessManager
-from .app_paths import user_data_dir
-from .calibrate_bridge import CalibrateBridge
-from .camera_manager import CameraManager
+from ..bridges.calibration_bridge import CalibrateBridge
+from ..bridges.profile_bridge import ProfileBridge
+from ..bridges.session_bridge import SessionBridge
+from ..bridges.state_bridge import StateBridge
+from ..dev.backend_process import BackendProcessManager
+from ..core.camera_manager import CameraManager
+from ..gestures.gesture_store import GestureStore
+from ..platforms.picture_in_picture import create_picture_in_picture
+from ..profile_manager import ProfileManager
+from ..utils.app_paths import user_data_dir
 from .camera_overlay_widget import CameraOverlayWidget
-from .gesture_store import GestureStore
-from .pip_factory import create_picture_in_picture
-from .profile_bridge import ProfileBridge
-from .profile_manager import ProfileManager
-from .session_bridge import SessionBridge
-from .state_bridge import StateBridge
 
 
 def resolve_frontend_path():
@@ -26,7 +26,7 @@ def resolve_frontend_path():
         return bundle_root / "frontend" / "dist" / "index.html"
 
     return (
-        Path(__file__).resolve().parent.parent
+        Path(__file__).resolve().parent.parent.parent
         / "frontend"
         / "dist"
         / "index.html"

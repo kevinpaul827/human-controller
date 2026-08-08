@@ -12,34 +12,31 @@ The desktop app is responsible for:
 
 For full-project setup, use the root [README](../README.md). This file is the app-specific companion guide.
 
-## Key Files
+## Project Structure
 
-```text
-app/
-├── main.py                  # App entry point
-├── main_window.py           # Main Qt window and frontend loading
-├── session_bridge.py        # Session page bridge between React and Python
-├── calibrate_bridge.py      # Calibration bridge
-├── profile_bridge.py        # Profile management bridge
-├── camera_overlay_widget.py # Native camera/pose overlay
-├── camera_manager.py        # Camera lifecycle and frame processing
-├── backend_process.py       # Starts/stops the local backend helper
-├── pose_processor.py        # Pose processing pipeline
-├── profile_manager/         # Profile loading, validation, persistence
-├── data/profiles/           # Saved patient profiles
-├── data/gestures/           # Saved gesture definitions
-└── tests/                   # Desktop app tests
-```
+- `main.py` — Desktop app entry point
+- `ui/` — Qt windows, overlays, and frontend loading
+- `bridges/` — Qt WebChannel bridge objects used by the frontend
+- `core/` — Camera/session runtime orchestration
+- `gestures/` — Gesture persistence and matching logic
+- `profile_manager/` — Profile persistence, schema, and validation
+- `platforms/` — OS-specific adapters for keyboard, windowing, and PiP behavior
+- `calibration/` — Calibration capture flow
+- `dev/` — Preview-only and development helpers
+- `tools/` — Manual demos and utility entry points
+- `utils/` — Shared app utilities
+- `data/` — Saved profiles and gestures
+- `tests/` — Desktop app tests
 
 ## How the Desktop App Fits In
 
 The app sits between the React frontend and the Python backend code.
 
-- `main_window.py` loads either the built frontend files or a live Vite URL.
-- `main_window.py` registers `sessionBridge`, `calibrateBridge`, and `profileBridge` on a Qt `QWebChannel`.
+- `ui/main_window.py` loads either the built frontend files or a live Vite URL.
+- `ui/main_window.py` registers `stateBridge`, `sessionBridge`, `calibrateBridge`, and `profileBridge` on a Qt `QWebChannel`.
 - the frontend calls those bridge objects from TypeScript services
 - the app manages the native calibration preview and Session picture-in-picture overlay
-- in preview mode, `backend_process.py` can start the local backend helper and wait for its `/health` endpoint
+- in preview mode, `dev/backend_process.py` can start the local backend helper and wait for its `/health` endpoint
 
 Important detail: camera pixels are not drawn by React. Calibration reports an
 in-page viewport for the native Qt preview, while Session uses a separate
@@ -121,5 +118,5 @@ python -m unittest app.tests.test_profile_manager -v
 To run the profile demo:
 
 ```bash
-python -m app.profile_demo
+python -m app.tools.profile_demo
 ```

@@ -6,10 +6,10 @@ from pathlib import Path
 from pydantic import ValidationError
 from PySide6.QtCore import QObject, Signal, Slot
 
-from .gesture_store import DEFAULT_GESTURES_DIR, GestureStore
-from .profile_manager import PatientProfile, ProfileError, ProfileManager
+from ..gestures.gesture_store import DEFAULT_GESTURES_DIR, GestureStore
+from ..profile_manager import PatientProfile, ProfileError, ProfileManager
 
-DEFAULT_PROFILES_DIR = Path(__file__).resolve().parent / "data" / "profiles"
+DEFAULT_PROFILES_DIR = Path(__file__).resolve().parent.parent / "data" / "profiles"
 
 
 class ProfileBridge(QObject):

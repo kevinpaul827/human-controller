@@ -9,8 +9,8 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from app.picture_in_picture_window import PictureInPictureWindow
-from app.session_bridge import SessionBridge, SessionState
+from app.bridges.session_bridge import SessionBridge, SessionState
+from app.ui.picture_in_picture_window import PictureInPictureWindow
 
 
 class FakeCamera(QObject):

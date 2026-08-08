@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.camera_manager import CameraManager
-from app.gesture_matcher import GestureMatcher
+from app.core.camera_manager import CameraManager
+from app.gestures.gesture_matcher import GestureMatcher
 from backend.matching_engine import AngleKey, TemplateBuilder
 
 

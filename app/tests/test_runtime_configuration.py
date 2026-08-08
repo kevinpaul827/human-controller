@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from app.runtime_configuration import RuntimeConfiguration, bounded_number
+from app.core.runtime_configuration import RuntimeConfiguration, bounded_number
 
 
 class RuntimeConfigurationTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from app.camera_overlay_widget import PoseOverlayTracker
+from app.ui.camera_overlay_widget import PoseOverlayTracker
 
 
 class PoseOverlayTrackerTests(unittest.TestCase):

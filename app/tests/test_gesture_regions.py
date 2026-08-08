@@ -1,6 +1,6 @@
 import unittest
 
-from app.gesture_regions import infer_gesture_regions
+from app.gestures.gesture_regions import infer_gesture_regions
 
 
 class GestureRegionInferenceTests(unittest.TestCase):

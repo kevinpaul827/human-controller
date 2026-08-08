@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app.json_storage import json_path, write_json_atomic
+from app.utils.json_storage import json_path, write_json_atomic
 
 
 class JsonStorageTests(unittest.TestCase):

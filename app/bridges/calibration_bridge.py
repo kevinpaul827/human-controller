@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal, Slot
 
 from .bridge_common import CameraBridgeBase
 from .bridge_types import CalibrateStatusPayload, CalibrationUpdatePayload
-from .camera_manager import CameraManager
+
+if TYPE_CHECKING:
+    from ..core.camera_manager import CameraManager
 
 
 class CalibrateState(str, Enum):

@@ -1,6 +1,6 @@
 import unittest
 
-from app.overlay_constants import (
+from app.ui.overlay_constants import (
     connections_for_angle_joints,
     landmarks_for_angle_joints,
 )

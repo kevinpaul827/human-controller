@@ -1,7 +1,7 @@
 import ctypes
 import unittest
 
-from app.key_injector import (
+from app.core.key_injector import (
     DEFAULT_KEY_PRESS_SECONDS,
     KeyInjectionError,
     KeyInjector,

@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
 
-from .json_storage import json_path, write_json_atomic
+from ..utils.json_storage import json_path, write_json_atomic
 
 CURRENT_ACTION_SCHEMA_VERSION = 1
 GESTURES_DIR_ENV = "HUMAN_CONTROLLER_GESTURES_DIR"
@@ -45,7 +45,7 @@ def resolve_default_gestures_dir() -> Path:
     if getattr(sys, "frozen", False):
         return _production_app_data_dir() / "gestures"
 
-    return Path(__file__).resolve().parent / "data" / "gestures"
+    return Path(__file__).resolve().parent.parent / "data" / "gestures"
 
 
 DEFAULT_GESTURES_DIR = resolve_default_gestures_dir()

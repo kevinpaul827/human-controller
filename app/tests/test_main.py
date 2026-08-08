@@ -95,26 +95,26 @@ def _install_pyside6_stub():
 
 
 def _install_pose_processor_stub():
-    pose_processor_module = ModuleType("app.pose_processor")
+    pose_processor_module = ModuleType("app.core.pose_processor")
     pose_processor_module.PoseProcessor = type("PoseProcessor", (), {})
-    sys.modules["app.pose_processor"] = pose_processor_module
+    sys.modules["app.core.pose_processor"] = pose_processor_module
 
 
 def _install_overlay_constants_stub():
-    overlay_constants_module = ModuleType("app.overlay_constants")
+    overlay_constants_module = ModuleType("app.ui.overlay_constants")
     overlay_constants_module.MIN_VISIBILITY = 0.5
     overlay_constants_module.POSE_CONNECTIONS = []
     overlay_constants_module.connections_for_angle_joints = lambda _joints: set()
     overlay_constants_module.landmarks_for_angle_joints = lambda _joints: set()
-    sys.modules["app.overlay_constants"] = overlay_constants_module
+    sys.modules["app.ui.overlay_constants"] = overlay_constants_module
 
 
 def _install_picture_in_picture_stub():
-    picture_in_picture_module = ModuleType("app.picture_in_picture_window")
+    picture_in_picture_module = ModuleType("app.ui.picture_in_picture_window")
     picture_in_picture_module.PictureInPictureWindow = type(
         "PictureInPictureWindow", (), {}
     )
-    sys.modules["app.picture_in_picture_window"] = picture_in_picture_module
+    sys.modules["app.ui.picture_in_picture_window"] = picture_in_picture_module
 
 
 try:
@@ -133,7 +133,7 @@ _install_overlay_constants_stub()
 _install_picture_in_picture_stub()
 
 from app import main
-from app import main_window
+from app.ui import main_window
 
 for module_name in list(sys.modules):
     if (

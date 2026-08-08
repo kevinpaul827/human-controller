@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from ..profile_manager import ProfileError, ProfileManager
 from .bridge_common import CameraBridgeBase
 from .bridge_types import GestureMatchPayload, PosePayload, SessionStatusPayload
-from .profile_manager import ProfileError, ProfileManager
 
 if TYPE_CHECKING:
-    from .camera_manager import CameraManager
+    from ..core.camera_manager import CameraManager
     from .state_bridge import StateBridge
 
 

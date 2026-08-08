@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 
-from app.logging_utils import log_debug, log_info
+from app.utils.logging_utils import log_debug, log_info
 
 
 def set_overlay_activation_policy(enabled: bool, appkit=None) -> bool:

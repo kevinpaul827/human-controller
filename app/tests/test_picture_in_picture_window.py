@@ -7,8 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-import app.picture_in_picture_window as picture_in_picture_module
-from app.picture_in_picture_window import PictureInPictureWindow
+import app.ui.picture_in_picture_window as picture_in_picture_module
+from app.ui.picture_in_picture_window import PictureInPictureWindow
 
 
 class PictureInPictureWindowTests(unittest.TestCase):

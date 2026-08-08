@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app import gesture_store
+from app.gestures import gesture_store
 
 
 class GestureStorePathResolutionTests(unittest.TestCase):

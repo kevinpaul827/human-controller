@@ -7,14 +7,14 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from app.json_storage import json_path, write_json_atomic
+from app.utils.json_storage import json_path, write_json_atomic
 
-from .exceptions import (
+from .profile_exceptions import (
     ProfileAlreadyExistsError,
     ProfileNotFoundError,
     ProfileValidationError,
 )
-from .models import CURRENT_SCHEMA_VERSION, PatientProfile
+from .profile_models import CURRENT_SCHEMA_VERSION, PatientProfile
 
 
 class ProfileManager:

@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app.gesture_matcher import GestureMatcher
-from app.gesture_store import SavedGesture
+from app.gestures.gesture_matcher import GestureMatcher
+from app.gestures.gesture_store import SavedGesture
 from backend.matching_engine.core.angles import AngleKey
 from backend.pose_types import BlazePose33, PoseLandmarks
 

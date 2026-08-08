@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtGui import QImage
 
-from app import pose_processor as pose_processor_module
-from app.pose_processor import PoseProcessor
+from app.core import pose_processor as pose_processor_module
+from app.core.pose_processor import PoseProcessor
 from backend.perception.models import (
     DEFAULT_POSE_MODEL,
     POSE_MODEL_PATHS,

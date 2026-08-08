@@ -4,9 +4,9 @@ from PySide6.QtCore import QPoint, QSettings, Qt, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import QLabel, QSizeGrip, QWidget
 
+from ..platforms import configure_overlay_window
+from ..utils.logging_utils import log_info
 from .camera_overlay_widget import CameraOverlayWidget
-from .logging_utils import log_info
-from .platforms import configure_overlay_window
 
 
 class PictureInPictureWindow(QWidget):

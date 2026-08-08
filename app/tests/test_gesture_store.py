@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.gesture_store import GestureStore, CURRENT_ACTION_SCHEMA_VERSION
+from app.gestures.gesture_store import GestureStore, CURRENT_ACTION_SCHEMA_VERSION
 
 
 class GestureStoreTests(unittest.TestCase):

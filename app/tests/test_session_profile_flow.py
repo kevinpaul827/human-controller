@@ -2,12 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.camera_manager import CameraManager
-from app.gesture_matcher import GestureMatcher
-from app.gesture_store import GestureStore
+from app.bridges.session_bridge import SessionBridge, SessionState
+from app.bridges.state_bridge import StateBridge
+from app.core.camera_manager import CameraManager
+from app.gestures.gesture_matcher import GestureMatcher
+from app.gestures.gesture_store import GestureStore
 from app.profile_manager import PatientProfile, ProfileManager
-from app.session_bridge import SessionBridge, SessionState
-from app.state_bridge import StateBridge
 
 
 class FakeSignal:

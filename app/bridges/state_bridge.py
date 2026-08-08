@@ -6,12 +6,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from .device_capabilities import device_pose_recommendation
-from .gesture_store import GestureStore
-from .json_storage import write_json_atomic
-from .profile_manager import PatientProfile, ProfileManager
-from .runtime_configuration import RuntimeConfiguration, bounded_number
-from .trigger_controller import DEFAULT_SETTINGS
+from backend.perception.models import normalize_pose_model
+
+from ..core.trigger_controller import DEFAULT_SETTINGS
+from ..gestures.gesture_store import GestureStore
+from ..utils.json_storage import write_json_atomic
+from ..profile_manager import PatientProfile, ProfileManager
+from ..core.runtime_configuration import RuntimeConfiguration, bounded_number
+from ..utils.device_capabilities import device_pose_recommendation
 
 
 DEFAULT_PATIENTS = (

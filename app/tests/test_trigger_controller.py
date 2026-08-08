@@ -1,7 +1,7 @@
 import unittest
 import math
 
-from app.trigger_controller import TriggerController
+from app.core.trigger_controller import TriggerController
 
 
 class FakeClock:
