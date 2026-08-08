@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import {
-  SAMPLE_BINDINGS,
-  SAMPLE_GESTURES,
-  SAMPLE_PATIENTS,
-  SAMPLE_PRESETS,
-} from "@/data/sampleProfiles";
-import type { Binding, Gesture, Patient, Preset } from "@/types/profile";
-import type { RuntimeSettings } from "@/types/desktopState";
+import type { Binding, Gesture, Patient } from "@/types/profile";
+import type { DesktopState, RuntimeSettings } from "@/types/desktopState";
 import type { SavedRepResult } from "@/types/calibrate";
 import { desktopStateBridge } from "@/services/desktopStateBridge";
+import { AppStateContext } from "./appStateContext";
 import {
-  AppStateContext,
-  type Readiness,
-  type ResolvedBinding,
-} from "./appStateContext";
-
-const STORAGE_KEY = "human-controller/app-state/v2";
+  bindingsForPatient,
+  parseStoredState,
+  readinessFor,
+  resolveBindings,
+  sameBindings,
+  STORAGE_KEY,
+  withSelectedPatientBindings,
+} from "./appStateModel";
 
 const UNDO_WINDOW_MS = 30_000;
 
@@ -25,121 +22,14 @@ const newId = () =>
     ? crypto.randomUUID().replace(/-/g, "")
     : Math.random().toString(16).slice(2).padEnd(32, "0");
 
-type Persisted = {
-  gestures: Gesture[];
-  bindings: Binding[];
-  presets: Preset[];
-  selectedPatientId: string | null;
-  activePresetId: string | null;
-  patients: Patient[];
-  settings: RuntimeSettings;
-};
-
-const DEFAULT_SETTINGS: RuntimeSettings = {
-  matchThreshold: 75,
-  holdDuration: 1.5,
-  cooldown: 0.5,
-  smoothing: 2,
-  poseModel: "lite",
-};
-
-const initialState = (): Persisted => ({
-  gestures: SAMPLE_GESTURES,
-  bindings: SAMPLE_BINDINGS,
-  presets: SAMPLE_PRESETS,
-  selectedPatientId: null,
-  activePresetId: null,
-  patients: SAMPLE_PATIENTS,
-  settings: DEFAULT_SETTINGS,
-});
-
-const loadState = (): Persisted => {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return initialState();
-    }
-    const parsed = JSON.parse(raw) as Partial<Persisted>;
-    if (!Array.isArray(parsed.gestures) || !Array.isArray(parsed.bindings)) {
-      return initialState();
-    }
-    return {
-      gestures: parsed.gestures,
-      bindings: parsed.bindings,
-      presets: parsed.presets ?? [],
-      selectedPatientId: parsed.selectedPatientId ?? null,
-      activePresetId: parsed.activePresetId ?? null,
-      patients: Array.isArray(parsed.patients)
-        ? parsed.patients
-        : SAMPLE_PATIENTS,
-      settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
-    };
-  } catch {
-    return initialState();
-  }
-};
-
-const sameBindings = (a: Binding[], b: Binding[], defaultThreshold: number) => {
-  if (a.length !== b.length) {
-    return false;
-  }
-  const key = (binding: Binding) =>
-    `${binding.gestureId}:${binding.key}:${binding.matchThreshold ?? defaultThreshold}`;
-  const left = [...a].map(key).sort();
-  const right = [...b].map(key).sort();
-  return left.every((value, index) => value === right[index]);
-};
-
-const bindingsForPatient = (
-  patient: Patient | null | undefined,
-  defaultThreshold: number,
-): Binding[] =>
-  patient
-    ? Object.entries(patient.keyBindings).map(([gestureId, key]) => ({
-        gestureId,
-        key,
-        matchThreshold: patient.matchThresholds[gestureId] ?? defaultThreshold,
-      }))
-    : [];
-
-const withSelectedPatientBindings = (
-  current: Persisted,
-  bindings: Binding[],
-): Persisted => {
-  const selectedPatientId = current.selectedPatientId;
-  if (!selectedPatientId) {
-    return { ...current, bindings };
-  }
-  const keyBindings = Object.fromEntries(
-    bindings.map(({ gestureId, key }) => [gestureId, key]),
-  );
-  const matchThresholds = Object.fromEntries(
-    bindings.map(({ gestureId, matchThreshold }) => [
-      gestureId,
-      matchThreshold ?? current.settings.matchThreshold,
-    ]),
-  );
-  return {
-    ...current,
-    bindings,
-    patients: current.patients.map((patient) =>
-      patient.patientId === selectedPatientId
-        ? {
-            ...patient,
-            updatedAt: new Date().toISOString(),
-            keyBindings,
-            matchThresholds,
-          }
-        : patient,
-    ),
-  };
-};
+const loadState = (): DesktopState =>
+  parseStoredState(window.localStorage.getItem(STORAGE_KEY));
 
 const AppStateProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<Persisted>(loadState);
+  const [state, setState] = useState<DesktopState>(loadState);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [undoLabel, setUndoLabel] = useState<string | null>(null);
-  const undoSnapshot = useRef<Persisted | null>(null);
+  const undoSnapshot = useRef<DesktopState | null>(null);
   const undoTimer = useRef<number | null>(null);
   const persistenceMode = useRef<"unknown" | "desktop" | "browser">("unknown");
 
@@ -188,7 +78,7 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const withUndo = useCallback(
-    (label: string, next: (current: Persisted) => Persisted) => {
+    (label: string, next: (current: DesktopState) => DesktopState) => {
       setState((current) => {
         undoSnapshot.current = current;
         return next(current);
@@ -213,49 +103,14 @@ const AppStateProvider = ({ children }: { children: ReactNode }) => {
     [state.gestures],
   );
 
-  const bindings = useMemo<ResolvedBinding[]>(
-    () =>
-      state.bindings.flatMap((binding) => {
-        const gesture = gestureById.get(binding.gestureId) ?? {
-          gestureId: binding.gestureId,
-          name: `Missing movement (${binding.gestureId})`,
-          calibratedAt: null,
-          matchScore: null,
-        };
-        return [
-          {
-            gesture,
-            key: binding.key,
-            matchThreshold: Math.min(
-              100,
-              Math.max(
-                0,
-                Number(binding.matchThreshold ?? state.settings.matchThreshold),
-              ),
-            ),
-          },
-        ];
-      }),
-    [state.bindings, state.settings.matchThreshold, gestureById],
-  );
+  const bindings = useMemo(() => resolveBindings(state), [state]);
 
   const unboundGestures = useMemo(() => {
     const bound = new Set(state.bindings.map((binding) => binding.gestureId));
     return state.gestures.filter((gesture) => !bound.has(gesture.gestureId));
   }, [state.gestures, state.bindings]);
 
-  const readiness = useMemo<Readiness>(() => {
-    const pending = bindings
-      .filter((binding) => !binding.gesture.calibratedAt)
-      .map((binding) => binding.gesture);
-
-    return {
-      total: bindings.length,
-      recorded: bindings.length - pending.length,
-      pending,
-      isReady: bindings.length > 0 && pending.length === 0,
-    };
-  }, [bindings]);
+  const readiness = useMemo(() => readinessFor(bindings), [bindings]);
 
   const activePreset = useMemo(
     () =>

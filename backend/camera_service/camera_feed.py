@@ -1,19 +1,43 @@
+from __future__ import annotations
+
+import math
+import time
+from collections.abc import Callable
+from typing import Protocol
+
 import cv2
 import numpy as np
-import time
 
 TARGET_FPS = 30
-FRAME_DELAY = 1.0 / TARGET_FPS
 DEF_CAMERA_INDEX = 0
-WAIT_TIME = 10
 QUIT_KEY = ord('q')
 
-class CameraFeed:
-    def __init__(self, camera_index=DEF_CAMERA_INDEX):
-        self.camera_index = camera_index
-        self.frame_delay = FRAME_DELAY
 
-        self.feed: cv2.VideoCapture | None = None
+class VideoCapture(Protocol):
+    def isOpened(self) -> bool: ...
+
+    def read(self) -> tuple[bool, np.ndarray | None]: ...
+
+    def release(self) -> None: ...
+
+
+class CameraFeed:
+    def __init__(
+        self,
+        camera_index: int = DEF_CAMERA_INDEX,
+        *,
+        target_fps: float = TARGET_FPS,
+        capture_factory: Callable[[int], VideoCapture] = cv2.VideoCapture,
+        clock: Callable[[], float] = time.perf_counter,
+    ) -> None:
+        if not math.isfinite(target_fps) or target_fps <= 0:
+            raise ValueError("Target FPS must be a positive finite number.")
+        self.camera_index = camera_index
+        self.frame_delay = 1.0 / target_fps
+        self._capture_factory = capture_factory
+        self._clock = clock
+
+        self.feed: VideoCapture | None = None
         self.prev_frame_time = 0.0
         self.start_time = 0.0
     
@@ -21,14 +45,14 @@ class CameraFeed:
         if self.feed is not None and self.feed.isOpened():
             return True
         
-        self.feed = cv2.VideoCapture(self.camera_index)
+        self.feed = self._capture_factory(self.camera_index)
 
         if not self.feed.isOpened():
             self.feed.release()
             self.feed = None
             return False
         
-        self.start_time = time.perf_counter()
+        self.start_time = self._clock()
         self.prev_frame_time = 0.0
 
         return True
@@ -42,9 +66,9 @@ class CameraFeed:
         if not ret:
             return False, None, 0
         
-        current_time = time.perf_counter()
+        current_time = self._clock()
 
-        if current_time - self.prev_frame_time < FRAME_DELAY:
+        if current_time - self.prev_frame_time < self.frame_delay:
             return True, None, 0
         
         self.prev_frame_time = current_time
@@ -52,7 +76,7 @@ class CameraFeed:
         
         return True, frame, timestamp_ms
     
-    def close(self):
+    def close(self) -> None:
         if self.feed is not None:
             self.feed.release()
             self.feed = None

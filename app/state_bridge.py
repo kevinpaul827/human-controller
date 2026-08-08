@@ -6,11 +6,11 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from backend.perception.models import normalize_pose_model
-
 from .device_capabilities import device_pose_recommendation
 from .gesture_store import GestureStore
+from .json_storage import write_json_atomic
 from .profile_manager import PatientProfile, ProfileManager
+from .runtime_configuration import RuntimeConfiguration, bounded_number
 from .trigger_controller import DEFAULT_SETTINGS
 
 
@@ -61,18 +61,29 @@ class StateBridge(QObject):
         try:
             payload = json.loads(self.state_path.read_text(encoding="utf-8"))
             if isinstance(payload, dict):
-                defaults.update(payload)
+                if isinstance(payload.get("presets"), list):
+                    defaults["presets"] = [
+                        item for item in payload["presets"] if isinstance(item, dict)
+                    ]
+                if isinstance(payload.get("pendingGestures"), list):
+                    defaults["pendingGestures"] = [
+                        item
+                        for item in payload["pendingGestures"]
+                        if isinstance(item, dict)
+                    ]
+                for key in ("activePresetId", "selectedPatientId"):
+                    value = payload.get(key)
+                    defaults[key] = value if isinstance(value, str) else None
+                defaults["settings"] = payload.get("settings", {})
         except (OSError, json.JSONDecodeError):
             pass
-        settings = {**DEFAULT_SETTINGS, **defaults.get("settings", {})}
-        settings["poseModel"] = normalize_pose_model(settings.get("poseModel"))
-        defaults["settings"] = settings
+        defaults["settings"] = RuntimeConfiguration.from_payload(
+            {"settings": defaults.get("settings")}
+        ).settings
         return defaults
 
     def _write_ui_state(self, payload: dict) -> None:
-        temporary = self.state_path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        temporary.replace(self.state_path)
+        write_json_atomic(self.state_path, payload)
 
     @staticmethod
     def _profile_payload(profile: PatientProfile) -> dict:
@@ -172,26 +183,35 @@ class StateBridge(QObject):
 
     @Slot("QVariantMap", result="QVariantMap")
     def saveState(self, payload):
+        payload = payload if isinstance(payload, dict) else {}
         current = self._read_ui_state()
         selected_id = payload.get("selectedPatientId", current["selectedPatientId"])
         selected_id = str(selected_id) if selected_id else None
+        raw_binding_items = payload.get("bindings", [])
+        if not isinstance(raw_binding_items, list):
+            raw_binding_items = []
         binding_items = [
-            item for item in payload.get("bindings", [])
-            if item.get("gestureId") and item.get("key")
+            item
+            for item in raw_binding_items
+            if isinstance(item, dict)
+            and item.get("gestureId")
+            and item.get("key")
         ]
         bindings = {
             str(item.get("gestureId")): str(item.get("key"))
             for item in binding_items
         }
-        default_threshold = float(
-            payload.get("settings", current.get("settings", {})).get(
-                "matchThreshold", DEFAULT_SETTINGS["matchThreshold"]
-            )
-        )
+        raw_settings = payload.get("settings", current.get("settings", {}))
+        settings = RuntimeConfiguration.from_payload(
+            {"settings": raw_settings}
+        ).settings
+        default_threshold = float(settings["matchThreshold"])
         match_thresholds = {
-            str(item.get("gestureId")): min(
+            str(item.get("gestureId")): bounded_number(
+                item.get("matchThreshold"),
+                default_threshold,
+                0.0,
                 100.0,
-                max(0.0, float(item.get("matchThreshold", default_threshold))),
             )
             for item in binding_items
         }
@@ -200,13 +220,17 @@ class StateBridge(QObject):
             profile.key_bindings = bindings
             profile.match_thresholds = match_thresholds
             self.profile_manager.save(profile)
+        raw_gestures = payload.get("gestures", [])
+        if not isinstance(raw_gestures, list):
+            raw_gestures = []
         pending = [
-            item for item in payload.get("gestures", []) if not item.get("calibratedAt")
+            item
+            for item in raw_gestures
+            if isinstance(item, dict) and not item.get("calibratedAt")
         ]
-        settings = {**DEFAULT_SETTINGS, **payload.get("settings", {})}
-        settings["poseModel"] = normalize_pose_model(settings.get("poseModel"))
+        raw_presets = payload.get("presets", current.get("presets", []))
         ui = {
-            "presets": payload.get("presets", current.get("presets", [])),
+            "presets": raw_presets if isinstance(raw_presets, list) else [],
             "activePresetId": payload.get("activePresetId"),
             "selectedPatientId": selected_id,
             "pendingGestures": pending,

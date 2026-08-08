@@ -1,4 +1,5 @@
 import unittest
+import math
 
 from app.trigger_controller import TriggerController
 
@@ -133,6 +134,36 @@ class TriggerControllerTests(unittest.TestCase):
         self.clock.advance(1.0)
 
         self.assertEqual(self.controller.process(match)["action"], "press")
+
+    def test_invalid_numeric_configuration_uses_safe_defaults(self):
+        self.controller.configure(
+            {"wave": "Space"},
+            {
+                "matchThreshold": "invalid",
+                "holdDuration": math.inf,
+                "cooldown": math.nan,
+                "smoothing": None,
+            },
+            {"wave": math.nan},
+        )
+
+        self.assertEqual(
+            self.controller.settings,
+            {
+                "matchThreshold": 75.0,
+                "holdDuration": 1.5,
+                "cooldown": 0.5,
+                "smoothing": 2,
+            },
+        )
+        self.assertEqual(self.controller.match_thresholds, {"wave": 75.0})
+
+    def test_invalid_match_score_is_treated_as_no_match(self):
+        action = self.controller.process(
+            {"gestureId": "wave", "score": "invalid", "matched": True}
+        )
+
+        self.assertIsNone(action)
 
 
 if __name__ == "__main__":

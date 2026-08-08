@@ -40,17 +40,14 @@ class PoseEstimator:
 
         result = self.detector.detect_for_video(mp_frame, timestamp_ms)
 
-        if result.pose_landmarks:
-            xyz_list = []
-            vis_list = []
+        if not result.pose_landmarks:
+            return None
 
-            for lm in result.pose_landmarks[0]:
-                xyz_list.append([lm.x, lm.y, lm.z])
-                vis_list.append(lm.visibility)
-
-            classed_plm = PoseLandmarks(xyz_list, vis_list)
-            return classed_plm
-        return None
+        landmarks = result.pose_landmarks[0]
+        return PoseLandmarks(
+            [[lm.x, lm.y, lm.z] for lm in landmarks],
+            [lm.visibility for lm in landmarks],
+        )
 
     def close(self):
         detector = self.detector

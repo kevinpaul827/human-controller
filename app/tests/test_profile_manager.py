@@ -126,6 +126,17 @@ class ProfileManagerTests(unittest.TestCase):
         with self.assertRaises(ProfileNotFoundError):
             self.manager.load("missing-profile")
 
+    def test_profile_operations_reject_paths_outside_profile_directory(self) -> None:
+        outside = self.manager.profiles_dir.parent / "outside.json"
+        outside.write_text("keep", encoding="utf-8")
+
+        for operation in (self.manager.exists, self.manager.load, self.manager.delete):
+            with self.subTest(operation=operation.__name__):
+                with self.assertRaises(ProfileValidationError):
+                    operation("../outside")
+
+        self.assertEqual(outside.read_text(encoding="utf-8"), "keep")
+
     def test_invalid_json_raises_validation_error(self) -> None:
         bad_file = self.manager.profiles_dir / "broken.json"
         bad_file.write_text("{not valid json", encoding="utf-8")

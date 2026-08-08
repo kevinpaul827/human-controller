@@ -8,6 +8,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
 
+from .json_storage import json_path, write_json_atomic
+
 CURRENT_ACTION_SCHEMA_VERSION = 1
 GESTURES_DIR_ENV = "HUMAN_CONTROLLER_GESTURES_DIR"
 PROJECT_ROOT_ENV = "HUMAN_CONTROLLER_PROJECT_ROOT"
@@ -124,13 +126,12 @@ class GestureStore:
         self.gestures_dir.mkdir(parents=True, exist_ok=True)
 
     def _gesture_path(self, gesture_id: str) -> Path:
-        resolved_gesture_id = str(gesture_id or "").strip()
-        if not resolved_gesture_id:
-            raise ValueError("Gesture ID is required.")
-        path = self.gestures_dir / f"{resolved_gesture_id}.json"
-        if path.parent.resolve() != self.gestures_dir.resolve():
-            raise ValueError("Gesture ID must not contain a path.")
-        return path
+        try:
+            return json_path(self.gestures_dir, gesture_id, label="Gesture ID")
+        except ValueError as error:
+            if not str(gesture_id or "").strip():
+                raise ValueError("Gesture ID is required.") from error
+            raise ValueError("Gesture ID must not contain a path.") from error
 
     def gesture_path(self, gesture_id: str) -> Path:
         return self._gesture_path(gesture_id)
@@ -148,7 +149,7 @@ class GestureStore:
 
     def save(self, gesture: SavedGesture) -> Path:
         path = self._gesture_path(gesture.gesture_id)
-        path.write_text(json.dumps(gesture.to_dict(), indent=2), encoding="utf-8")
+        write_json_atomic(path, gesture.to_dict())
         return path
 
     def create_or_update(

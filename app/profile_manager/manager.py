@@ -7,6 +7,8 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
+from app.json_storage import json_path, write_json_atomic
+
 from .exceptions import (
     ProfileAlreadyExistsError,
     ProfileNotFoundError,
@@ -23,7 +25,10 @@ class ProfileManager:
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
 
     def _profile_path(self, patient_id: str) -> Path:
-        return self.profiles_dir / f"{patient_id}.json"
+        try:
+            return json_path(self.profiles_dir, patient_id, label="Patient ID")
+        except ValueError as exc:
+            raise ProfileValidationError(str(exc)) from exc
 
     def exists(self, patient_id: str) -> bool:
         return self._profile_path(patient_id).exists()
@@ -32,7 +37,7 @@ class ProfileManager:
         profile.updated_at = datetime.now(timezone.utc)
         path = self._profile_path(profile.patient_id)
         payload = profile.model_dump(mode="json", by_alias=True)
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        write_json_atomic(path, payload)
         return path
 
     def create(self, profile: PatientProfile) -> PatientProfile:

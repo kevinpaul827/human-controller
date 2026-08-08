@@ -107,31 +107,6 @@ BODY_REGION_LABELS: dict[BodyRegion, str] = {
   BodyRegion.RIGHT_ANKLE: "Right ankle / foot",
 }
 
-REGION_LANDMARKS: dict[BodyRegion, list[int]] = {
-  BodyRegion.TORSO: [_B.L_SHOULDER, _B.R_SHOULDER, _B.L_HIP, _B.R_HIP],
-  BodyRegion.HEAD: [
-    _B.NOSE,
-    _B.L_EAR,
-    _B.R_EAR,
-    _B.L_SHOULDER,
-    _B.R_SHOULDER,
-  ],
-  BodyRegion.LEFT_SHOULDER: [_B.L_HIP, _B.L_SHOULDER, _B.L_ELBOW],
-  BodyRegion.LEFT_ELBOW: [_B.L_SHOULDER, _B.L_ELBOW, _B.L_WRIST],
-  BodyRegion.LEFT_WRIST: [_B.L_ELBOW, _B.L_WRIST, _B.L_PINKY, _B.L_INDEX, _B.L_THUMB],
-  BodyRegion.LEFT_HAND: [_B.L_WRIST, _B.L_PINKY, _B.L_INDEX, _B.L_THUMB],
-  BodyRegion.RIGHT_SHOULDER: [_B.R_HIP, _B.R_SHOULDER, _B.R_ELBOW],
-  BodyRegion.RIGHT_ELBOW: [_B.R_SHOULDER, _B.R_ELBOW, _B.R_WRIST],
-  BodyRegion.RIGHT_WRIST: [_B.R_ELBOW, _B.R_WRIST, _B.R_PINKY, _B.R_INDEX, _B.R_THUMB],
-  BodyRegion.RIGHT_HAND: [_B.R_WRIST, _B.R_PINKY, _B.R_INDEX, _B.R_THUMB],
-  BodyRegion.LEFT_HIP: [_B.L_SHOULDER, _B.L_HIP, _B.L_KNEE],
-  BodyRegion.LEFT_KNEE: [_B.L_HIP, _B.L_KNEE, _B.L_ANKLE],
-  BodyRegion.LEFT_ANKLE: [_B.L_KNEE, _B.L_ANKLE, _B.L_HEEL, _B.L_FOOT_INDEX],
-  BodyRegion.RIGHT_HIP: [_B.R_SHOULDER, _B.R_HIP, _B.R_KNEE],
-  BodyRegion.RIGHT_KNEE: [_B.R_HIP, _B.R_KNEE, _B.R_ANKLE],
-  BodyRegion.RIGHT_ANKLE: [_B.R_KNEE, _B.R_ANKLE, _B.R_HEEL, _B.R_FOOT_INDEX],
-}
-
 REGION_CONNECTIONS: dict[BodyRegion, list[tuple[int, int]]] = {
   BodyRegion.TORSO: [
     (_B.L_SHOULDER, _B.R_SHOULDER),
@@ -213,6 +188,12 @@ REGION_CONNECTIONS: dict[BodyRegion, list[tuple[int, int]]] = {
 }
 
 
+REGION_LANDMARKS: dict[BodyRegion, list[int]] = {
+  region: sorted({point for edge in edges for point in edge})
+  for region, edges in REGION_CONNECTIONS.items()
+}
+
+
 def parse_regions(names: list[str] | None) -> list[BodyRegion]:
   if not names:
     return list(ALL_BODY_REGIONS)
@@ -253,5 +234,6 @@ BODY_LANDMARKS: list[int] = landmarks_for_regions(DEFAULT_SKELETON_REGIONS)
 BODY_CONNECTIONS: list[tuple[int, int]] = connections_for_regions(DEFAULT_SKELETON_REGIONS)
 
 _EXPECTED_LANDMARK_COUNT = 16
+_EXPECTED_CONNECTION_COUNT = 16
 assert len(BODY_LANDMARKS) == _EXPECTED_LANDMARK_COUNT
-assert len(BODY_CONNECTIONS) == 16
+assert len(BODY_CONNECTIONS) == _EXPECTED_CONNECTION_COUNT

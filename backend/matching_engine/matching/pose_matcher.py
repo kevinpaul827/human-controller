@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import time
 from typing import List, Optional
 
 from ..core.angles import AngleKey, AngleVector
 from ..core.types import GestureTemplate, MatchResult
+from .strategy import best_of
 
 DEFAULT_TOLERANCE_DEG = 15.0
 
@@ -36,10 +36,4 @@ class PoseMatcher:
         templates: List[GestureTemplate],
         timestamp: Optional[float] = None,
     ) -> Optional[MatchResult]:
-        ts = time.time() if timestamp is None else timestamp
-        best: Optional[MatchResult] = None
-        for template in templates:
-            s = self.score(current, template)
-            if best is None or s > best.score:
-                best = MatchResult(gesture_id=template.gesture_id, score=s, timestamp=ts)
-        return best
+        return best_of(lambda t: self.score(current, t), templates, timestamp)

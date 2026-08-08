@@ -35,6 +35,12 @@ class FakeCamera:
         return {"gesture": {"gestureId": gesture_id, "name": "Loaded"}}
 
 
+class FakeGestureStore:
+    @staticmethod
+    def list_gestures():
+        return [{"gestureId": "from-store", "name": "From Store"}]
+
+
 class CalibrateBridgeCompatibilityTests(unittest.TestCase):
     def setUp(self) -> None:
         self.camera = FakeCamera()
@@ -63,6 +69,14 @@ class CalibrateBridgeCompatibilityTests(unittest.TestCase):
         self.assertEqual(
             self.bridge.loadSavedGesture("saved")["gesture"]["gestureId"],
             "saved",
+        )
+
+    def test_saved_gesture_listing_uses_injected_store(self) -> None:
+        bridge = CalibrateBridge(self.camera, FakeGestureStore())
+
+        self.assertEqual(
+            bridge.listSavedGestures(),
+            [{"gestureId": "from-store", "name": "From Store"}],
         )
 
 
