@@ -170,7 +170,17 @@ class CameraManagerRuntimeTests(unittest.TestCase):
         self.assertEqual(camera._session_key_bindings, {"left_arm": "A"})
         self.assertEqual(
             camera.trigger_controller.configuration,
-            ({"left_arm": "A"}, {"matchThreshold": 72}, {"left_arm": 64.0}),
+            (
+                {"left_arm": "A"},
+                {
+                    "matchThreshold": 72.0,
+                    "holdDuration": 1.5,
+                    "cooldown": 0.5,
+                    "smoothing": 2,
+                    "poseModel": "lite",
+                },
+                {"left_arm": 64.0},
+            ),
         )
         self.assertEqual(
             camera.gesture_matcher.active_configuration,

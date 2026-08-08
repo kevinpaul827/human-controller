@@ -1,5 +1,7 @@
 import tempfile
 import unittest
+import json
+import math
 from pathlib import Path
 from unittest.mock import patch
 
@@ -64,6 +66,44 @@ class StateBridgeThresholdTests(unittest.TestCase):
         saved = self.bridge.saveState(current)
 
         self.assertEqual(saved["settings"]["poseModel"], "lite")
+
+    def test_corrupt_state_shapes_fall_back_to_safe_values(self):
+        self.bridge.state_path.write_text(
+            json.dumps(
+                {
+                    "presets": None,
+                    "pendingGestures": "invalid",
+                    "selectedPatientId": ["patient-a"],
+                    "settings": "invalid",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        state = self.bridge.getState()
+
+        self.assertEqual(state["presets"], [])
+        self.assertIsNone(state["selectedPatientId"])
+        self.assertEqual(state["settings"]["matchThreshold"], 75.0)
+        self.assertEqual(state["settings"]["poseModel"], "lite")
+
+    def test_invalid_runtime_numbers_are_clamped_or_defaulted(self):
+        current = self.bridge.getState()
+        current["settings"].update(
+            {
+                "matchThreshold": "invalid",
+                "holdDuration": math.inf,
+                "cooldown": -4,
+                "smoothing": 99,
+            }
+        )
+
+        saved = self.bridge.saveState(current)
+
+        self.assertEqual(saved["settings"]["matchThreshold"], 75.0)
+        self.assertEqual(saved["settings"]["holdDuration"], 1.5)
+        self.assertEqual(saved["settings"]["cooldown"], 0.0)
+        self.assertEqual(saved["settings"]["smoothing"], 4)
         self.assertEqual(
             self.bridge.runtime_configuration()["settings"]["poseModel"],
             "lite",

@@ -18,6 +18,7 @@ from .gesture_store import SavedGesture
 from .key_injector import KeyInjectionError, KeyInjector
 from .logging_utils import log_debug, log_info, log_verbose
 from .pose_processor import PoseProcessor
+from .runtime_configuration import RuntimeConfiguration
 from .trigger_controller import TriggerController
 
 # CameraManager handles both calibration and live camera sessions.
@@ -187,12 +188,13 @@ class CameraManager(QObject):
 
     @Slot("QVariantMap")
     def configure_runtime(self, configuration):
+        runtime = RuntimeConfiguration.from_payload(configuration)
         self._release_injected_keys()
-        settings = CameraManager._runtime_settings(self, configuration)
+        settings = runtime.settings
         self.configurePoseModel.emit(normalize_pose_model(settings.get("poseModel")))
         CameraManager._emit_runtime_reset_match(self)
-        bindings = CameraManager._runtime_bindings(self, configuration)
-        match_thresholds = CameraManager._runtime_match_thresholds(self, configuration)
+        bindings = runtime.bindings
+        match_thresholds = runtime.match_thresholds
         CameraManager._apply_runtime_bindings(self, bindings)
         self.trigger_controller.configure(
             bindings,
@@ -430,20 +432,6 @@ class CameraManager(QObject):
             self.key_injector.release_all()
         except KeyInjectionError as error:
             log_info(f"[camera_manager] failed to release injected key: {error}")
-
-    def _runtime_settings(self, configuration):
-        return dict(configuration.get("settings", {}))
-
-    def _runtime_bindings(self, configuration):
-        return dict(configuration.get("bindings", {}))
-
-    def _runtime_match_thresholds(self, configuration):
-        return {
-            str(gesture_id): float(threshold)
-            for gesture_id, threshold in dict(
-                configuration.get("matchThresholds", {})
-            ).items()
-        }
 
     def _emit_runtime_reset_match(self):
         if self.active_bridge != "session":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
+import math
 from typing import Callable
 
 
@@ -47,17 +48,40 @@ class TriggerController:
         self.bindings = {str(k): str(v) for k, v in bindings.items() if k and v}
         if settings:
             self.settings = {
-                "matchThreshold": min(100.0, max(0.0, float(settings.get("matchThreshold", 75.0)))),
-                "holdDuration": min(10.0, max(0.0, float(settings.get("holdDuration", 1.5)))),
-                "cooldown": min(10.0, max(0.0, float(settings.get("cooldown", 0.5)))),
-                "smoothing": min(4, max(0, int(settings.get("smoothing", 2)))),
+                "matchThreshold": self._bounded_number(
+                    settings.get("matchThreshold"), 75.0, 0.0, 100.0
+                ),
+                "holdDuration": self._bounded_number(
+                    settings.get("holdDuration"), 1.5, 0.0, 10.0
+                ),
+                "cooldown": self._bounded_number(
+                    settings.get("cooldown"), 0.5, 0.0, 10.0
+                ),
+                "smoothing": int(
+                    self._bounded_number(settings.get("smoothing"), 2.0, 0.0, 4.0)
+                ),
             }
         self.match_thresholds = {
-            str(gesture_id): min(100.0, max(0.0, float(threshold)))
+            str(gesture_id): self._bounded_number(
+                threshold,
+                self.settings["matchThreshold"],
+                0.0,
+                100.0,
+            )
             for gesture_id, threshold in (match_thresholds or {}).items()
             if gesture_id
         }
         self.reset()
+
+    @staticmethod
+    def _bounded_number(value, default, minimum, maximum):
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return default
+        if not math.isfinite(number):
+            return default
+        return min(maximum, max(minimum, number))
 
     def reset(self) -> None:
         self._candidate_id = None
@@ -101,7 +125,7 @@ class TriggerController:
             return self._release_active()
 
         gesture_id = match.get("gestureId")
-        score = float(match.get("score") or 0.0) * 100.0
+        score = self._bounded_number(match.get("score"), 0.0, 0.0, 1.0) * 100.0
         threshold = self.match_thresholds.get(
             str(gesture_id), self.settings["matchThreshold"]
         )
