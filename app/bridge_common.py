@@ -65,6 +65,15 @@ class CameraBridgeBase:
             self.preview_widget.clear_frame()
         self._clear_extra_preview()
 
+    def update_preview_bounds(self, left, top, width, height) -> None:
+        self.preview_bounds = (
+            max(0, round(left)),
+            max(0, round(top)),
+            max(0, round(width)),
+            max(0, round(height)),
+        )
+        self.apply_preview_bounds()
+
     def handle_camera_started(self, bridge) -> None:
         if bridge != self.BRIDGE:
             return
@@ -103,15 +112,6 @@ class CameraBridgeBase:
             return
 
         self.previewAspectRatioChanged.emit(aspect_ratio)
-
-    def update_preview_bounds(self, left, top, width, height) -> None:
-        self.preview_bounds = (
-            max(0, round(left)),
-            max(0, round(top)),
-            max(0, round(width)),
-            max(0, round(height)),
-        )
-        self.apply_preview_bounds()
 
     def _should_show_preview(self, width: int, height: int) -> bool:
         return (

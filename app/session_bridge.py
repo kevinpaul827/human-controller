@@ -12,10 +12,12 @@ if TYPE_CHECKING:
     from .camera_manager import CameraManager
     from .state_bridge import StateBridge
 
+
 class SessionState(str, Enum):
     IDLE = "idle"
     LIVE = "live"
     ERROR = "error"
+
 
 class SessionBridge(CameraBridgeBase, QObject):
     BRIDGE = "session"
@@ -63,6 +65,84 @@ class SessionBridge(CameraBridgeBase, QObject):
     def attach_picture_in_picture(self, window):
         self.picture_in_picture = window
 
+    @Slot(str, result="QVariantMap")
+    def loadProfile(self, patient_id):
+        return self._profile_result(patient_id)
+
+    @Slot()
+    def startSession(self):
+        self.camera.start(self.BRIDGE)
+
+    @Slot()
+    def stopSession(self):
+        self.camera.stop(self.BRIDGE)
+        if self.state_bridge is None:
+            self._clear_profile()
+        if self.state != SessionState.IDLE:
+            self.set_state(SessionState.IDLE)
+            self.clear_preview()
+            self.apply_overlay_visibility()
+
+    @Slot(result=str)
+    def getSessionState(self):
+        return self.state.value
+    
+    @Slot(result="QVariantList")
+    def getLoadedSessionGestures(self):
+        if hasattr(self.camera, "session_gesture_mappings"):
+            return self.camera.session_gesture_mappings()
+        if self.state_bridge is None:
+            return []
+        runtime = self.state_bridge.runtime_configuration()
+        snapshot = self.state_bridge.getState()
+        gestures_by_id = {
+            item["gestureId"]: item
+            for item in snapshot.get("gestures", [])
+            if item.get("calibratedAt")
+        }
+        return [
+            {
+                "gestureId": gesture_id,
+                "name": gestures_by_id[gesture_id]["name"],
+                "key": key,
+            }
+            for gesture_id, key in runtime["bindings"].items()
+            if gesture_id in gestures_by_id
+        ]
+
+    @Slot(float, float, float, float, float)
+    def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
+        self.update_preview_bounds(left, top, width, height)
+
+    @Slot()
+    def openCameraSettings(self):
+        self.camera.openCameraSettings()
+
+    @Slot()
+    def openAccessibilitySettings(self):
+        self.camera.openAccessibilitySettings()
+
+    def handle_preview_frame(self, frame, timestamp_ms):
+        if not self.check_camera_ownership() or self.state != SessionState.LIVE:
+            return
+        if self.picture_in_picture is not None:
+            self.picture_in_picture.set_frame(frame, timestamp_ms)
+
+    def handle_gesture_match_updated(self, payload):
+        if not self.check_camera_ownership():
+            return
+
+        if self.state != SessionState.LIVE:
+            return
+
+        enriched_payload = dict(payload)
+        gesture_id = enriched_payload.get("gestureId")
+        if not enriched_payload.get("key"):
+            enriched_payload["key"] = self.active_key_bindings.get(gesture_id)
+        if self.picture_in_picture is not None:
+            self.picture_in_picture.show_match(enriched_payload)
+        self.gestureMatchUpdated.emit(enriched_payload)
+
     def apply_overlay_visibility(self):
         if self.picture_in_picture is None:
             return
@@ -89,33 +169,6 @@ class SessionBridge(CameraBridgeBase, QObject):
     def _handle_live_pose(self, pose: dict) -> None:
         if self.picture_in_picture is not None:
             self.picture_in_picture.set_pose(pose)
-    
-    def handle_preview_frame(self, frame, timestamp_ms):
-        if not self.check_camera_ownership() or self.state != SessionState.LIVE:
-            return
-        if self.picture_in_picture is not None:
-            self.picture_in_picture.set_frame(frame, timestamp_ms)
-
-    def handle_preview_aspect_ratio_changed(self, aspect_ratio):
-        if not self.check_camera_ownership():
-            return
-        
-        self.previewAspectRatioChanged.emit(aspect_ratio)
-
-    def handle_gesture_match_updated(self, payload):
-        if not self.check_camera_ownership():
-            return
-
-        if self.state != SessionState.LIVE:
-            return
-
-        enriched_payload = dict(payload)
-        gesture_id = enriched_payload.get("gestureId")
-        if not enriched_payload.get("key"):
-            enriched_payload["key"] = self.active_key_bindings.get(gesture_id)
-        if self.picture_in_picture is not None:
-            self.picture_in_picture.show_match(enriched_payload)
-        self.gestureMatchUpdated.emit(enriched_payload)
 
     def _load_profile(self, patient_id):
         if self.profile_manager is None:
@@ -176,60 +229,3 @@ class SessionBridge(CameraBridgeBase, QObject):
             self._clear_profile()
             self.emit_error(str(error))
             return {"ok": False, "error": str(error)}
-
-    @Slot(str, result="QVariantMap")
-    def loadProfile(self, patient_id):
-        return self._profile_result(patient_id)
-
-    @Slot()
-    def startSession(self):
-        self.camera.start(self.BRIDGE)
-
-    @Slot()
-    def stopSession(self):
-        self.camera.stop(self.BRIDGE)
-        if self.state_bridge is None:
-            self._clear_profile()
-        if self.state != SessionState.IDLE:
-            self.set_state(SessionState.IDLE)
-            self.clear_preview()
-            self.apply_overlay_visibility()
-
-    @Slot(result=str)
-    def getSessionState(self):
-        return self.state.value
-    
-    @Slot(result="QVariantList")
-    def getLoadedSessionGestures(self):
-        if hasattr(self.camera, "session_gesture_mappings"):
-            return self.camera.session_gesture_mappings()
-        if self.state_bridge is None:
-            return []
-        runtime = self.state_bridge.runtime_configuration()
-        snapshot = self.state_bridge.getState()
-        gestures_by_id = {
-            item["gestureId"]: item
-            for item in snapshot.get("gestures", [])
-            if item.get("calibratedAt")
-        }
-        return [
-            {
-                "gestureId": gesture_id,
-                "name": gestures_by_id[gesture_id]["name"],
-                "key": key,
-            }
-            for gesture_id, key in runtime["bindings"].items()
-            if gesture_id in gestures_by_id
-        ]
-
-    @Slot(float, float, float, float, float)
-    def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
-        self.update_preview_bounds(left, top, width, height)
-
-    @Slot()
-    def openCameraSettings(self):
-        self.camera.openCameraSettings()
-
-    @Slot()
-    def openAccessibilitySettings(self):
-        self.camera.openAccessibilitySettings()

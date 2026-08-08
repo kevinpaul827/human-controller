@@ -7,10 +7,12 @@ from PySide6.QtCore import QObject, Signal, Slot
 from .bridge_common import CameraBridgeBase
 from .camera_manager import CameraManager
 
+
 class CalibrateState(str, Enum):
     IDLE = "idle"
     LIVE = "live"
     ERROR = "error"
+
 
 class CalibrateBridge(CameraBridgeBase, QObject):
     BRIDGE = "calibrate"
@@ -35,15 +37,6 @@ class CalibrateBridge(CameraBridgeBase, QObject):
         self.camera.frameProcessed.connect(self.handle_frame_processed)
         self.camera.calibrationUpdated.connect(self.handle_calibration_updated)
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
-
-    def _emit_status_payload(self, payload: dict) -> None:
-        self.calibrateStatusChanged.emit(payload)
-
-    def handle_calibration_updated(self, payload):
-        if not self.check_camera_ownership():
-            return
-
-        self.calibrationUpdated.emit(payload)
 
     @Slot()
     def startCalibrate(self):
@@ -128,3 +121,12 @@ class CalibrateBridge(CameraBridgeBase, QObject):
             return {"error": str(error)}
         except FileNotFoundError:
             return {"error": "Selected gesture could not be found."}
+
+    def handle_calibration_updated(self, payload):
+        if not self.check_camera_ownership():
+            return
+
+        self.calibrationUpdated.emit(payload)
+
+    def _emit_status_payload(self, payload: dict) -> None:
+        self.calibrateStatusChanged.emit(payload)
