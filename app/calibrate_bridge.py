@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from enum import Enum
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from .bridge_common import CameraBridgeBase
 from .camera_manager import CameraManager
+
 
 class CalibrateState(str, Enum):
     IDLE = "idle"
@@ -10,8 +14,11 @@ class CalibrateState(str, Enum):
     ERROR = "error"
 
 
-class CalibrateBridge(QObject):
+class CalibrateBridge(CameraBridgeBase, QObject):
     BRIDGE = "calibrate"
+    IDLE_STATE = CalibrateState.IDLE
+    LIVE_STATE = CalibrateState.LIVE
+    ERROR_STATE = CalibrateState.ERROR
 
     calibrateStatusChanged = Signal(dict)
     calibrationUpdated = Signal(dict)
@@ -21,9 +28,7 @@ class CalibrateBridge(QObject):
 
     def __init__(self, camera_manager):
         super().__init__()
-        self.state = CalibrateState.IDLE
-        self.preview_widget = None
-        self.preview_bounds = (0, 0, 0, 0)
+        self._init_camera_preview_bridge(camera_manager, CalibrateState.IDLE)
         self.camera: CameraManager = camera_manager
 
         self.camera.cameraStarted.connect(self.handle_camera_started)
@@ -32,85 +37,6 @@ class CalibrateBridge(QObject):
         self.camera.frameProcessed.connect(self.handle_frame_processed)
         self.camera.calibrationUpdated.connect(self.handle_calibration_updated)
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
-    
-    def check_camera_ownership(self):
-        return self.camera.active_bridge == self.BRIDGE
-
-    def attach_preview_widget(self, preview_widget):
-        self.preview_widget = preview_widget
-        self.preview_widget.hide()
-
-    def set_state(self, state):
-        self.state = state
-        self.calibrateStatusChanged.emit({"state": self.state.value})
-
-    def emit_error(self, message):
-        self.state = CalibrateState.ERROR
-        self.calibrateStatusChanged.emit({"state": self.state.value, "message": message})
-        self.clear_preview()
-
-    def apply_preview_bounds(self):
-        if self.preview_widget is None:
-            return
-
-        left, top, width, height = self.preview_bounds
-        self.previewBoundsChanged.emit(left, top, width, height)
-
-        if self.state == CalibrateState.LIVE and width > 0 and height > 0 and self.check_camera_ownership():
-            self.preview_widget.show()
-            self.preview_widget.raise_()
-        else:
-            self.preview_widget.hide()
-    
-    def clear_preview(self):
-        if self.preview_widget is not None:
-            self.preview_widget.hide()
-            self.preview_widget.clear_pose()
-            self.preview_widget.clear_frame() 
-
-    def handle_camera_started(self, bridge):
-        if bridge != self.BRIDGE:
-            return
-
-        self.set_state(CalibrateState.LIVE)
-        self.apply_preview_bounds()
-    
-    def handle_camera_stopped(self, bridge):
-        if bridge != self.BRIDGE:
-            return
-
-        self.set_state(CalibrateState.IDLE)
-        self.clear_preview()
-
-    def handle_camera_error(self, message, bridge):
-        if bridge != self.BRIDGE:
-            return
-
-        self.emit_error(message)
-
-    def handle_frame_processed(self, frame, pose):
-        if not self.check_camera_ownership():
-            return
-
-        if self.state != CalibrateState.LIVE:
-            return
-        
-        if self.preview_widget is not None:
-            self.preview_widget.set_frame(frame)
-        
-        self.poseEstimated.emit(pose)
-    
-    def handle_preview_aspect_ratio_changed(self, aspect_ratio):
-        if not self.check_camera_ownership():
-            return
-        
-        self.previewAspectRatioChanged.emit(aspect_ratio)
-
-    def handle_calibration_updated(self, payload):
-        if not self.check_camera_ownership():
-            return
-
-        self.calibrationUpdated.emit(payload)
 
     @Slot()
     def startCalibrate(self):
@@ -126,13 +52,7 @@ class CalibrateBridge(QObject):
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
-        self.preview_bounds = (
-            max(0, round(left)),
-            max(0, round(top)),
-            max(0, round(width)),
-            max(0, round(height)),
-        )
-        self.apply_preview_bounds()
+        self.update_preview_bounds(left, top, width, height)
 
     @Slot()
     def openCameraSettings(self):
@@ -201,3 +121,12 @@ class CalibrateBridge(QObject):
             return {"error": str(error)}
         except FileNotFoundError:
             return {"error": "Selected gesture could not be found."}
+
+    def handle_calibration_updated(self, payload):
+        if not self.check_camera_ownership():
+            return
+
+        self.calibrationUpdated.emit(payload)
+
+    def _emit_status_payload(self, payload: dict) -> None:
+        self.calibrateStatusChanged.emit(payload)
