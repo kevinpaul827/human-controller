@@ -44,6 +44,7 @@ macOS / Linux:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
 pip install -r app/requirements.txt
 pip install -r backend/requirements.txt
 pip install -r backend/matching_engine/requirements.txt
@@ -59,6 +60,7 @@ Windows PowerShell:
 ```powershell
 python3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 pip install -r app/requirements.txt
 pip install -r backend/requirements.txt
 pip install -r backend/matching_engine/requirements.txt
