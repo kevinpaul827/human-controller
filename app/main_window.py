@@ -96,7 +96,10 @@ class MainWindow(QMainWindow):
         self.channel.registerObject("sessionBridge", self.session_bridge)
         self.session_bridge.attach_picture_in_picture(self.picture_in_picture)
 
-        self.calibrate_bridge = CalibrateBridge(self.camera_manager)
+        self.calibrate_bridge = CalibrateBridge(
+            self.camera_manager,
+            self.gesture_store,
+        )
         self.channel.registerObject("calibrateBridge", self.calibrate_bridge)
         self.calibrate_bridge.attach_preview_widget(self.preview)
         self.calibrate_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)

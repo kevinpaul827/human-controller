@@ -27,10 +27,11 @@ class CalibrateBridge(CameraBridgeBase, QObject):
     previewAspectRatioChanged = Signal(float)
     poseEstimated = Signal(dict)
 
-    def __init__(self, camera_manager):
+    def __init__(self, camera_manager, gesture_store=None):
         super().__init__()
         self._init_camera_preview_bridge(camera_manager, CalibrateState.IDLE)
         self.camera: CameraManager = camera_manager
+        self.gesture_store = gesture_store
 
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
@@ -107,7 +108,8 @@ class CalibrateBridge(CameraBridgeBase, QObject):
 
     @Slot(result="QVariantList")
     def listSavedGestures(self):
-        # FIXME: this should comes from self.gesture_store.list_saved_gestures()
+        if self.gesture_store is not None:
+            return self.gesture_store.list_gestures()
         return self.camera.list_saved_gestures()
 
     @Slot(result="QVariantList")
