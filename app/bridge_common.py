@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .bridge_types import PosePayload
+
 
 class CameraBridgeBase:
     """Shared helper for CalibrateBridge and SessionBridge preview/state handling."""
@@ -18,7 +20,7 @@ class CameraBridgeBase:
         """Run bridge-specific side effects after state updates."""
         pass
 
-    def _handle_live_pose(self, pose: dict) -> None:
+    def _handle_live_pose(self, pose: PosePayload) -> None:
         """Handle extra bridge-specific work for each live pose update."""
         pass
 

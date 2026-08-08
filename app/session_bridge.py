@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, Signal, Slot
 
 from .bridge_common import CameraBridgeBase
+from .bridge_types import GestureMatchPayload, PosePayload, SessionStatusPayload
 from .profile_manager import ProfileError, ProfileManager
 
 if TYPE_CHECKING:
@@ -128,14 +129,14 @@ class SessionBridge(CameraBridgeBase, QObject):
         if self.picture_in_picture is not None:
             self.picture_in_picture.set_frame(frame, timestamp_ms)
 
-    def handle_gesture_match_updated(self, payload):
+    def handle_gesture_match_updated(self, payload: GestureMatchPayload):
         if not self.check_camera_ownership():
             return
 
         if self.state != SessionState.LIVE:
             return
 
-        enriched_payload = dict(payload)
+        enriched_payload: GestureMatchPayload = dict(payload)
         gesture_id = enriched_payload.get("gestureId")
         if not enriched_payload.get("key"):
             enriched_payload["key"] = self.active_key_bindings.get(gesture_id)
@@ -156,7 +157,7 @@ class SessionBridge(CameraBridgeBase, QObject):
         else:
             self.picture_in_picture.hide_overlay()
 
-    def _emit_status_payload(self, payload: dict) -> None:
+    def _emit_status_payload(self, payload: SessionStatusPayload) -> None:
         self.sessionStatusChanged.emit(payload)
 
     def _after_state_change(self) -> None:
@@ -166,7 +167,7 @@ class SessionBridge(CameraBridgeBase, QObject):
         if self.picture_in_picture is not None:
             self.picture_in_picture.clear()
 
-    def _handle_live_pose(self, pose: dict) -> None:
+    def _handle_live_pose(self, pose: PosePayload) -> None:
         if self.picture_in_picture is not None:
             self.picture_in_picture.set_pose(pose)
 
