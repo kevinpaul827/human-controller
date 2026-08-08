@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT / "dist"
+FRONTEND_DIR = ROOT / "frontend"
 PYINSTALLER_CONFIG_DIR = ROOT / ".pyinstaller"
 SPEC_PATH = ROOT / "human_controller.spec"
 FRONTEND_PATH = ROOT / "frontend" / "dist" / "index.html"
@@ -204,15 +205,30 @@ def find_bundled_mediapipe_native_libraries() -> list[Path]:
     )
 
 
+def build_frontend() -> bool:
+    npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
+    if npm is None:
+        print("Could not find npm. Install Node.js and ensure npm is on PATH.")
+        return False
+
+    print("Building frontend bundle for the packaged app...")
+    result = subprocess.run([npm, "run", "build"], cwd=FRONTEND_DIR, check=False)
+    return result.returncode == 0
+
+
 def main() -> int:
     if sys.platform != "darwin":
         print("This builder is only intended for macOS.")
         return 1
 
-    # The packaged app serves the built frontend files from inside the bundle,
-    # so we fail early if the frontend has not been built yet.
+    # The packaged app serves bundled frontend files, so we rebuild the UI here
+    # to keep it aligned with the source shown by `make preview-local`.
+    if not build_frontend():
+        print("Frontend build failed; the macOS app bundle was not created.")
+        return 1
+
     if not FRONTEND_PATH.exists():
-        print("Frontend build is missing. Run `npm run build` in `frontend/` first.")
+        print("Frontend build finished without producing frontend/dist/index.html.")
         return 1
 
     # Pose estimation needs the MediaPipe task file at runtime. Packaging would
