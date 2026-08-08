@@ -188,8 +188,6 @@ REGION_CONNECTIONS: dict[BodyRegion, list[tuple[int, int]]] = {
 }
 
 
-# A region's landmarks are exactly the endpoints of its connections, so this is
-# derived rather than hand-listed — the two can't drift apart.
 REGION_LANDMARKS: dict[BodyRegion, list[int]] = {
   region: sorted({point for edge in edges for point in edge})
   for region, edges in REGION_CONNECTIONS.items()
