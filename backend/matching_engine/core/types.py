@@ -18,6 +18,11 @@ __all__ = [
 
 SCHEMA_VERSION = 2
 
+# Shared by the dataclass defaults and the from_dict fallbacks, so the two
+# can't disagree about what an omitted field means.
+DEFAULT_TYPE = "state"
+DEFAULT_FPS = 30
+
 
 @dataclass
 class MatchResult:
@@ -30,12 +35,12 @@ class MatchResult:
 class GestureTemplate:
     name: str
     gesture_id: str = field(default_factory=lambda: uuid4().hex)
-    type: str = "state"
+    type: str = DEFAULT_TYPE
     active_joints: List[AngleKey] = field(default_factory=list)
     target_angles: Dict[AngleKey, float] = field(default_factory=dict)
     tolerance_deg: Dict[AngleKey, float] = field(default_factory=dict)
     trajectory: List[Dict[str, Any]] = field(default_factory=list)
-    fps: int = 30
+    fps: int = DEFAULT_FPS
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -54,10 +59,10 @@ class GestureTemplate:
         return cls(
             name=d["name"],
             gesture_id=d["gesture_id"],
-            type=d.get("type", "state"),
+            type=d.get("type", DEFAULT_TYPE),
             active_joints=[AngleKey(j) for j in d.get("active_joints", [])],
             target_angles={AngleKey(k): float(v) for k, v in d.get("target_angles", {}).items()},
             tolerance_deg={AngleKey(k): float(v) for k, v in d.get("tolerance_deg", {}).items()},
             trajectory=d.get("trajectory", []),
-            fps=int(d.get("fps", 30)),
+            fps=int(d.get("fps", DEFAULT_FPS)),
         )

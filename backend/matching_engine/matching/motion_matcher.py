@@ -9,13 +9,13 @@ same ``MatcherStrategy`` Protocol as ``PoseMatcher``.
 
 from __future__ import annotations
 
-import time
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 from ..core.angles import AngleKey, AngleVector
 from ..core.types import GestureTemplate, MatchResult
+from .strategy import best_of
 
 DEFAULT_MOTION_TOLERANCE_DEG = 30.0
 MISS_PENALTY_DEG = 180.0
@@ -196,40 +196,40 @@ class MotionMatcher:
         self.min_template_range_deg = min_template_range_deg
         self.coverage_tol_deg = coverage_tol_deg
 
-    def score(self, current: AngleWindow, template: GestureTemplate) -> float:
-        ref = _trajectory_to_window(template.trajectory)
-        if not ref or not current:
-            return 0.0
-
+    def _scored_joints(self, template: GestureTemplate, ref: AngleWindow) -> List[AngleKey]:
+        """Template joints, dropping those that barely move over the trajectory."""
         joints = _template_joints(template, ref)
-        if self.min_template_range_deg > 0.0:
-            joints = [
-                joint
-                for joint in joints
-                if _joint_range(ref, joint) >= self.min_template_range_deg
-            ]
-        if not joints:
-            return 0.0
+        if self.min_template_range_deg <= 0.0:
+            return joints
+        return [j for j in joints if _joint_range(ref, j) >= self.min_template_range_deg]
 
+    def _rejected(self, current: AngleWindow, ref: AngleWindow, joints: List[AngleKey]) -> bool:
+        """True if a pre-DTW gate disqualifies the window outright."""
         if self.min_amplitude_ratio > 0.0:
             for j in joints:
                 tmpl_range = _joint_range(ref, j)
                 if tmpl_range >= 1e-6 and _joint_range(current, j) < self.min_amplitude_ratio * tmpl_range:
-                    return 0.0
+                    return True
 
         if self.end_pose_tol_deg is not None:
             end_ref, end_cur = ref[-1], current[-1]
             for j in joints:
                 rv, cv = end_ref.get(j), end_cur.get(j)
                 if rv is not None and cv is not None and abs(cv - rv) > self.end_pose_tol_deg:
-                    return 0.0
+                    return True
 
-        if self.coverage_tol_deg is not None and not _covers_trajectory(
-            current,
-            ref,
-            joints,
-            self.coverage_tol_deg,
-        ):
+        if self.coverage_tol_deg is not None:
+            return not _covers_trajectory(current, ref, joints, self.coverage_tol_deg)
+
+        return False
+
+    def score(self, current: AngleWindow, template: GestureTemplate) -> float:
+        ref = _trajectory_to_window(template.trajectory)
+        if not ref or not current:
+            return 0.0
+
+        joints = self._scored_joints(template, ref)
+        if not joints or self._rejected(current, ref, joints):
             return 0.0
 
         dist = dtw_distance(
@@ -252,10 +252,4 @@ class MotionMatcher:
         templates: List[GestureTemplate],
         timestamp: Optional[float] = None,
     ) -> Optional[MatchResult]:
-        ts = time.time() if timestamp is None else timestamp
-        best: Optional[MatchResult] = None
-        for template in templates:
-            s = self.score(current, template)
-            if best is None or s > best.score:
-                best = MatchResult(gesture_id=template.gesture_id, score=s, timestamp=ts)
-        return best
+        return best_of(lambda t: self.score(current, t), templates, timestamp)

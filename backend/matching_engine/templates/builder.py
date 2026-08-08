@@ -19,11 +19,6 @@ MIN_TOLERANCE_DEG = 5.0
 MOTION_TRAJECTORY_FRAMES = 32
 
 
-def _end_state(rep: Rep, n_frames: int) -> AngleVector:
-    tail = rep[-n_frames:] if len(rep) >= n_frames else rep
-    return reduce_joints(tail, np.mean)
-
-
 def _resample_joint(series: List[Optional[float]], n_out: int) -> List[Optional[float]]:
     """Linearly resample one joint's angle series to ``n_out`` frames.
 
@@ -91,11 +86,7 @@ class TemplateBuilder:
         fps: int,
         active_joints: Optional[List[AngleKey]],
     ) -> GestureTemplate:
-        if active_joints is None:
-            active_joints = self.detect_active_joints(reps)
-        if not active_joints:
-            active_joints = self._joints_with_data(reps)
-
+        active_joints = self._resolve_active_joints(reps, active_joints)
         end_states = [self._end_state(rep) for rep in reps]
 
         target_angles: Dict[AngleKey, float] = {}
@@ -105,8 +96,9 @@ class TemplateBuilder:
             if not per_rep:
                 continue
             target_angles[joint] = float(np.mean(per_rep))
-            std = float(np.std(per_rep)) if len(per_rep) > 1 else 0.0
-            tolerance_deg[joint] = max(self.tolerance_k * std, self.min_tolerance_deg)
+            tolerance_deg[joint] = self._tolerance(
+                float(np.std(per_rep)) if len(per_rep) > 1 else 0.0
+            )
 
         active = [j for j in active_joints if j in target_angles]
 
@@ -134,11 +126,7 @@ class TemplateBuilder:
         ``MotionMatcher`` scores live windows against via DTW. Per-joint
         tolerances are derived from inter-rep variance along the path.
         """
-        if active_joints is None:
-            active_joints = self.detect_active_joints(reps)
-        if not active_joints:
-            active_joints = self._joints_with_data(reps)
-
+        active_joints = self._resolve_active_joints(reps, active_joints)
         n = self.motion_trajectory_frames
         resampled = [_resample_rep(rep, n) for rep in reps]
 
@@ -155,10 +143,10 @@ class TemplateBuilder:
                 if len(per_rep) > 1:
                     frame_stds[j].append(float(np.std(per_rep)))
 
-        tolerance_deg: Dict[AngleKey, float] = {}
-        for j in active_joints:
-            mean_std = float(np.mean(frame_stds[j])) if frame_stds[j] else 0.0
-            tolerance_deg[j] = max(self.tolerance_k * mean_std, self.min_tolerance_deg)
+        tolerance_deg: Dict[AngleKey, float] = {
+            j: self._tolerance(float(np.mean(frame_stds[j])) if frame_stds[j] else 0.0)
+            for j in active_joints
+        }
 
         return GestureTemplate(
             name=name,
@@ -171,7 +159,19 @@ class TemplateBuilder:
         )
 
     def _end_state(self, rep: Rep) -> AngleVector:
-        return _end_state(rep, self.end_state_frames)
+        tail = rep[-self.end_state_frames:] if len(rep) >= self.end_state_frames else rep
+        return reduce_joints(tail, np.mean)
+
+    def _resolve_active_joints(
+        self, reps: List[Rep], active_joints: Optional[List[AngleKey]]
+    ) -> List[AngleKey]:
+        """Caller-supplied joints, else the moving ones, else any with full data."""
+        if active_joints is None:
+            active_joints = self.detect_active_joints(reps)
+        return active_joints or self._joints_with_data(reps)
+
+    def _tolerance(self, std: float) -> float:
+        return max(self.tolerance_k * std, self.min_tolerance_deg)
 
     def _joints_with_data(self, reps: List[Rep]) -> List[AngleKey]:
         return [
