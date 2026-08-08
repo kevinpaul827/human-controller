@@ -5,6 +5,7 @@ from enum import Enum
 from PySide6.QtCore import QObject, Signal, Slot
 
 from .bridge_common import CameraBridgeBase
+from .bridge_types import CalibrateStatusPayload, CalibrationUpdatePayload
 from .camera_manager import CameraManager
 
 
@@ -122,11 +123,11 @@ class CalibrateBridge(CameraBridgeBase, QObject):
         except FileNotFoundError:
             return {"error": "Selected gesture could not be found."}
 
-    def handle_calibration_updated(self, payload):
+    def handle_calibration_updated(self, payload: CalibrationUpdatePayload):
         if not self.check_camera_ownership():
             return
 
         self.calibrationUpdated.emit(payload)
 
-    def _emit_status_payload(self, payload: dict) -> None:
+    def _emit_status_payload(self, payload: CalibrateStatusPayload) -> None:
         self.calibrateStatusChanged.emit(payload)

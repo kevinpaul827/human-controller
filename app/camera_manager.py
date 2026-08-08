@@ -1,5 +1,6 @@
 import sys
 import time
+from typing import cast
 
 from PySide6.QtCore import QCameraPermission, QCoreApplication, QElapsedTimer, QObject, QThread, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QImage
@@ -9,6 +10,7 @@ from backend.matching_engine import AngleKey, TemplateBuilder
 from backend.matching_engine.core.angles import reduce_joints
 from backend.perception.models import normalize_pose_model
 
+from .bridge_types import CalibrationUpdatePayload, GestureMatchPayload, PosePayload
 from .calibration_capture import CalibrationCaptureController, CapturePhase
 from .gesture_matcher import GestureMatcher
 from .gesture_regions import infer_gesture_regions
@@ -374,7 +376,7 @@ class CameraManager(QObject):
                     else:
                         self._emit_calibration_updated()
             match_event = self.gesture_matcher.match_pose(pose, angles=angles)
-            match_payload = match_event.to_dict()
+            match_payload = cast(GestureMatchPayload, match_event.to_dict())
             key_action = self.trigger_controller.process(match_payload)
             if key_action is not None and self.active_bridge == "session":
                 try:
@@ -409,26 +411,7 @@ class CameraManager(QObject):
         except Exception as error:
             log_info(f"[camera_manager] gesture matcher error: {error}")
 
-        if pose is None:
-            log_verbose("[camera_manager] pose not detected")
-            payload = {
-                "detected": False,
-                "landmarks": [],
-                "visibility": [],
-                "timestampMs": self._pending_pose_timestamp_ms,
-            }
-        else:
-            log_verbose("[camera_manager] pose detected, forwarding live landmarks")
-            payload = {
-                "detected": True,
-                "landmarks": pose.xyz,
-                "visibility": pose.visibility,
-                "timestampMs": self._pending_pose_timestamp_ms,
-            }
-            if self.active_bridge == "session":
-                payload["renderJoints"] = sorted(
-                    joint.value for joint in self.gesture_matcher.bound_angle_keys
-                )
+        payload = CameraManager._pose_payload(self, pose)
 
         frame = self._pending_pose_frame
         self._pending_pose_frame = QImage()
@@ -466,19 +449,7 @@ class CameraManager(QObject):
         if self.active_bridge != "session":
             return
 
-        self.gestureMatchUpdated.emit(
-            {
-                "gestureId": None,
-                "name": None,
-                "score": 0.0,
-                "timestamp": None,
-                "matched": False,
-                "hasTemplates": False,
-                "gestureType": None,
-                "triggered": False,
-                "keyAction": "reset",
-            }
-        )
+        self.gestureMatchUpdated.emit(CameraManager._reset_match_payload(self))
 
     def _apply_runtime_bindings(self, bindings):
         self._session_key_bindings = bindings
@@ -502,6 +473,42 @@ class CameraManager(QObject):
         self.active_bridge = None
         self._stopping = False
         return stopping_bridge
+
+    def _reset_match_payload(self) -> GestureMatchPayload:
+        return {
+            "gestureId": None,
+            "name": None,
+            "score": 0.0,
+            "timestamp": None,
+            "matched": False,
+            "hasTemplates": False,
+            "gestureType": None,
+            "triggered": False,
+            "keyAction": "reset",
+        }
+
+    def _pose_payload(self, pose) -> PosePayload:
+        if pose is None:
+            log_verbose("[camera_manager] pose not detected")
+            return {
+                "detected": False,
+                "landmarks": [],
+                "visibility": [],
+                "timestampMs": self._pending_pose_timestamp_ms,
+            }
+
+        log_verbose("[camera_manager] pose detected, forwarding live landmarks")
+        payload: PosePayload = {
+            "detected": True,
+            "landmarks": pose.xyz,
+            "visibility": pose.visibility,
+            "timestampMs": self._pending_pose_timestamp_ms,
+        }
+        if self.active_bridge == "session":
+            payload["renderJoints"] = sorted(
+                joint.value for joint in self.gesture_matcher.bound_angle_keys
+            )
+        return payload
 
 ############################## Calibration Methods #############################
     def _loaded_session_gestures(self):
@@ -575,14 +582,13 @@ class CameraManager(QObject):
 
     def _emit_calibration_updated(self):
         now = time.monotonic()
-        self.calibrationUpdated.emit(
-            {
-                "repCount": len(self._calibration_reps),
-                "capturing": self._recording_rep,
-                "phase": self.calibration_capture.phase.value,
-                "countdownRemaining": self.calibration_capture.remaining_seconds(now),
-            }
-        )
+        payload: CalibrationUpdatePayload = {
+            "repCount": len(self._calibration_reps),
+            "capturing": self._recording_rep,
+            "phase": self.calibration_capture.phase.value,
+            "countdownRemaining": self.calibration_capture.remaining_seconds(now),
+        }
+        self.calibrationUpdated.emit(payload)
 
     def _finalize_automatic_rep(self):
         frames = list(self.calibration_capture.frames)
