@@ -2,20 +2,22 @@
 
 from .body_regions import (
     ALL_BODY_REGIONS,
-    BODY_CONNECTIONS,
-    BODY_LANDMARKS,
     BODY_REGION_GROUPS,
     BODY_REGION_LABELS,
-    DEFAULT_SKELETON_REGIONS,
     BodyRegion,
     BodyRegionGroup,
     MEASURABLE_REGIONS,
-    connections_for_regions,
     group_region_ids,
-    landmarks_for_regions,
     parse_regions,
 )
 from .landmarks import NUM_LANDMARKS, BlazePose33, PoseLandmarks
+from .skeleton import (
+    BODY_CONNECTIONS,
+    BODY_LANDMARKS,
+    DEFAULT_SKELETON_REGIONS,
+    connections_for_regions,
+    landmarks_for_regions,
+)
 
 __all__ = [
     "NUM_LANDMARKS",

@@ -61,6 +61,12 @@ class PoseLandmarks:
             raise ValueError(
                 f"visibility must have shape ({NUM_LANDMARKS},), got {self.visibility.shape}"
             )
+        if not np.isfinite(self.xyz).all():
+            raise ValueError("xyz values must be finite")
+        if not np.isfinite(self.visibility).all():
+            raise ValueError("visibility values must be finite")
+        if np.any((self.visibility < 0.0) | (self.visibility > 1.0)):
+            raise ValueError("visibility values must be between 0 and 1")
 
     #allows for frames with no data
     @classmethod
