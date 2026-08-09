@@ -17,7 +17,6 @@ class FakeEvent:
             "timestamp": 1.0,
             "matched": True,
             "hasTemplates": True,
-            "gestureType": "state",
         }
 
 
@@ -88,11 +87,11 @@ class GestureSessionTests(unittest.TestCase):
     def test_configured_gestures_filter_matcher_templates_and_keep_bindings(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = GestureStore(Path(temp_dir))
-            store.create_or_update(
+            store.create_motion(
                 name="Wave",
                 regions=[],
                 active_joints=["L_ELBOW"],
-                target_angles={"L_ELBOW": 90.0},
+                trajectory=[{"L_ELBOW": 45.0}, {"L_ELBOW": 90.0}],
             )
             session = GestureSession(Path(temp_dir))
 

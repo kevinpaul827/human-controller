@@ -68,14 +68,6 @@ class CalibrateBridge(CameraBridgeBase, QObject):
         """Tell the camera manager to begin calibration mode."""
         self.camera.start_calibration()
 
-    @Slot(result="QVariantMap")
-    def captureRep(self):
-        """Ask the camera manager to save the current held pose as one rep."""
-        try:
-            return self.camera.capture_rep()
-        except ValueError as error:
-            return {"error": str(error)}
-
     @Slot(float, result="QVariantMap")
     def startRep(self, recording_seconds):
         try:

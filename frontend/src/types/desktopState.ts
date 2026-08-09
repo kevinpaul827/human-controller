@@ -11,7 +11,6 @@ export type PoseModelRecommendation = {
 
 export type RuntimeSettings = {
   matchThreshold: number;
-  holdDuration: number;
   cooldown: number;
   smoothing: number;
   poseModel: PoseModel;

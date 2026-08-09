@@ -1,14 +1,11 @@
-"""Matcher interface"""
-
 from __future__ import annotations
 
 import time
 from typing import Callable, List, Optional, Protocol, Union, runtime_checkable
 
-from ..core.angles import AngleVector
+from ..core.angles import AngleVector, AngleWindow
 from ..core.types import GestureTemplate, MatchResult
 
-AngleWindow = List[AngleVector]
 MatchInput = Union[AngleVector, AngleWindow]
 
 
@@ -17,10 +14,6 @@ def best_of(
     templates: List[GestureTemplate],
     timestamp: Optional[float] = None,
 ) -> Optional[MatchResult]:
-    """Highest-scoring template, or None when ``templates`` is empty.
-
-    Shared by every matcher: only the per-template scoring differs between them.
-    """
     ts = time.time() if timestamp is None else timestamp
     best: Optional[MatchResult] = None
     for template in templates:

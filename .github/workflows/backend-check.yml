@@ -32,12 +32,13 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: backend/**/requirements.txt
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
 
       - name: Install backend dependencies
         run: |
-          pip install -r backend/matching_engine/requirements.txt
-          pip install coverage
+          pip install -r backend/requirements-dev.txt
 
       - name: Run backend coverage
         run: make backend-coverage

@@ -60,7 +60,6 @@ export interface CalibrateBridge {
   startCalibrate(): Promise<void>;
   stopCalibrate(): Promise<void>;
   startCalibration(): Promise<void>;
-  captureRep(): Promise<CapturedRep>;
   startRep(recordingSeconds: number): Promise<void>;
   cancelRep(): Promise<void>;
   stopRep(): Promise<CapturedRep>;

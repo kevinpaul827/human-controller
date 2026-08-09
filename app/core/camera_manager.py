@@ -1,12 +1,11 @@
-import sys
-
-from PySide6.QtCore import QObject, QUrl, Signal, Slot
-from PySide6.QtGui import QDesktopServices, QImage
+from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtGui import QImage
 
 from backend.perception.models import normalize_pose_model
 
 from ..bridges.bridge_types import PosePayload
 from ..calibration.calibration_service import CalibrationService
+from ..platforms.system_settings import open_accessibility_settings, open_camera_settings
 from ..utils.logging_utils import log_debug, log_info, log_verbose
 from .camera_session import CameraSession
 from .gesture_session import GestureSession
@@ -66,7 +65,7 @@ class CameraManager(QObject):
         runtime = RuntimeConfiguration.from_payload(configuration)
         settings = runtime.settings
         self.pose_pipeline.configure_model(normalize_pose_model(settings.get("poseModel")))
-        CameraManager._emit_runtime_reset_match(self)
+        self._emit_runtime_reset_match()
         self.gesture_session.configure_runtime(
             runtime.bindings,
             settings,
@@ -125,7 +124,7 @@ class CameraManager(QObject):
         except Exception as error:
             log_info(f"[camera_manager] gesture matcher error: {error}")
 
-        payload = CameraManager._pose_payload(self, pose, timestamp_ms)
+        payload = self._pose_payload(pose, timestamp_ms)
         self.frameProcessed.emit(frame, payload)
 
     def handle_pose_error(self, message):
@@ -193,9 +192,6 @@ class CameraManager(QObject):
     def stop_rep(self):
         return self.calibration.stop_rep()
 
-    def capture_rep(self):
-        return self.calibration.capture_rep()
-
     def reset_rep(self):
         self.calibration.reset_reps()
 
@@ -206,34 +202,17 @@ class CameraManager(QObject):
 
     @Slot()
     def openCameraSettings(self):
-        if sys.platform == "win32":
-            QDesktopServices.openUrl(QUrl("ms-settings:privacy-webcam"))
-            return
-
-        if sys.platform == "darwin":
-            QDesktopServices.openUrl(
-                QUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_Camera")
+        if not open_camera_settings():
+            self.camera_session.emit_camera_error(
+                "Open your system camera privacy settings to allow access."
             )
-            return
-
-        self.camera_session.emit_camera_error(
-            "Open your system camera privacy settings to allow access."
-        )
 
     @Slot()
     def openAccessibilitySettings(self):
-        if sys.platform == "darwin":
-            QDesktopServices.openUrl(
-                QUrl(
-                    "x-apple.systempreferences:com.apple.preference.security?"
-                    "Privacy_Accessibility"
-                )
+        if not open_accessibility_settings():
+            self.camera_session.emit_camera_error(
+                "Open your system accessibility settings to allow keyboard control."
             )
-            return
-
-        self.camera_session.emit_camera_error(
-            "Open your system accessibility settings to allow keyboard control."
-        )
 
     @Slot()
     def shutdown(self):

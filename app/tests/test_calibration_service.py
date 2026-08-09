@@ -21,20 +21,6 @@ class CalibrationServiceTests(unittest.TestCase):
             on_update=self.updates.append,
         )
 
-    def test_manual_capture_builds_and_persists_a_static_template(self) -> None:
-        self.service.add_pose_angles({AngleKey.L_ELBOW: 80.0})
-        self.service.add_pose_angles({AngleKey.L_ELBOW: 100.0})
-
-        captured = self.service.capture_rep()
-        saved = self.service.save_rep("Held elbow", "held_elbow")
-        gesture = self.store.load("held_elbow")
-
-        self.assertEqual(captured["angles"], {"L_ELBOW": 90.0})
-        self.assertEqual(saved["gestureId"], "held_elbow")
-        self.assertEqual(gesture.type, "state")
-        self.assertEqual(gesture.trajectory, [])
-        self.assertEqual(self.updates[-1]["repCount"], 0)
-
     def test_recorded_motion_is_persisted_as_a_motion_template(self) -> None:
         self.service.start_rep(10)
         for timestamp, angle in ((1.0, 90.0), (3.0, 90.0), (3.2, 110.0), (3.4, 130.0)):

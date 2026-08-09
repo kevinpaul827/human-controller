@@ -5,6 +5,7 @@ from typing import Any
 
 from ..bridges.bridge_types import GestureMatchPayload
 from ..gestures.gesture_matcher import GestureMatcher
+from ..gestures.gesture_store import GestureStore
 from ..utils.logging_utils import log_info
 from .key_injector import KeyInjectionError, KeyInjector
 from .trigger_controller import TriggerController
@@ -19,8 +20,8 @@ class GestureSession:
         matcher: GestureMatcher | None = None,
         trigger_controller: TriggerController | None = None,
     ) -> None:
-        self.matcher = matcher or (
-            GestureMatcher(gestures_dir) if gestures_dir else GestureMatcher()
+        self.matcher = matcher or GestureMatcher(
+            store=GestureStore(gestures_dir) if gestures_dir else GestureStore()
         )
         self.key_injector = key_injector or KeyInjector()
         self.trigger_controller = trigger_controller or TriggerController()
@@ -185,25 +186,7 @@ class GestureSession:
             log_info(f"[gesture_session] failed to release injected key: {error}")
 
     def _angles_for_pose(self, pose, active_angle_keys) -> dict:
-        if hasattr(self.matcher, "angles_for_pose"):
-            return self.matcher.angles_for_pose(pose, active_angle_keys)
-        if hasattr(self.matcher, "feature_extractor") and hasattr(
-            self.matcher.feature_extractor,
-            "to_angles",
-        ):
-            log_info(
-                "[gesture_session] matcher missing angles_for_pose; "
-                "using feature extractor fallback"
-            )
-            return (
-                self.matcher.feature_extractor.to_angles(pose)
-                if pose is not None
-                else {}
-            )
-        raise AttributeError(
-            "Gesture matcher is missing angles_for_pose and has no fallback "
-            "feature extractor."
-        )
+        return self.matcher.angles_for_pose(pose, active_angle_keys)
 
     @staticmethod
     def reset_match_payload() -> GestureMatchPayload:
@@ -214,7 +197,6 @@ class GestureSession:
             "timestamp": None,
             "matched": False,
             "hasTemplates": False,
-            "gestureType": None,
             "triggered": False,
             "keyAction": "reset",
         }

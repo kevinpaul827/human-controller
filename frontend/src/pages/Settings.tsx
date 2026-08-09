@@ -224,15 +224,6 @@ const Settings = () => {
             Session page.
           </p>
           <BrutalSlider
-            label="Hold duration"
-            value={settings.holdDuration}
-            min={0.5}
-            max={3}
-            step={0.1}
-            formatValue={(value) => `${value.toFixed(1)}s`}
-            onChange={(value) => updateSetting("holdDuration", value)}
-          />
-          <BrutalSlider
             label="Cooldown"
             value={settings.cooldown}
             min={0}

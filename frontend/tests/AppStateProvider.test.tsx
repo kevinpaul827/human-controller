@@ -23,8 +23,8 @@ const StateHarness = () => {
     <div>
       <output data-testid="binding-count">{bindings.length}</output>
       <output data-testid="ready">{String(readiness.isReady)}</output>
-      <button onClick={() => bindGesture("ges-hold-pose", "Space")}>
-        Bind hold pose
+      <button onClick={() => bindGesture("ges-jump", "Space")}>
+        Bind jump
       </button>
     </div>
   );

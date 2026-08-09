@@ -11,10 +11,9 @@ export type PatientProfile = {
 export type GestureSummary = {
   gestureId: string;
   name: string;
-  type?: string;
 };
 
-export type Gesture = Omit<GestureSummary, "type"> & {
+export type Gesture = GestureSummary & {
   calibratedAt: string | null;
   matchScore: number | null;
 };

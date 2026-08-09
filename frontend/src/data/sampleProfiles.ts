@@ -29,8 +29,8 @@ export const SAMPLE_GESTURES: Gesture[] = [
     matchScore: null,
   },
   {
-    gestureId: "ges-hold-pose",
-    name: "Hold Pose",
+    gestureId: "ges-jump",
+    name: "Jump",
     calibratedAt: null,
     matchScore: null,
   },
@@ -63,7 +63,7 @@ export const SAMPLE_PRESETS: Preset[] = [
     presetId: "preset-mario",
     name: "Super Mario Bros",
     bindings: [
-      { gestureId: "ges-hold-pose", key: "Space", matchThreshold: 75 },
+      { gestureId: "ges-jump", key: "Space", matchThreshold: 75 },
       { gestureId: "ges-elbow-curl", key: "ArrowRight", matchThreshold: 75 },
     ],
   },
