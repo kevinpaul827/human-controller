@@ -1,31 +1,16 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import Mapping
 
 from backend.perception.models import normalize_pose_model
 
 from .trigger_controller import DEFAULT_SETTINGS
+from ..utils.validation import bounded_number
 
 
 def _mapping(value: object) -> Mapping[object, object]:
     return value if isinstance(value, Mapping) else {}
-
-
-def bounded_number(
-    value: object,
-    default: float,
-    minimum: float,
-    maximum: float,
-) -> float:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return default
-    if not math.isfinite(number):
-        return default
-    return min(maximum, max(minimum, number))
 
 
 @dataclass(frozen=True)

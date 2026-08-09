@@ -12,6 +12,37 @@ class CapturePhase(str, Enum):
     CAPTURED = "captured"
 
 
+def _valid_angles(angles):
+    return {
+        key: float(value)
+        for key, value in (angles or {}).items()
+        if value is not None and math.isfinite(float(value))
+    }
+
+
+def _wrapped_delta(a, b):
+    return (a - b + 180.0) % 360.0 - 180.0
+
+
+def _median_frame(frames):
+    keys = {key for frame in frames for key in frame}
+    out = {}
+    for key in keys:
+        values = [frame[key] for frame in frames if key in frame]
+        ref = values[0]
+        shifted = [ref + _wrapped_delta(v, ref) for v in values]
+        out[key] = float(median(shifted))
+    return out
+
+
+def _largest_delta(current, reference):
+    deltas = [
+        abs(_wrapped_delta(current[key], reference[key]))
+        for key in current.keys() & reference.keys()
+    ]
+    return max(deltas, default=0.0)
+
+
 class CalibrationCaptureController:
 
 
@@ -91,7 +122,7 @@ class CalibrationCaptureController:
     def update(self, angles, now):
 
         now = float(now)
-        valid_angles = self._valid_angles(angles)
+        valid_angles = _valid_angles(angles)
 
         if self.phase == CapturePhase.COUNTDOWN:
             if valid_angles:
@@ -99,7 +130,7 @@ class CalibrationCaptureController:
             if now - self.phase_started_at < self.PREP_SECONDS - 1e-6:
                 return False
 
-            self._baseline = self._median_frame(self._baseline_frames)
+            self._baseline = _median_frame(self._baseline_frames)
             self.phase = CapturePhase.WAITING
             self.phase_started_at = now
             self._pre_roll.clear()
@@ -112,7 +143,7 @@ class CalibrationCaptureController:
                 return False
 
             self._pre_roll.append(valid_angles)
-            if self._largest_delta(valid_angles, self._baseline) >= self.START_DELTA_DEG:
+            if _largest_delta(valid_angles, self._baseline) >= self.START_DELTA_DEG:
                 self._start_confirmed_frames += 1
             else:
                 self._start_confirmed_frames = 0
@@ -158,42 +189,7 @@ class CalibrationCaptureController:
         ) <= self.END_STABLE_RANGE_DEG
 
     @staticmethod
-    def _valid_angles(angles):
-        return {
-            key: float(value)
-            for key, value in (angles or {}).items()
-            if value is not None and math.isfinite(float(value))
-        }
-
-
-
-
-
-    @staticmethod
-    def _wrapped_delta(a, b):
-        return (a - b + 180.0) % 360.0 - 180.0
-
-    @classmethod
-    def _median_frame(cls, frames):
-        keys = {key for frame in frames for key in frame}
-        out = {}
-        for key in keys:
-            values = [frame[key] for frame in frames if key in frame]
-            ref = values[0]
-            shifted = [ref + cls._wrapped_delta(v, ref) for v in values]
-            out[key] = float(median(shifted))
-        return out
-
-    @classmethod
-    def _largest_delta(cls, current, reference):
-        deltas = [
-            abs(cls._wrapped_delta(current[key], reference[key]))
-            for key in current.keys() & reference.keys()
-        ]
-        return max(deltas, default=0.0)
-
-    @classmethod
-    def _largest_range(cls, frames):
+    def _largest_range(frames):
         keys = {key for frame in frames for key in frame}
         ranges = []
         for key in keys:
@@ -202,6 +198,6 @@ class CalibrationCaptureController:
                 continue
             unwrapped = [values[0]]
             for value in values[1:]:
-                unwrapped.append(unwrapped[-1] + cls._wrapped_delta(value, unwrapped[-1]))
+                unwrapped.append(unwrapped[-1] + _wrapped_delta(value, unwrapped[-1]))
             ranges.append(max(unwrapped) - min(unwrapped))
         return max(ranges, default=0.0)

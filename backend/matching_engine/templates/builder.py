@@ -79,6 +79,24 @@ class TemplateBuilder:
             return self._build_motion(reps, name, fps, active_joints)
         raise NotImplementedError(f"Unknown template mode: {mode!r}")
 
+    def build_state(
+        self,
+        reps: List[Rep],
+        name: str,
+        fps: int = 30,
+        active_joints: Optional[List[AngleKey]] = None,
+    ) -> GestureTemplate:
+        return self.build(reps, name, mode="state", fps=fps, active_joints=active_joints)
+
+    def build_motion(
+        self,
+        reps: List[Rep],
+        name: str,
+        fps: int = 30,
+        active_joints: Optional[List[AngleKey]] = None,
+    ) -> GestureTemplate:
+        return self.build(reps, name, mode="motion", fps=fps, active_joints=active_joints)
+
     def _build_state(
         self,
         reps: List[Rep],

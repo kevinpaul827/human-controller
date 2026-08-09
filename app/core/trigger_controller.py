@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import time
 from collections import deque
-import math
 from typing import Callable
+
+from ..utils.validation import bounded_number
 
 
 DEFAULT_SETTINGS = {
@@ -48,21 +49,21 @@ class TriggerController:
         self.bindings = {str(k): str(v) for k, v in bindings.items() if k and v}
         if settings:
             self.settings = {
-                "matchThreshold": self._bounded_number(
+                "matchThreshold": bounded_number(
                     settings.get("matchThreshold"), 75.0, 0.0, 100.0
                 ),
-                "holdDuration": self._bounded_number(
+                "holdDuration": bounded_number(
                     settings.get("holdDuration"), 1.5, 0.0, 10.0
                 ),
-                "cooldown": self._bounded_number(
+                "cooldown": bounded_number(
                     settings.get("cooldown"), 0.5, 0.0, 10.0
                 ),
                 "smoothing": int(
-                    self._bounded_number(settings.get("smoothing"), 2.0, 0.0, 4.0)
+                    bounded_number(settings.get("smoothing"), 2.0, 0.0, 4.0)
                 ),
             }
         self.match_thresholds = {
-            str(gesture_id): self._bounded_number(
+            str(gesture_id): bounded_number(
                 threshold,
                 self.settings["matchThreshold"],
                 0.0,
@@ -73,15 +74,6 @@ class TriggerController:
         }
         self.reset()
 
-    @staticmethod
-    def _bounded_number(value, default, minimum, maximum):
-        try:
-            number = float(value)
-        except (TypeError, ValueError):
-            return default
-        if not math.isfinite(number):
-            return default
-        return min(maximum, max(minimum, number))
 
     def reset(self) -> None:
         self._candidate_id = None
@@ -125,7 +117,7 @@ class TriggerController:
             return self._release_active()
 
         gesture_id = match.get("gestureId")
-        score = self._bounded_number(match.get("score"), 0.0, 0.0, 1.0) * 100.0
+        score = bounded_number(match.get("score"), 0.0, 0.0, 1.0) * 100.0
         threshold = self.match_thresholds.get(
             str(gesture_id), self.settings["matchThreshold"]
         )

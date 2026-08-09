@@ -185,25 +185,7 @@ class GestureSession:
             log_info(f"[gesture_session] failed to release injected key: {error}")
 
     def _angles_for_pose(self, pose, active_angle_keys) -> dict:
-        if hasattr(self.matcher, "angles_for_pose"):
-            return self.matcher.angles_for_pose(pose, active_angle_keys)
-        if hasattr(self.matcher, "feature_extractor") and hasattr(
-            self.matcher.feature_extractor,
-            "to_angles",
-        ):
-            log_info(
-                "[gesture_session] matcher missing angles_for_pose; "
-                "using feature extractor fallback"
-            )
-            return (
-                self.matcher.feature_extractor.to_angles(pose)
-                if pose is not None
-                else {}
-            )
-        raise AttributeError(
-            "Gesture matcher is missing angles_for_pose and has no fallback "
-            "feature extractor."
-        )
+        return self.matcher.angles_for_pose(pose, active_angle_keys)
 
     @staticmethod
     def reset_match_payload() -> GestureMatchPayload:

@@ -1,9 +1,5 @@
-from .motion_matcher import (
-    DEFAULT_MOTION_TOLERANCE_DEG,
-    MISS_PENALTY_DEG,
-    MotionMatcher,
-    dtw_distance,
-)
+from .dtw import MISS_PENALTY_DEG, dtw_distance
+from .motion_matcher import DEFAULT_MOTION_TOLERANCE_DEG, MotionMatcher
 from .pose_matcher import DEFAULT_TOLERANCE_DEG, PoseMatcher, state_score
 from .strategy import AngleWindow, MatcherStrategy, MatchInput
 
