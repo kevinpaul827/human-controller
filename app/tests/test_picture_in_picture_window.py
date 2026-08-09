@@ -14,7 +14,7 @@ class PictureInPictureWindowTests(unittest.TestCase):
         cls.application = ensure_qapplication()
 
     def tearDown(self) -> None:
-        for window in QApplication.topLevelWidgets():
+        for window in self.application.topLevelWidgets():
             if isinstance(window, PictureInPictureWindow):
                 window.hide()
                 window.deleteLater()
