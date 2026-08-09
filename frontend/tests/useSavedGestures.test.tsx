@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, type ComponentType } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +13,7 @@ const bridgeMocks = vi.hoisted(() => ({
   loadSavedGesture: vi.fn(),
 }));
 
-vi.mock("@/services/calibrateBridge", () => ({
+vi.mock("../src/services/calibrateBridge", () => ({
   default: bridgeMocks,
 }));
 
@@ -101,9 +101,7 @@ describe("useSavedGestures", () => {
   it("loads gestures on mount and toggles loading state", async () => {
     const availableDeferred = deferred<SavedGestureSummary[]>();
     const loadedDeferred = deferred<SavedGestureSummary[]>();
-    bridgeMocks.listSavedGestures.mockReturnValueOnce(
-      availableDeferred.promise,
-    );
+    bridgeMocks.listSavedGestures.mockReturnValueOnce(availableDeferred.promise);
     bridgeMocks.getLoadedSessionGestures.mockReturnValueOnce(
       loadedDeferred.promise,
     );
@@ -206,9 +204,7 @@ describe("useSavedGestures", () => {
   it("ignores in-flight refresh completion after unmount", async () => {
     const availableDeferred = deferred<SavedGestureSummary[]>();
     const loadedDeferred = deferred<SavedGestureSummary[]>();
-    bridgeMocks.listSavedGestures.mockReturnValueOnce(
-      availableDeferred.promise,
-    );
+    bridgeMocks.listSavedGestures.mockReturnValueOnce(availableDeferred.promise);
     bridgeMocks.getLoadedSessionGestures.mockReturnValueOnce(
       loadedDeferred.promise,
     );
@@ -243,7 +239,7 @@ const ActiveProfileHookConsumer = () => {
 };
 
 const expectHookProviderError = (
-  RenderComponent: () => JSX.Element,
+  RenderComponent: ComponentType,
   expectedMessage: string,
 ) => {
   const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
