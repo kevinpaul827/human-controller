@@ -25,11 +25,11 @@ backend-check:
 	$(MAKE) backend-test
 
 backend-test:
-	$(PYTHON) -m pytest backend/matching_engine/tests
+	$(PYTHON) -m pytest backend
 
 backend-coverage:
 	$(PYTHON) -m compileall backend
-	$(PYTHON) -m coverage run --source=backend/matching_engine -m pytest backend/matching_engine/tests
+	$(PYTHON) -m coverage run --source=backend -m pytest backend
 	$(PYTHON) -m coverage report
 	$(PYTHON) -m coverage xml -o coverage-backend.xml
 

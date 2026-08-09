@@ -41,7 +41,6 @@ jobs:
           cache-dependency-path: |
             app/requirements.txt
             backend/requirements.txt
-            backend/matching_engine/requirements.txt
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -62,7 +61,6 @@ jobs:
         run: |
           pip install -r app/requirements.txt
           pip install -r backend/requirements.txt
-          pip install -r backend/matching_engine/requirements.txt
           pip install pyinstaller
 
       - name: Build macOS app bundle
