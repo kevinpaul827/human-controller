@@ -13,6 +13,7 @@ from app.platforms.macos.pip_process import (
     MacOSPipProcessTransport,
 )
 from app.platforms.macos.pip_protocol import PROTOCOL_VERSION, MessageBuffer
+from app.tests._bootstrap import ensure_qapplication
 
 
 class FakeFrameWriter:
@@ -49,7 +50,7 @@ class FakeProcess:
 class MacOSPipPoseIpcRegressionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def test_real_pose_estimator_arrays_cross_the_control_channel(self):
         process = FakeProcess()

@@ -3,12 +3,13 @@ import unittest
 from PySide6.QtWidgets import QApplication
 
 from app.core.camera_session import CameraSession
+from app.tests._bootstrap import ensure_qapplication
 
 
 class CameraSessionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def test_stop_deactivates_and_emits_the_owning_bridge(self):
         session = CameraSession()

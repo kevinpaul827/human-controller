@@ -56,6 +56,7 @@ def frontend_qurl():
 
     return QUrl.fromLocalFile(str(FRONTEND_PATH))
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -74,10 +75,23 @@ class MainWindow(QMainWindow):
         self.picture_in_picture = create_picture_in_picture()
         self.channel = QWebChannel()
 
-        self.preview.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._configure_preview_overlay()
+        self._setup_state_bridge()
+        self._setup_session_bridge()
+        self._setup_calibration_bridge()
+        self._setup_profile_bridge()
+        self._maybe_autostart_backend()
+        self._configure_frontend()
+
+    def _configure_preview_overlay(self):
+        self.preview.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents,
+            True,
+        )
         self.preview.setAutoFillBackground(True)
         self.preview.hide()
 
+    def _setup_state_bridge(self):
         self.state_bridge = StateBridge(
             self.data_dir,
             self.gesture_store,
@@ -89,6 +103,7 @@ class MainWindow(QMainWindow):
         )
         self.camera_manager.configure_runtime(self.state_bridge.runtime_configuration())
 
+    def _setup_session_bridge(self):
         self.session_bridge = SessionBridge(
             self.camera_manager,
             self.state_bridge,
@@ -96,25 +111,31 @@ class MainWindow(QMainWindow):
         self.channel.registerObject("sessionBridge", self.session_bridge)
         self.session_bridge.attach_picture_in_picture(self.picture_in_picture)
 
+    def _setup_calibration_bridge(self):
         self.calibrate_bridge = CalibrateBridge(
             self.camera_manager,
             self.gesture_store,
         )
         self.channel.registerObject("calibrateBridge", self.calibrate_bridge)
         self.calibrate_bridge.attach_preview_widget(self.preview)
-        self.calibrate_bridge.previewBoundsChanged.connect(self.handle_preview_bounds_changed)
+        self.calibrate_bridge.previewBoundsChanged.connect(
+            self.handle_preview_bounds_changed
+        )
         self.calibrate_bridge.poseEstimated.connect(self.preview.set_pose)
 
+    def _setup_profile_bridge(self):
         self.profile_bridge = ProfileBridge(self.profile_manager, self.gesture_store)
         self.channel.registerObject("profileBridge", self.profile_bridge)
-        self.profile_bridge.profilesChanged.connect(
-            self.state_bridge.refreshProfiles
-        )
+        self.profile_bridge.profilesChanged.connect(self.state_bridge.refreshProfiles)
 
-        if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") == "1":
-            self.backend_manager = BackendProcessManager()
-            self.backend_manager.start()
+    def _maybe_autostart_backend(self):
+        if os.environ.get("HUMAN_CONTROLLER_BACKEND_AUTOSTART") != "1":
+            return
 
+        self.backend_manager = BackendProcessManager()
+        self.backend_manager.start()
+
+    def _configure_frontend(self):
         self.frontend.page().setWebChannel(self.channel)
         self.frontend.setUrl(frontend_qurl())
         self.setCentralWidget(self.frontend)

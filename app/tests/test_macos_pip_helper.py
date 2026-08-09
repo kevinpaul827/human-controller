@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 from app.platforms.macos import pip_helper
 from app.platforms.macos.pip_helper import MacOSPipHelperController
 from app.platforms.macos.pip_protocol import PROTOCOL_VERSION
+from app.tests._bootstrap import ensure_qapplication
 
 
 class FakeSignal:
@@ -108,9 +109,7 @@ class FakeTimer:
 class MacOSPipHelperControllerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.qt_application = (
-            QApplication.instance() or QApplication([])
-        )
+        cls.qt_application = ensure_qapplication()
 
     def setUp(self):
         self.app = FakeApplication()

@@ -11,6 +11,7 @@ from app.platforms.macos.pip_process import (
     MacOSPipProcessTransport,
 )
 from app.platforms.macos.pip_protocol import MessageBuffer
+from app.tests._bootstrap import ensure_qapplication
 
 
 class FakeSignal:
@@ -131,7 +132,7 @@ class FakeTransport(QObject):
 class MacOSPipProcessLifecycleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def make_transport(self):
         processes = []
