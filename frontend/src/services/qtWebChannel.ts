@@ -20,3 +20,8 @@ export const getQtWebChannel = () => {
 
   return channelPromise;
 };
+
+/** @internal Clear the cached channel between isolated bridge tests. */
+export const resetQtWebChannelForTests = () => {
+  channelPromise = null;
+};

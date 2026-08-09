@@ -9,15 +9,11 @@ import type {
   GestureMatchListener,
 } from "../types/session";
 
-import { getQtWebChannel } from "./qtWebChannel";
-
-/**
- * Wrapper around the PySide6 Qt WebChannel session bridge.
- */
-type QtSignal<T> = {
-  connect(callback: (payload: T) => void): void;
-  disconnect?(callback: (payload: T) => void): void;
-};
+import {
+  createBridgeResolver,
+  invokeWithResult,
+  type QtSignal,
+} from "./qtBridgeUtils";
 
 type SessionProfileResult = {
   ok: boolean;
@@ -55,69 +51,12 @@ type QtSessionBridgeObject = {
   gestureMatchUpdated?: QtSignal<GestureMatchEvent>;
 };
 
-const BRIDGE_NAME = "sessionBridge";
 const BRIDGE_ERROR = "Qt WebChannel session bridge is unavailable.";
 
-let bridgePromise: Promise<QtSessionBridgeObject> | null = null;
-
-/**
- * Resolves the desktop bridge exposed by PySide6.
- */
-const getSessionBridgeOrThrow = () => {
-  bridgePromise ??= getQtWebChannel().then((channel) => {
-    const bridge = channel.objects[BRIDGE_NAME] as
-      | QtSessionBridgeObject
-      | undefined;
-
-    if (!bridge) {
-      throw new Error(BRIDGE_ERROR);
-    }
-
-    return bridge;
-  });
-
-  return bridgePromise;
-};
-
-const invokeWithResult = <T>(
-  invoke: (callback: (result: T) => void) => unknown,
-) =>
-  new Promise<T>((resolve, reject) => {
-    let settled = false;
-
-    const settle = (result: T) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(result);
-    };
-
-    try {
-      const maybePromise = invoke(settle);
-      if (
-        maybePromise != null &&
-        typeof (maybePromise as PromiseLike<T>).then === "function"
-      ) {
-        void Promise.resolve(maybePromise as PromiseLike<T>).then(
-          settle,
-          (error: unknown) => {
-            if (!settled) {
-              settled = true;
-              reject(error);
-            }
-          },
-        );
-      } else if (maybePromise !== undefined) {
-        settle(maybePromise as T);
-      }
-    } catch (error) {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    }
-  });
+const sessionBridgeResolver = createBridgeResolver<QtSessionBridgeObject>(
+  "sessionBridge",
+  BRIDGE_ERROR,
+);
 
 const parseProfileResult = (result: SessionProfileResult) => {
   if (!result.ok || !result.data) {
@@ -128,7 +67,7 @@ const parseProfileResult = (result: SessionProfileResult) => {
 
 const sessionBridge: SessionBridge = {
   async loadProfile(patientId) {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
     if (!bridge.loadProfile) {
       throw new Error("Profile-aware sessions are unavailable in this build.");
     }
@@ -140,17 +79,17 @@ const sessionBridge: SessionBridge = {
   },
 
   async startSession() {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
     await bridge.startSession();
   },
 
   async stopSession() {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
     await bridge.stopSession();
   },
 
   async getLoadedSessionGestures() {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
     if (!bridge.getLoadedSessionGestures) {
       throw new Error("Loaded session gestures unavailable in this build.");
     }
@@ -163,7 +102,7 @@ const sessionBridge: SessionBridge = {
   },
 
   async updatePreviewBounds(bounds: SessionPreviewBounds) {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
     await bridge.updatePreviewBounds(
       bounds.left,
       bounds.top,
@@ -174,7 +113,7 @@ const sessionBridge: SessionBridge = {
   },
 
   async openCameraSettings() {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
 
     if (!bridge.openCameraSettings) {
       throw new Error("Desktop camera settings are unavailable in this build.");
@@ -184,7 +123,7 @@ const sessionBridge: SessionBridge = {
   },
 
   async openAccessibilitySettings() {
-    const bridge = await getSessionBridgeOrThrow();
+    const bridge = await sessionBridgeResolver.get();
 
     if (!bridge.openAccessibilitySettings) {
       throw new Error(
@@ -199,7 +138,8 @@ const sessionBridge: SessionBridge = {
     let active = true;
     let unsubscribe = () => {};
 
-    void getSessionBridgeOrThrow()
+    void sessionBridgeResolver
+      .get()
       .then((bridge) => {
         if (!active) {
           return;
@@ -243,7 +183,8 @@ const sessionBridge: SessionBridge = {
     let active = true;
     let unsubscribe = () => {};
 
-    void getSessionBridgeOrThrow()
+    void sessionBridgeResolver
+      .get()
       .then((bridge) => {
         if (!active) {
           return;
@@ -269,7 +210,8 @@ const sessionBridge: SessionBridge = {
   onGestureMatch(listener: GestureMatchListener) {
     let active = true;
     let unsubscribe = () => {};
-    void getSessionBridgeOrThrow()
+    void sessionBridgeResolver
+      .get()
       .then((bridge) => {
         if (!active || !bridge.gestureMatchUpdated) return;
         bridge.gestureMatchUpdated.connect(listener);
@@ -284,3 +226,8 @@ const sessionBridge: SessionBridge = {
 };
 
 export default sessionBridge;
+
+/** @internal Reset cached bridge state between isolated tests. */
+export const resetSessionBridgeForTests = () => {
+  sessionBridgeResolver.reset();
+};

@@ -10,15 +10,11 @@ import type {
   SavedGestureSummary,
 } from "../types/calibrate";
 
-import { getQtWebChannel } from "./qtWebChannel";
-
-/**
- * Wrapper around the PySide6 Qt WebChannel calibrate bridge.
- */
-type QtSignal<T> = {
-  connect(callback: (payload: T) => void): void;
-  disconnect?(callback: (payload: T) => void): void;
-};
+import {
+  createBridgeResolver,
+  invokeWithResult,
+  type QtSignal,
+} from "./qtBridgeUtils";
 
 type QtCalibrateBridgeObject = {
   startCalibrate: () => void | Promise<void>;
@@ -81,64 +77,12 @@ type QtCapturedRepResult = CapturedRep & QtBridgeErrorResult;
 type QtSavedRepResult = SavedRepResult & QtBridgeErrorResult;
 type QtLoadSavedGestureResult = LoadSavedGestureResult & QtBridgeErrorResult;
 
-const BRIDGE_NAME = "calibrateBridge";
 const BRIDGE_ERROR = "Qt WebChannel calibrate bridge is unavailable.";
 
-let bridgePromise: Promise<QtCalibrateBridgeObject> | null = null;
-
-/**
- * Resolves the desktop bridge exposed by PySide6.
- */
-const getCalibrateBridgeOrThrow = () => {
-  bridgePromise ??= getQtWebChannel().then((channel) => {
-    const bridge = channel.objects[BRIDGE_NAME] as
-      | QtCalibrateBridgeObject
-      | undefined;
-
-    if (!bridge) {
-      throw new Error(BRIDGE_ERROR);
-    }
-
-    return bridge;
-  });
-
-  return bridgePromise;
-};
-
-const invokeWithResult = <T>(
-  invoke: (callback: (result: T) => void) => unknown,
-) =>
-  new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const settle = (result: T) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-    try {
-      const maybePromise = invoke(settle);
-      if (
-        maybePromise != null &&
-        typeof (maybePromise as PromiseLike<T>).then === "function"
-      ) {
-        void Promise.resolve(maybePromise as PromiseLike<T>).then(
-          settle,
-          (error: unknown) => {
-            if (settled) return;
-            settled = true;
-            reject(error);
-          },
-        );
-      } else if (maybePromise !== undefined) {
-        settle(maybePromise as T);
-      }
-    } catch (error) {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    }
-  });
+const calibrateBridgeResolver = createBridgeResolver<QtCalibrateBridgeObject>(
+  "calibrateBridge",
+  BRIDGE_ERROR,
+);
 
 const unwrapBridgeResult = <T extends object>(
   result: (T & QtBridgeErrorResult) | null | undefined,
@@ -157,17 +101,17 @@ const unwrapBridgeResult = <T extends object>(
 
 const calibrateBridge: CalibrateBridge = {
   async startCalibrate() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
     await bridge.startCalibrate();
   },
 
   async stopCalibrate() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
     await bridge.stopCalibrate();
   },
 
   async updatePreviewBounds(bounds: CalibratePreviewBounds) {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
     await bridge.updatePreviewBounds(
       bounds.left,
       bounds.top,
@@ -178,7 +122,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async openCameraSettings() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.openCameraSettings) {
       throw new Error("Desktop camera settings are unavailable in this build.");
@@ -188,7 +132,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async startCalibration() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.startCalibration) {
       throw new Error("Calibration controls are unavailable in this build.");
@@ -198,7 +142,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async startRep(recordingSeconds: number) {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.startRep) {
       throw new Error("Recording controls are unavailable in this build.");
@@ -213,7 +157,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async cancelRep() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.cancelRep) {
       throw new Error("Recording controls are unavailable in this build.");
@@ -223,7 +167,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async stopRep() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.stopRep) {
       throw new Error("Recording controls are unavailable in this build.");
@@ -238,7 +182,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async resetRep() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.resetRep) {
       throw new Error("Calibration reset is unavailable in this build.");
@@ -248,7 +192,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async saveRep(name: string, gestureId?: string) {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.saveRep) {
       throw new Error("Calibration save is unavailable in this build.");
@@ -265,7 +209,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async listSavedGestures() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.listSavedGestures) {
       throw new Error("Saved gesture listing is unavailable in this build.");
@@ -279,7 +223,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async getLoadedSessionGestures() {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.getLoadedSessionGestures) {
       throw new Error("Loaded session gestures are unavailable in this build.");
@@ -293,7 +237,7 @@ const calibrateBridge: CalibrateBridge = {
   },
 
   async loadSavedGesture(gestureId: string) {
-    const bridge = await getCalibrateBridgeOrThrow();
+    const bridge = await calibrateBridgeResolver.get();
 
     if (!bridge.loadSavedGesture) {
       throw new Error("Saved gesture loading is unavailable in this build.");
@@ -311,7 +255,8 @@ const calibrateBridge: CalibrateBridge = {
     let active = true;
     let unsubscribe = () => {};
 
-    void getCalibrateBridgeOrThrow()
+    void calibrateBridgeResolver
+      .get()
       .then((bridge) => {
         if (!active) {
           return;
@@ -355,7 +300,8 @@ const calibrateBridge: CalibrateBridge = {
     let active = true;
     let unsubscribe = () => {};
 
-    void getCalibrateBridgeOrThrow()
+    void calibrateBridgeResolver
+      .get()
       .then((bridge) => {
         if (!active) {
           return;
@@ -382,7 +328,8 @@ const calibrateBridge: CalibrateBridge = {
     let active = true;
     let unsubscribe = () => {};
 
-    void getCalibrateBridgeOrThrow()
+    void calibrateBridgeResolver
+      .get()
       .then((bridge) => {
         if (!active) {
           return;
@@ -407,3 +354,8 @@ const calibrateBridge: CalibrateBridge = {
 };
 
 export default calibrateBridge;
+
+/** @internal Reset cached bridge state between isolated tests. */
+export const resetCalibrateBridgeForTests = () => {
+  calibrateBridgeResolver.reset();
+};
