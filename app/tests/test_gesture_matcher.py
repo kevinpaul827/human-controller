@@ -5,7 +5,7 @@ from pathlib import Path
 from app.gestures.gesture_matcher import GestureMatcher, GestureMatchEvent
 from app.gestures.gesture_store import GestureStore, SavedGesture
 from backend.matching_engine.core.angles import AngleKey
-from backend.pose_types import BlazePose33, PoseLandmarks
+from backend.pose_types import PoseKeypoint, PoseLandmarks
 
 
 def _save_motion(
@@ -89,9 +89,9 @@ class GestureMatcherTests(unittest.TestCase):
         matcher = GestureMatcher(self.store)
         pose = PoseLandmarks.empty()
         pose.visibility[:] = 1.0
-        pose.xyz[BlazePose33.L_SHOULDER] = [0.0, 0.0, 5.0]
-        pose.xyz[BlazePose33.L_ELBOW] = [1.0, 0.0, -5.0]
-        pose.xyz[BlazePose33.L_WRIST] = [1.0, 1.0, 8.0]
+        pose.xyz[PoseKeypoint.L_SHOULDER] = [0.0, 0.0, 5.0]
+        pose.xyz[PoseKeypoint.L_ELBOW] = [1.0, 0.0, -5.0]
+        pose.xyz[PoseKeypoint.L_WRIST] = [1.0, 1.0, 8.0]
 
         angles = matcher.angles_for_pose(pose)
 

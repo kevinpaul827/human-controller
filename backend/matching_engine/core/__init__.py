@@ -11,7 +11,7 @@ from .angles import (
     reduce_joints,
     valid_values,
 )
-from backend.pose_types import NUM_LANDMARKS, BlazePose33, PoseLandmarks
+from backend.pose_types import NUM_LANDMARKS, PoseKeypoint, PoseLandmarks
 from .types import (
     SCHEMA_VERSION,
     GestureTemplate,
@@ -29,7 +29,7 @@ __all__ = [
     "reduce_joints",
     "valid_values",
     "NUM_LANDMARKS",
-    "BlazePose33",
+    "PoseKeypoint",
     "PoseLandmarks",
     "SCHEMA_VERSION",
     "GestureTemplate",

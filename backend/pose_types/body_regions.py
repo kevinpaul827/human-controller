@@ -8,15 +8,12 @@ from typing import Mapping
 
 class BodyRegion(StrEnum):
     TORSO = "torso"
-    HEAD = "head"
     LEFT_SHOULDER = "left_shoulder"
     LEFT_ELBOW = "left_elbow"
     LEFT_WRIST = "left_wrist"
-    LEFT_HAND = "left_hand"
     RIGHT_SHOULDER = "right_shoulder"
     RIGHT_ELBOW = "right_elbow"
     RIGHT_WRIST = "right_wrist"
-    RIGHT_HAND = "right_hand"
     LEFT_HIP = "left_hip"
     LEFT_KNEE = "left_knee"
     LEFT_ANKLE = "left_ankle"
@@ -49,7 +46,7 @@ class BodyRegionGroup:
 
 
 BODY_REGION_GROUPS: tuple[BodyRegionGroup, ...] = (
-    BodyRegionGroup("torso", "Torso & head", (BodyRegion.TORSO, BodyRegion.HEAD)),
+    BodyRegionGroup("torso", "Torso", (BodyRegion.TORSO,)),
     BodyRegionGroup(
         "left_arm",
         "Left arm",
@@ -57,7 +54,6 @@ BODY_REGION_GROUPS: tuple[BodyRegionGroup, ...] = (
             BodyRegion.LEFT_SHOULDER,
             BodyRegion.LEFT_ELBOW,
             BodyRegion.LEFT_WRIST,
-            BodyRegion.LEFT_HAND,
         ),
     ),
     BodyRegionGroup(
@@ -67,7 +63,6 @@ BODY_REGION_GROUPS: tuple[BodyRegionGroup, ...] = (
             BodyRegion.RIGHT_SHOULDER,
             BodyRegion.RIGHT_ELBOW,
             BodyRegion.RIGHT_WRIST,
-            BodyRegion.RIGHT_HAND,
         ),
     ),
     BodyRegionGroup(
@@ -85,15 +80,12 @@ BODY_REGION_GROUPS: tuple[BodyRegionGroup, ...] = (
 BODY_REGION_LABELS: Mapping[BodyRegion, str] = MappingProxyType(
     {
         BodyRegion.TORSO: "Torso / core",
-        BodyRegion.HEAD: "Head / neck",
         BodyRegion.LEFT_SHOULDER: "Left shoulder",
         BodyRegion.LEFT_ELBOW: "Left elbow",
         BodyRegion.LEFT_WRIST: "Left wrist",
-        BodyRegion.LEFT_HAND: "Left hand",
         BodyRegion.RIGHT_SHOULDER: "Right shoulder",
         BodyRegion.RIGHT_ELBOW: "Right elbow",
         BodyRegion.RIGHT_WRIST: "Right wrist",
-        BodyRegion.RIGHT_HAND: "Right hand",
         BodyRegion.LEFT_HIP: "Left hip",
         BodyRegion.LEFT_KNEE: "Left knee",
         BodyRegion.LEFT_ANKLE: "Left ankle / foot",

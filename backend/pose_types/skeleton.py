@@ -4,13 +4,13 @@ from collections.abc import Iterable, Mapping
 from types import MappingProxyType
 
 from .body_regions import MEASURABLE_REGIONS, BodyRegion
-from .landmarks import BlazePose33
+from .landmarks import PoseKeypoint
 
-_B = BlazePose33
+_B = PoseKeypoint
 
 REGION_CONNECTIONS: Mapping[
     BodyRegion,
-    tuple[tuple[BlazePose33, BlazePose33], ...],
+    tuple[tuple[PoseKeypoint, PoseKeypoint], ...],
 ] = MappingProxyType(
     {
         BodyRegion.TORSO: (
@@ -18,13 +18,6 @@ REGION_CONNECTIONS: Mapping[
             (_B.L_SHOULDER, _B.L_HIP),
             (_B.R_SHOULDER, _B.R_HIP),
             (_B.L_HIP, _B.R_HIP),
-        ),
-        BodyRegion.HEAD: (
-            (_B.NOSE, _B.L_EAR),
-            (_B.NOSE, _B.R_EAR),
-            (_B.L_EAR, _B.R_EAR),
-            (_B.L_EAR, _B.L_SHOULDER),
-            (_B.R_EAR, _B.R_SHOULDER),
         ),
         BodyRegion.LEFT_SHOULDER: (
             (_B.L_HIP, _B.L_SHOULDER),
@@ -36,14 +29,6 @@ REGION_CONNECTIONS: Mapping[
         ),
         BodyRegion.LEFT_WRIST: (
             (_B.L_ELBOW, _B.L_WRIST),
-            (_B.L_WRIST, _B.L_PINKY),
-            (_B.L_WRIST, _B.L_INDEX),
-            (_B.L_WRIST, _B.L_THUMB),
-        ),
-        BodyRegion.LEFT_HAND: (
-            (_B.L_WRIST, _B.L_PINKY),
-            (_B.L_WRIST, _B.L_INDEX),
-            (_B.L_WRIST, _B.L_THUMB),
         ),
         BodyRegion.RIGHT_SHOULDER: (
             (_B.R_HIP, _B.R_SHOULDER),
@@ -55,14 +40,6 @@ REGION_CONNECTIONS: Mapping[
         ),
         BodyRegion.RIGHT_WRIST: (
             (_B.R_ELBOW, _B.R_WRIST),
-            (_B.R_WRIST, _B.R_PINKY),
-            (_B.R_WRIST, _B.R_INDEX),
-            (_B.R_WRIST, _B.R_THUMB),
-        ),
-        BodyRegion.RIGHT_HAND: (
-            (_B.R_WRIST, _B.R_PINKY),
-            (_B.R_WRIST, _B.R_INDEX),
-            (_B.R_WRIST, _B.R_THUMB),
         ),
         BodyRegion.LEFT_HIP: (
             (_B.L_SHOULDER, _B.L_HIP),

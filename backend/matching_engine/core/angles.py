@@ -7,7 +7,12 @@ from enum import Enum
 
 import numpy as np
 
-from backend.pose_types import MEASURABLE_REGIONS, BlazePose33, BodyRegion, PoseLandmarks
+from backend.pose_types import (
+    MEASURABLE_REGIONS,
+    BodyRegion,
+    PoseKeypoint,
+    PoseLandmarks,
+)
 
 VIS_FLOOR = 0.5
 
@@ -25,17 +30,41 @@ class AngleKey(str, Enum):
     R_ANKLE = "R_ANKLE"
 
 
-ANGLE_TRIPLETS: dict[AngleKey, tuple[BlazePose33, BlazePose33, BlazePose33]] = {
-    AngleKey.L_ELBOW: (BlazePose33.L_SHOULDER, BlazePose33.L_ELBOW, BlazePose33.L_WRIST),
-    AngleKey.R_ELBOW: (BlazePose33.R_SHOULDER, BlazePose33.R_ELBOW, BlazePose33.R_WRIST),
-    AngleKey.L_SHOULDER_ABD: (BlazePose33.L_HIP, BlazePose33.L_SHOULDER, BlazePose33.L_ELBOW),
-    AngleKey.R_SHOULDER_ABD: (BlazePose33.R_HIP, BlazePose33.R_SHOULDER, BlazePose33.R_ELBOW),
-    AngleKey.L_KNEE: (BlazePose33.L_HIP, BlazePose33.L_KNEE, BlazePose33.L_ANKLE),
-    AngleKey.R_KNEE: (BlazePose33.R_HIP, BlazePose33.R_KNEE, BlazePose33.R_ANKLE),
-    AngleKey.L_HIP: (BlazePose33.L_SHOULDER, BlazePose33.L_HIP, BlazePose33.L_KNEE),
-    AngleKey.R_HIP: (BlazePose33.R_SHOULDER, BlazePose33.R_HIP, BlazePose33.R_KNEE),
-    AngleKey.L_ANKLE: (BlazePose33.L_KNEE, BlazePose33.L_ANKLE, BlazePose33.L_FOOT_INDEX),
-    AngleKey.R_ANKLE: (BlazePose33.R_KNEE, BlazePose33.R_ANKLE, BlazePose33.R_FOOT_INDEX),
+ANGLE_TRIPLETS: dict[AngleKey, tuple[PoseKeypoint, PoseKeypoint, PoseKeypoint]] = {
+    AngleKey.L_ELBOW: (
+        PoseKeypoint.L_SHOULDER,
+        PoseKeypoint.L_ELBOW,
+        PoseKeypoint.L_WRIST,
+    ),
+    AngleKey.R_ELBOW: (
+        PoseKeypoint.R_SHOULDER,
+        PoseKeypoint.R_ELBOW,
+        PoseKeypoint.R_WRIST,
+    ),
+    AngleKey.L_SHOULDER_ABD: (
+        PoseKeypoint.L_HIP,
+        PoseKeypoint.L_SHOULDER,
+        PoseKeypoint.L_ELBOW,
+    ),
+    AngleKey.R_SHOULDER_ABD: (
+        PoseKeypoint.R_HIP,
+        PoseKeypoint.R_SHOULDER,
+        PoseKeypoint.R_ELBOW,
+    ),
+    AngleKey.L_KNEE: (PoseKeypoint.L_HIP, PoseKeypoint.L_KNEE, PoseKeypoint.L_ANKLE),
+    AngleKey.R_KNEE: (PoseKeypoint.R_HIP, PoseKeypoint.R_KNEE, PoseKeypoint.R_ANKLE),
+    AngleKey.L_HIP: (PoseKeypoint.L_SHOULDER, PoseKeypoint.L_HIP, PoseKeypoint.L_KNEE),
+    AngleKey.R_HIP: (PoseKeypoint.R_SHOULDER, PoseKeypoint.R_HIP, PoseKeypoint.R_KNEE),
+    AngleKey.L_ANKLE: (
+        PoseKeypoint.L_KNEE,
+        PoseKeypoint.L_ANKLE,
+        PoseKeypoint.L_FOOT_INDEX,
+    ),
+    AngleKey.R_ANKLE: (
+        PoseKeypoint.R_KNEE,
+        PoseKeypoint.R_ANKLE,
+        PoseKeypoint.R_FOOT_INDEX,
+    ),
 }
 
 AngleVector = dict[AngleKey, float | None]
@@ -43,15 +72,12 @@ AngleWindow = list[AngleVector]
 
 REGION_ANGLES: dict[BodyRegion, list[AngleKey]] = {
     BodyRegion.TORSO: [],
-    BodyRegion.HEAD: [],
     BodyRegion.LEFT_SHOULDER: [AngleKey.L_SHOULDER_ABD],
     BodyRegion.LEFT_ELBOW: [AngleKey.L_ELBOW],
     BodyRegion.LEFT_WRIST: [],
-    BodyRegion.LEFT_HAND: [],
     BodyRegion.RIGHT_SHOULDER: [AngleKey.R_SHOULDER_ABD],
     BodyRegion.RIGHT_ELBOW: [AngleKey.R_ELBOW],
     BodyRegion.RIGHT_WRIST: [],
-    BodyRegion.RIGHT_HAND: [],
     BodyRegion.LEFT_HIP: [AngleKey.L_HIP],
     BodyRegion.LEFT_KNEE: [AngleKey.L_KNEE],
     BodyRegion.LEFT_ANKLE: [AngleKey.L_ANKLE],
