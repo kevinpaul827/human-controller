@@ -1,4 +1,4 @@
-"""BlazePose result data structure"""
+"""Application pose-keypoint data structures."""
 
 from __future__ import annotations
 
@@ -7,59 +7,70 @@ from enum import IntEnum
 
 import numpy as np
 
-NUM_LANDMARKS = 33
+MEDIAPIPE_NUM_LANDMARKS = 33
 
 
-# https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
-class BlazePose33(IntEnum):
-    NOSE = 0
-    L_EYE_INNER = 1
-    L_EYE = 2
-    L_EYE_OUTER = 3
-    R_EYE_INNER = 4
-    R_EYE = 5
-    R_EYE_OUTER = 6
-    L_EAR = 7
-    R_EAR = 8
-    MOUTH_L = 9
-    MOUTH_R = 10
-    L_SHOULDER = 11
-    R_SHOULDER = 12
-    L_ELBOW = 13
-    R_ELBOW = 14
-    L_WRIST = 15
-    R_WRIST = 16
-    L_PINKY = 17
-    R_PINKY = 18
-    L_INDEX = 19
-    R_INDEX = 20
-    L_THUMB = 21
-    R_THUMB = 22
-    L_HIP = 23
-    R_HIP = 24
-    L_KNEE = 25
-    R_KNEE = 26
-    L_ANKLE = 27
-    R_ANKLE = 28
-    L_HEEL = 29
-    R_HEEL = 30
-    L_FOOT_INDEX = 31
-    R_FOOT_INDEX = 32
+class PoseKeypoint(IntEnum):
+    """Keypoints used by gesture matching, stored in compact array order."""
+
+    L_SHOULDER = 0
+    R_SHOULDER = 1
+    L_ELBOW = 2
+    R_ELBOW = 3
+    L_WRIST = 4
+    R_WRIST = 5
+    L_HIP = 6
+    R_HIP = 7
+    L_KNEE = 8
+    R_KNEE = 9
+    L_ANKLE = 10
+    R_ANKLE = 11
+    L_HEEL = 12
+    R_HEEL = 13
+    L_FOOT_INDEX = 14
+    R_FOOT_INDEX = 15
+
+
+NUM_LANDMARKS = len(PoseKeypoint)
+
+# Source indices in MediaPipe's 33-landmark result. Face and finger points are
+# discarded as soon as a detector result enters the application.
+MEDIAPIPE_POSE_INDICES: tuple[int, ...] = (
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+)
 
 
 @dataclass
 class PoseLandmarks:
-    xyz: np.ndarray  # (33, 3)
-    visibility: np.ndarray  # (33,) in [0, 1]
+    xyz: np.ndarray  # (16, 3)
+    visibility: np.ndarray  # (16,) in [0, 1]
 
     def __post_init__(self) -> None:
         self.xyz = np.asarray(self.xyz, dtype=np.float64)
         self.visibility = np.asarray(self.visibility, dtype=np.float64)
         if self.xyz.shape != (NUM_LANDMARKS, 3):
-            raise ValueError(f"xyz must have shape ({NUM_LANDMARKS}, 3), got {self.xyz.shape}")
+            raise ValueError(
+                f"xyz must have shape ({NUM_LANDMARKS}, 3), got {self.xyz.shape}"
+            )
         if self.visibility.shape != (NUM_LANDMARKS,):
             raise ValueError(
-                f"visibility must have shape ({NUM_LANDMARKS},), got {self.visibility.shape}"
+                "visibility must have shape "
+                f"({NUM_LANDMARKS},), got {self.visibility.shape}"
             )
         if not np.isfinite(self.xyz).all():
             raise ValueError("xyz values must be finite")
@@ -68,10 +79,29 @@ class PoseLandmarks:
         if np.any((self.visibility < 0.0) | (self.visibility > 1.0)):
             raise ValueError("visibility values must be between 0 and 1")
 
-    #allows for frames with no data
+    # Allows for frames with no data.
     @classmethod
     def empty(cls) -> "PoseLandmarks":
         return cls(
             xyz=np.zeros((NUM_LANDMARKS, 3), dtype=np.float64),
             visibility=np.zeros(NUM_LANDMARKS, dtype=np.float64),
         )
+
+    @classmethod
+    def from_mediapipe(cls, xyz, visibility) -> "PoseLandmarks":
+        """Build the compact application pose from a MediaPipe result."""
+        source_xyz = np.asarray(xyz, dtype=np.float64)
+        source_visibility = np.asarray(visibility, dtype=np.float64)
+        if source_xyz.shape != (MEDIAPIPE_NUM_LANDMARKS, 3):
+            raise ValueError(
+                "MediaPipe xyz must have shape "
+                f"({MEDIAPIPE_NUM_LANDMARKS}, 3), got {source_xyz.shape}"
+            )
+        if source_visibility.shape != (MEDIAPIPE_NUM_LANDMARKS,):
+            raise ValueError(
+                "MediaPipe visibility must have shape "
+                f"({MEDIAPIPE_NUM_LANDMARKS},), got {source_visibility.shape}"
+            )
+
+        source_indices = list(MEDIAPIPE_POSE_INDICES)
+        return cls(source_xyz[source_indices], source_visibility[source_indices])

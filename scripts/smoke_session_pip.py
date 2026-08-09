@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.bridges.session_bridge import SessionBridge, SessionState
 from app.ui.picture_in_picture_window import PictureInPictureWindow
+from backend.pose_types import NUM_LANDMARKS
 
 
 class FakeCamera(QObject):
@@ -42,8 +43,8 @@ def main():
     processed_frame.fill(0xFF993322)
     pose = {
         "detected": True,
-        "landmarks": [[0.5, 0.5, 0.0] for _ in range(33)],
-        "visibility": [1.0 for _ in range(33)],
+        "landmarks": [[0.5, 0.5, 0.0] for _ in range(NUM_LANDMARKS)],
+        "visibility": [1.0 for _ in range(NUM_LANDMARKS)],
         "timestampMs": 100,
         "renderJoints": ["L_ELBOW"],
     }
@@ -69,7 +70,7 @@ def main():
         picture_in_picture.preview._frame_image.pixelColor(0, 0).blue()
         > picture_in_picture.preview._frame_image.pixelColor(0, 0).red()
     )
-    assert len(picture_in_picture.preview._landmarks) == 33
+    assert len(picture_in_picture.preview._landmarks) == NUM_LANDMARKS
     assert picture_in_picture.preview._preview_timestamp_ms == 116
     assert picture_in_picture.preview._render_joints == ("L_ELBOW",)
     assert picture_in_picture.match_badge.isVisible()

@@ -5,7 +5,7 @@ from app.ui.overlay_constants import (
     landmarks_for_angle_joints,
 )
 from backend.matching_engine.core.angles import AngleKey
-from backend.pose_types import BlazePose33
+from backend.pose_types import PoseKeypoint
 
 
 class OverlayConstantsTests(unittest.TestCase):
@@ -17,12 +17,12 @@ class OverlayConstantsTests(unittest.TestCase):
         self.assertEqual(
             landmarks,
             {
-                BlazePose33.L_SHOULDER,
-                BlazePose33.L_ELBOW,
-                BlazePose33.L_WRIST,
-                BlazePose33.R_HIP,
-                BlazePose33.R_KNEE,
-                BlazePose33.R_ANKLE,
+                PoseKeypoint.L_SHOULDER,
+                PoseKeypoint.L_ELBOW,
+                PoseKeypoint.L_WRIST,
+                PoseKeypoint.R_HIP,
+                PoseKeypoint.R_KNEE,
+                PoseKeypoint.R_ANKLE,
             },
         )
 
@@ -32,8 +32,8 @@ class OverlayConstantsTests(unittest.TestCase):
         self.assertEqual(
             connections,
             {
-                (BlazePose33.L_KNEE, BlazePose33.L_ANKLE),
-                (BlazePose33.L_ANKLE, BlazePose33.L_FOOT_INDEX),
+                (PoseKeypoint.L_KNEE, PoseKeypoint.L_ANKLE),
+                (PoseKeypoint.L_ANKLE, PoseKeypoint.L_FOOT_INDEX),
             },
         )
 

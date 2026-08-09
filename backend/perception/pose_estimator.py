@@ -44,7 +44,7 @@ class PoseEstimator:
             return None
 
         landmarks = result.pose_landmarks[0]
-        return PoseLandmarks(
+        return PoseLandmarks.from_mediapipe(
             [[lm.x, lm.y, lm.z] for lm in landmarks],
             [lm.visibility for lm in landmarks],
         )

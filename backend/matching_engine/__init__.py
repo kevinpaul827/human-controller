@@ -9,7 +9,7 @@ Public API:
 from .core import (
     AngleKey,
     AngleVector,
-    BlazePose33,
+    PoseKeypoint,
     FeatureExtractor,
     GestureTemplate,
     MatchResult,
@@ -23,7 +23,7 @@ from .templates import TemplateBuilder
 __all__ = [
     "AngleKey",
     "AngleVector",
-    "BlazePose33",
+    "PoseKeypoint",
     "FeatureExtractor",
     "GestureTemplate",
     "MatchResult",

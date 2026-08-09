@@ -10,7 +10,7 @@ from .body_regions import (
     group_region_ids,
     parse_regions,
 )
-from .landmarks import NUM_LANDMARKS, BlazePose33, PoseLandmarks
+from .landmarks import NUM_LANDMARKS, PoseKeypoint, PoseLandmarks
 from .skeleton import (
     BODY_CONNECTIONS,
     BODY_LANDMARKS,
@@ -21,7 +21,7 @@ from .skeleton import (
 
 __all__ = [
     "NUM_LANDMARKS",
-    "BlazePose33",
+    "PoseKeypoint",
     "PoseLandmarks",
     "BODY_LANDMARKS",
     "BODY_CONNECTIONS",
