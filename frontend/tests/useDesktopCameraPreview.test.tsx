@@ -256,9 +256,11 @@ describe("useDesktopCameraPreview", () => {
   });
 
   it("surfaces a desktop runtime bridge error when runtime is unavailable", () => {
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-      return undefined;
-    });
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {
+        return undefined;
+      });
     const bridge = {
       updatePreviewBounds: vi.fn().mockResolvedValue(undefined),
       onPreviewAspectRatio: vi.fn(() => {
