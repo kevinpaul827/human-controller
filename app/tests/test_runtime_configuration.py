@@ -10,7 +10,6 @@ class RuntimeConfigurationTests(unittest.TestCase):
             {
                 "settings": {
                     "matchThreshold": 72,
-                    "holdDuration": 1.2,
                     "cooldown": 0.4,
                     "smoothing": 3,
                     "poseModel": "HEAVY",
@@ -30,7 +29,6 @@ class RuntimeConfigurationTests(unittest.TestCase):
             {
                 "settings": {
                     "matchThreshold": "not-a-number",
-                    "holdDuration": math.inf,
                     "cooldown": -2,
                     "smoothing": 99,
                     "poseModel": "unknown",
@@ -42,7 +40,6 @@ class RuntimeConfigurationTests(unittest.TestCase):
 
         self.assertEqual(runtime.bindings, {})
         self.assertEqual(runtime.settings["matchThreshold"], 75.0)
-        self.assertEqual(runtime.settings["holdDuration"], 1.5)
         self.assertEqual(runtime.settings["cooldown"], 0.0)
         self.assertEqual(runtime.settings["smoothing"], 4)
         self.assertEqual(runtime.settings["poseModel"], "lite")

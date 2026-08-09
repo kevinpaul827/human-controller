@@ -57,17 +57,23 @@ class SessionProfileFlowTests(unittest.TestCase):
         root = Path(self.temp_dir.name)
         self.profile_manager = ProfileManager(root / "profiles")
         self.gesture_store = GestureStore(root / "gestures")
-        self.gesture_store.create_or_update(
+        self.gesture_store.create_motion(
             name="Right Arm Raise",
             regions=["upper_body"],
             active_joints=["L_SHOULDER_ABD"],
-            target_angles={"L_SHOULDER_ABD": 90},
+            trajectory=[
+                {"L_SHOULDER_ABD": 30.0},
+                {"L_SHOULDER_ABD": 90.0},
+            ],
         )
-        self.gesture_store.create_or_update(
+        self.gesture_store.create_motion(
             name="Left Arm Raise",
             regions=["upper_body"],
             active_joints=["R_SHOULDER_ABD"],
-            target_angles={"R_SHOULDER_ABD": 90},
+            trajectory=[
+                {"R_SHOULDER_ABD": 30.0},
+                {"R_SHOULDER_ABD": 90.0},
+            ],
         )
         self.profile_manager.create(
             PatientProfile(
@@ -108,7 +114,7 @@ class SessionProfileFlowTests(unittest.TestCase):
         self.assertEqual(
             [
                 template.gesture_id
-                for template in self.camera.gesture_session.matcher._state_templates
+                for template in self.camera.gesture_session.matcher._active_templates
             ],
             ["right_arm_raise"],
         )
@@ -191,12 +197,15 @@ class StateDrivenSessionProfileFlowTests(unittest.TestCase):
         root = Path(self.temp_dir.name)
         self.profile_manager = ProfileManager(root / "profiles")
         self.gesture_store = GestureStore(root / "gestures")
-        self.gesture_store.create_or_update(
+        self.gesture_store.create_motion(
             gesture_id="right_arm_raise",
             name="Right Arm Raise",
             regions=["upper_body"],
             active_joints=["L_SHOULDER_ABD"],
-            target_angles={"L_SHOULDER_ABD": 90},
+            trajectory=[
+                {"L_SHOULDER_ABD": 30.0},
+                {"L_SHOULDER_ABD": 90.0},
+            ],
         )
         self.state_bridge = StateBridge(
             root,

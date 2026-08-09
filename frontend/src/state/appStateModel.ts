@@ -12,7 +12,6 @@ export const STORAGE_KEY = "human-controller/app-state/v2";
 
 export const DEFAULT_SETTINGS: RuntimeSettings = {
   matchThreshold: 75,
-  holdDuration: 1.5,
   cooldown: 0.5,
   smoothing: 2,
   poseModel: "lite",

@@ -92,7 +92,6 @@ class StateBridgeThresholdTests(unittest.TestCase):
         current["settings"].update(
             {
                 "matchThreshold": "invalid",
-                "holdDuration": math.inf,
                 "cooldown": -4,
                 "smoothing": 99,
             }
@@ -101,7 +100,6 @@ class StateBridgeThresholdTests(unittest.TestCase):
         saved = self.bridge.saveState(current)
 
         self.assertEqual(saved["settings"]["matchThreshold"], 75.0)
-        self.assertEqual(saved["settings"]["holdDuration"], 1.5)
         self.assertEqual(saved["settings"]["cooldown"], 0.0)
         self.assertEqual(saved["settings"]["smoothing"], 4)
         self.assertEqual(
@@ -188,12 +186,12 @@ class StateBridgeThresholdTests(unittest.TestCase):
 
     def test_delete_gesture_cleans_profiles_presets_pending_state_and_file(self):
         gesture_store = self.bridge.gesture_store
-        gesture_store.create_or_update(
+        gesture_store.create_motion(
             gesture_id="delete_me",
             name="Delete Me",
             regions=["right_arm"],
             active_joints=["R_ELBOW"],
-            target_angles={"R_ELBOW": 90.0},
+            trajectory=[{"R_ELBOW": 45.0}, {"R_ELBOW": 90.0}],
         )
         current = self.bridge.getState()
         current["bindings"] = [

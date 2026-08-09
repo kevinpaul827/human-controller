@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+import math
+from typing import Literal
 
 import numpy as np
 
-from ..core.angles import AngleKey, AngleVector
+from ..core.angles import AngleKey, AngleVector, AngleWindow
 
 MISS_PENALTY_DEG = 180.0
-DEFAULT_STEP_PATTERN = "symmetricP1"
+StepPattern = Literal["symmetric1", "symmetric2", "symmetricP1"]
+DEFAULT_STEP_PATTERN: StepPattern = "symmetricP1"
 
-AngleWindow = List[AngleVector]
-
-Production = Tuple[Tuple[int, int], Tuple[Tuple[int, int, float], ...]]
-STEP_PATTERNS: Dict[str, Tuple[Production, ...]] = {
+Production = tuple[tuple[int, int], tuple[tuple[int, int, float], ...]]
+STEP_PATTERNS: dict[StepPattern, tuple[Production, ...]] = {
     "symmetric1": (
         ((1, 1), (((0, 0), 1.0),)),
         ((1, 0), (((0, 0), 1.0),)),
@@ -31,8 +31,12 @@ STEP_PATTERNS: Dict[str, Tuple[Production, ...]] = {
 }
 
 
-def frame_cost(a: AngleVector, b: AngleVector, joints: List[AngleKey]) -> Optional[float]:
-    diffs: List[float] = []
+def frame_cost(
+    a: AngleVector,
+    b: AngleVector,
+    joints: list[AngleKey],
+) -> float | None:
+    diffs: list[float] = []
     for joint in joints:
         va = a.get(joint)
         vb = b.get(joint)
@@ -44,7 +48,7 @@ def frame_cost(a: AngleVector, b: AngleVector, joints: List[AngleKey]) -> Option
     return sum(diffs) / len(diffs)
 
 
-def _band_bounds(i: int, n: int, m: int, band: int) -> Tuple[int, int]:
+def _band_bounds(i: int, n: int, m: int, band: int) -> tuple[int, int]:
     center = i * m / n
     lo = max(1, int(np.floor(center - band)))
     hi = min(m, int(np.ceil(center + band)))
@@ -54,18 +58,26 @@ def _band_bounds(i: int, n: int, m: int, band: int) -> Tuple[int, int]:
 def dtw_distance(
     seq_a: AngleWindow,
     seq_b: AngleWindow,
-    joints: List[AngleKey],
-    band: Optional[int] = None,
+    joints: list[AngleKey],
+    band: int | None = None,
     miss_penalty: float = MISS_PENALTY_DEG,
-    step_pattern: str = DEFAULT_STEP_PATTERN,
+    step_pattern: StepPattern = DEFAULT_STEP_PATTERN,
     open_begin: bool = False,
 ) -> float:
+    if step_pattern not in STEP_PATTERNS:
+        raise ValueError(f"Unsupported DTW step pattern: {step_pattern!r}")
+    if band is not None and (
+        isinstance(band, bool) or not isinstance(band, int) or band < 0
+    ):
+        raise ValueError("DTW band must be a non-negative integer or None.")
+    if not math.isfinite(miss_penalty) or miss_penalty < 0.0:
+        raise ValueError("DTW miss penalty must be a non-negative finite number.")
     n, m = len(seq_a), len(seq_b)
     if n == 0 or m == 0:
         return float("inf")
     productions = STEP_PATTERNS[step_pattern]
 
-    lcost: Dict[Tuple[int, int], float] = {}
+    lcost: dict[tuple[int, int], float] = {}
 
     def local(i: int, j: int) -> float:
         v = lcost.get((i, j))

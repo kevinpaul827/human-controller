@@ -3,9 +3,8 @@ from __future__ import annotations
 import time
 from typing import Callable, List, Optional, Protocol, Union, runtime_checkable
 
-from ..core.angles import AngleVector
+from ..core.angles import AngleVector, AngleWindow
 from ..core.types import GestureTemplate, MatchResult
-from .dtw import AngleWindow
 
 MatchInput = Union[AngleVector, AngleWindow]
 

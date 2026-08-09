@@ -27,11 +27,8 @@ def _ramp(start: float, stop: float, n: int) -> List[Optional[float]]:
 def _motion_template(elbow: List[float], name: str = "raise") -> GestureTemplate:
     return GestureTemplate(
         name=name,
-        type="motion",
         active_joints=[ELBOW],
-        target_angles={},
-        tolerance_deg={ELBOW: 30.0},
-        trajectory=[{ELBOW.value: v} for v in elbow],
+        trajectory=[{ELBOW: v} for v in elbow],
         fps=30,
     )
 
@@ -72,6 +69,29 @@ def test_no_comparable_joints_uses_miss_penalty():
 def test_band_constraint_still_matches_aligned_sequences():
     seq = _window(_ramp(0.0, 90.0, 12))
     assert dtw_distance(seq, seq, [ELBOW], band=2) == pytest.approx(0.0)
+
+
+def test_invalid_dtw_configuration_is_rejected():
+    sequence = _window([1.0])
+    with pytest.raises(ValueError, match="band"):
+        dtw_distance(sequence, sequence, [ELBOW], band=1.5)
+    with pytest.raises(ValueError, match="step pattern"):
+        dtw_distance(sequence, sequence, [ELBOW], step_pattern="bogus")
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"band": -1}, "band"),
+        ({"default_tolerance_deg": 0.0}, "default_tolerance_deg"),
+        ({"step_pattern": "bogus"}, "step pattern"),
+        ({"min_amplitude_ratio": 1.1}, "min_amplitude_ratio"),
+        ({"coverage_tol_deg": -1.0}, "coverage_tol_deg"),
+    ],
+)
+def test_invalid_matcher_configuration_is_rejected(kwargs, message):
+    with pytest.raises(ValueError, match=message):
+        MotionMatcher(**kwargs)
 
 
 def test_default_step_pattern_is_slope_constrained():
@@ -206,7 +226,7 @@ def test_empty_window_scores_zero():
 
 
 def test_empty_trajectory_scores_zero():
-    template = GestureTemplate(name="x", type="motion", active_joints=[ELBOW])
+    template = GestureTemplate(name="x", active_joints=[ELBOW])
     assert MotionMatcher().score(_window([1.0, 2.0]), template) == 0.0
 
 
@@ -238,31 +258,24 @@ def test_build_motion_produces_normalised_trajectory():
     builder = TemplateBuilder(motion_trajectory_frames=16)
     rep1 = _window(_ramp(0.0, 90.0, 20))
     rep2 = _window(_ramp(0.0, 90.0, 30))  # same movement, different length
-    template = builder.build([rep1, rep2], name="arm raise", mode="motion")
+    template = builder.build_motion([rep1, rep2], name="arm raise")
 
-    assert template.type == "motion"
     assert len(template.trajectory) == 16
     assert ELBOW in template.active_joints
     # Trajectory should be monotonically increasing like the underlying ramp.
-    vals = [f[ELBOW.value] for f in template.trajectory]
+    vals = [f[ELBOW] for f in template.trajectory]
     assert vals == sorted(vals)
 
 
 def test_built_motion_template_matches_its_own_reps():
     builder = TemplateBuilder(motion_trajectory_frames=16)
     rep = _window(_ramp(0.0, 90.0, 24))
-    template = builder.build([rep, rep], name="arm raise", mode="motion")
+    template = builder.build_motion([rep, rep], name="arm raise")
     assert MotionMatcher().score(rep, template) > 0.9
 
 
 def test_motion_template_round_trips_through_dict():
     template = _motion_template([float(v) for v in _ramp(0.0, 90.0, 8)])
     restored = GestureTemplate.from_dict(template.to_dict())
-    assert restored.type == "motion"
     assert restored.trajectory == template.trajectory
     assert restored.active_joints == template.active_joints
-
-
-def test_unknown_mode_raises():
-    with pytest.raises(NotImplementedError):
-        TemplateBuilder().build([_window([1.0, 2.0])], name="x", mode="bogus")

@@ -192,9 +192,6 @@ class CameraManager(QObject):
     def stop_rep(self):
         return self.calibration.stop_rep()
 
-    def capture_rep(self):
-        return self.calibration.capture_rep()
-
     def reset_rep(self):
         self.calibration.reset_reps()
 

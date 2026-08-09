@@ -53,7 +53,6 @@ class ProfileBridge(QObject):
                 {
                     "gestureId": gesture.gesture_id,
                     "name": gesture.name,
-                    "type": gesture.type,
                 }
                 for gesture in self.gesture_store.load_all()
             ]

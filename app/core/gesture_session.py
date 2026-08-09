@@ -5,6 +5,7 @@ from typing import Any
 
 from ..bridges.bridge_types import GestureMatchPayload
 from ..gestures.gesture_matcher import GestureMatcher
+from ..gestures.gesture_store import GestureStore
 from ..utils.logging_utils import log_info
 from .key_injector import KeyInjectionError, KeyInjector
 from .trigger_controller import TriggerController
@@ -19,8 +20,8 @@ class GestureSession:
         matcher: GestureMatcher | None = None,
         trigger_controller: TriggerController | None = None,
     ) -> None:
-        self.matcher = matcher or (
-            GestureMatcher(gestures_dir) if gestures_dir else GestureMatcher()
+        self.matcher = matcher or GestureMatcher(
+            store=GestureStore(gestures_dir) if gestures_dir else GestureStore()
         )
         self.key_injector = key_injector or KeyInjector()
         self.trigger_controller = trigger_controller or TriggerController()
@@ -196,7 +197,6 @@ class GestureSession:
             "timestamp": None,
             "matched": False,
             "hasTemplates": False,
-            "gestureType": None,
             "triggered": False,
             "keyAction": "reset",
         }

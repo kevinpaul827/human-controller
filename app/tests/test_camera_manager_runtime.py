@@ -34,7 +34,6 @@ class FakeGestureSession:
                 "timestamp": 1.0,
                 "matched": True,
                 "hasTemplates": True,
-                "gestureType": "state",
                 "threshold": 0.64,
             },
             {AngleKey.L_ELBOW: 90.0},
@@ -52,6 +51,9 @@ class FakeGestureSession:
 
 
 class RuntimeHarness:
+    _emit_runtime_reset_match = CameraManager._emit_runtime_reset_match
+    _pose_payload = CameraManager._pose_payload
+
     def __init__(self) -> None:
         self.active_bridge = "session"
         self.gestureMatchUpdated = FakeSignal()
@@ -130,7 +132,6 @@ class CameraManagerRuntimeTests(unittest.TestCase):
                 {"left_arm": "A"},
                 {
                     "matchThreshold": 72.0,
-                    "holdDuration": 1.5,
                     "cooldown": 0.5,
                     "smoothing": 2,
                     "poseModel": "lite",

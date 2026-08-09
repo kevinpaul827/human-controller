@@ -30,12 +30,6 @@ class RuntimeConfiguration:
                 0.0,
                 100.0,
             ),
-            "holdDuration": bounded_number(
-                raw_settings.get("holdDuration"),
-                float(DEFAULT_SETTINGS["holdDuration"]),
-                0.0,
-                10.0,
-            ),
             "cooldown": bounded_number(
                 raw_settings.get("cooldown"),
                 float(DEFAULT_SETTINGS["cooldown"]),

@@ -15,11 +15,14 @@ class ProfileBridgeTests(unittest.TestCase):
         root = Path(self.temp_dir.name)
         self.profile_manager = ProfileManager(root / "profiles")
         self.gesture_store = GestureStore(root / "gestures")
-        self.gesture_store.create_or_update(
+        self.gesture_store.create_motion(
             name="Right Arm Raise",
             regions=["upper_body"],
             active_joints=["L_SHOULDER_ABD"],
-            target_angles={"L_SHOULDER_ABD": 90},
+            trajectory=[
+                {"L_SHOULDER_ABD": 30.0},
+                {"L_SHOULDER_ABD": 90.0},
+            ],
         )
         self.bridge = ProfileBridge(self.profile_manager, self.gesture_store)
 
@@ -67,7 +70,7 @@ class ProfileBridgeTests(unittest.TestCase):
         self.assertEqual(profiles["data"][0]["patientName"], "Patient A")
         self.assertEqual(gestures["data"][0]["name"], "Right Arm Raise")
         self.assertEqual(gestures["data"][0]["gestureId"], "right_arm_raise")
-        self.assertEqual(gestures["data"][0]["type"], "state")
+        self.assertNotIn("type", gestures["data"][0])
 
     def test_returns_error_response_for_invalid_profile(self) -> None:
         response = self._response(self.bridge.createProfile("", ""))

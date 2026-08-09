@@ -25,7 +25,6 @@ class GestureMatchPayload(TypedDict):
     timestamp: float | None
     matched: bool
     hasTemplates: bool
-    gestureType: str | None
     threshold: NotRequired[float]
     triggered: NotRequired[bool]
     key: NotRequired[str | None]

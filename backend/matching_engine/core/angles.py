@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import Callable, Dict, Iterable, List, Optional, Set
 
 import numpy as np
 
@@ -25,7 +25,7 @@ class AngleKey(str, Enum):
     R_ANKLE = "R_ANKLE"
 
 
-ANGLE_TRIPLETS: Dict[AngleKey, tuple[BlazePose33, BlazePose33, BlazePose33]] = {
+ANGLE_TRIPLETS: dict[AngleKey, tuple[BlazePose33, BlazePose33, BlazePose33]] = {
     AngleKey.L_ELBOW: (BlazePose33.L_SHOULDER, BlazePose33.L_ELBOW, BlazePose33.L_WRIST),
     AngleKey.R_ELBOW: (BlazePose33.R_SHOULDER, BlazePose33.R_ELBOW, BlazePose33.R_WRIST),
     AngleKey.L_SHOULDER_ABD: (BlazePose33.L_HIP, BlazePose33.L_SHOULDER, BlazePose33.L_ELBOW),
@@ -38,9 +38,10 @@ ANGLE_TRIPLETS: Dict[AngleKey, tuple[BlazePose33, BlazePose33, BlazePose33]] = {
     AngleKey.R_ANKLE: (BlazePose33.R_KNEE, BlazePose33.R_ANKLE, BlazePose33.R_FOOT_INDEX),
 }
 
-AngleVector = Dict[AngleKey, Optional[float]]
+AngleVector = dict[AngleKey, float | None]
+AngleWindow = list[AngleVector]
 
-REGION_ANGLES: Dict[BodyRegion, list[AngleKey]] = {
+REGION_ANGLES: dict[BodyRegion, list[AngleKey]] = {
     BodyRegion.TORSO: [],
     BodyRegion.HEAD: [],
     BodyRegion.LEFT_SHOULDER: [AngleKey.L_SHOULDER_ABD],
@@ -60,7 +61,7 @@ REGION_ANGLES: Dict[BodyRegion, list[AngleKey]] = {
 }
 
 
-def angle_keys_for_regions(regions: list[BodyRegion]) -> set[AngleKey]:
+def angle_keys_for_regions(regions: Iterable[BodyRegion]) -> set[AngleKey]:
     keys: set[AngleKey] = set()
     for region in regions:
         keys.update(REGION_ANGLES[region])
@@ -78,12 +79,12 @@ def default_focus_angle_keys() -> set[AngleKey]:
 assert angle_keys_for_regions(MEASURABLE_REGIONS) == set(AngleKey)
 
 
-def valid_values(values: Iterable[Optional[float]]) -> List[float]:
+def valid_values(values: Iterable[float | None]) -> list[float]:
     return [v for v in values if v is not None]
 
 
 def reduce_joints(
-    frames: List[AngleVector], fn: Callable[[List[float]], float]
+    frames: list[AngleVector], fn: Callable[[list[float]], float]
 ) -> AngleVector:
     """Per-joint reduction"""
     out: AngleVector = {}
@@ -93,7 +94,7 @@ def reduce_joints(
     return out
 
 
-def joint_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> Optional[float]:
+def joint_angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float | None:
     ba = np.asarray(a, dtype=np.float64) - np.asarray(b, dtype=np.float64)
     bc = np.asarray(c, dtype=np.float64) - np.asarray(b, dtype=np.float64)
     denom = np.linalg.norm(ba) * np.linalg.norm(bc)
@@ -111,10 +112,10 @@ class FeatureExtractor:
     def to_angles(
         self,
         lm: PoseLandmarks,
-        keys: Optional[Iterable[AngleKey]] = None,
+        keys: Iterable[AngleKey] | None = None,
     ) -> AngleVector:
         """Extract joint angles. If ``keys`` is set, only those joints are computed."""
-        active: Optional[Set[AngleKey]] = set(keys) if keys is not None else None
+        active = set(keys) if keys is not None else None
         angles: AngleVector = {}
         for key, (a, b, c) in ANGLE_TRIPLETS.items():
             if active is not None and key not in active:

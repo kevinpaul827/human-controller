@@ -24,9 +24,6 @@ type QtCalibrateBridgeObject = {
   startCalibrate: () => void | Promise<void>;
   stopCalibrate: () => void | Promise<void>;
   startCalibration?: () => void | Promise<void>;
-  captureRep?: (
-    callback?: (result: QtCapturedRepResult) => void,
-  ) => QtCapturedRepResult | Promise<QtCapturedRepResult> | void;
   startRep?: (
     recordingSeconds: number,
     callback?: (result: QtBridgeAck) => void,
@@ -198,21 +195,6 @@ const calibrateBridge: CalibrateBridge = {
     }
 
     await bridge.startCalibration();
-  },
-
-  async captureRep() {
-    const bridge = await getCalibrateBridgeOrThrow();
-
-    if (!bridge.captureRep) {
-      throw new Error("Calibration capture is unavailable in this build.");
-    }
-
-    return unwrapBridgeResult(
-      await invokeWithResult<QtCapturedRepResult>((callback) =>
-        bridge.captureRep?.(callback),
-      ),
-      "Unable to capture the current gesture rep.",
-    );
   },
 
   async startRep(recordingSeconds: number) {

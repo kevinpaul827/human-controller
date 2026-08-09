@@ -4,9 +4,12 @@ import json
 import os
 import re
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
+
+from backend.matching_engine.core.types import MOTION_TYPE, GestureTemplate
 
 from ..utils.json_storage import json_path, write_json_atomic
 
@@ -56,38 +59,54 @@ class SavedGesture:
     schemaVersion: int = CURRENT_ACTION_SCHEMA_VERSION
     gesture_id: str = ""
     name: str = ""
-    type: str = "state"
+    type: str = MOTION_TYPE
     regions: list[str] = field(default_factory=list)
     active_joints: list[str] = field(default_factory=list)
-    target_angles: dict[str, float] = field(default_factory=dict)
-    tolerance_deg: dict[str, float] = field(default_factory=dict)
     trajectory: list[dict[str, object]] = field(default_factory=list)
     fps: int = 30
 
     @classmethod
-    def from_dict(cls, payload: dict) -> "SavedGesture":
+    def from_dict(cls, payload: Mapping[str, object]) -> "SavedGesture":
         gesture_id = str(payload.get("gesture_id") or "").strip()
         name = str(payload.get("name") or "").strip()
         if not gesture_id or not name:
             raise ValueError("gesture_id and name are required")
 
-        return cls(
-            schemaVersion=int(payload.get("schemaVersion", CURRENT_ACTION_SCHEMA_VERSION)),
+        gesture_type = str(payload.get("type", MOTION_TYPE) or "")
+        if gesture_type != MOTION_TYPE:
+            raise ValueError("Only motion gestures are supported.")
+        regions = payload.get("regions", [])
+        active_joints = payload.get("active_joints", [])
+        trajectory = payload.get("trajectory", [])
+        if not isinstance(regions, list):
+            raise ValueError("regions must be a list.")
+        if not isinstance(active_joints, list):
+            raise ValueError("active_joints must be a list.")
+        if not isinstance(trajectory, list) or not trajectory:
+            raise ValueError("Motion gestures require a trajectory.")
+
+        template = GestureTemplate(
             gesture_id=gesture_id,
             name=name,
-            type=str(payload.get("type", "state") or "state"),
-            regions=[str(region) for region in payload.get("regions", [])],
-            active_joints=[str(joint) for joint in payload.get("active_joints", [])],
-            target_angles={
-                str(joint): float(angle)
-                for joint, angle in payload.get("target_angles", {}).items()
-            },
-            tolerance_deg={
-                str(joint): float(angle)
-                for joint, angle in payload.get("tolerance_deg", {}).items()
-            },
-            trajectory=list(payload.get("trajectory", [])),
-            fps=max(1, int(payload.get("fps", 30))),
+            active_joints=active_joints,
+            trajectory=trajectory,
+            fps=int(payload.get("fps", 30)),
+        )
+        return cls(
+            schemaVersion=int(payload.get("schemaVersion", CURRENT_ACTION_SCHEMA_VERSION)),
+            gesture_id=template.gesture_id,
+            name=template.name,
+            type=MOTION_TYPE,
+            regions=[str(region) for region in regions],
+            active_joints=[joint.value for joint in template.active_joints],
+            trajectory=[
+                {
+                    joint.value: None if value is None else float(value)
+                    for joint, value in frame.items()
+                }
+                for frame in template.trajectory
+            ],
+            fps=template.fps,
         )
 
     def to_dict(self) -> dict:
@@ -99,26 +118,39 @@ class SavedGesture:
             "name": self.name,
         }
 
-    def to_template(self):
-        from backend.matching_engine.core.angles import AngleKey
-        from backend.matching_engine.core.types import GestureTemplate
+    @classmethod
+    def from_template(
+        cls,
+        template: GestureTemplate,
+        *,
+        regions: list[str],
+        gesture_id: str | None = None,
+    ) -> "SavedGesture":
+        return cls(
+            gesture_id=str(gesture_id or template.gesture_id),
+            name=template.name,
+            type=MOTION_TYPE,
+            regions=list(regions),
+            active_joints=[joint.value for joint in template.active_joints],
+            trajectory=[
+                {
+                    joint.value: None if value is None else float(value)
+                    for joint, value in frame.items()
+                }
+                for frame in template.trajectory
+            ],
+            fps=template.fps,
+        )
 
+    def to_template(self) -> GestureTemplate:
         return GestureTemplate(
             name=self.name,
             gesture_id=self.gesture_id,
-            type=self.type,
-            active_joints=[AngleKey(joint) for joint in self.active_joints],
-            target_angles={
-                AngleKey(joint): float(angle)
-                for joint, angle in self.target_angles.items()
-            },
-            tolerance_deg={
-                AngleKey(joint): float(angle)
-                for joint, angle in self.tolerance_deg.items()
-            },
+            active_joints=self.active_joints,
             trajectory=self.trajectory,
             fps=self.fps,
         )
+
 
 class GestureStore:
     def __init__(self, gestures_dir: Path = DEFAULT_GESTURES_DIR) -> None:
@@ -148,19 +180,20 @@ class GestureStore:
         return slug[:64]
 
     def save(self, gesture: SavedGesture) -> Path:
-        path = self._gesture_path(gesture.gesture_id)
-        write_json_atomic(path, gesture.to_dict())
+        validated = SavedGesture.from_dict(gesture.to_dict())
+        path = self._gesture_path(validated.gesture_id)
+        write_json_atomic(path, validated.to_dict())
         return path
 
-    def create_or_update(
+    def create_motion(
         self,
         *,
         name: str,
         regions: list[str],
         active_joints: list[str],
-        target_angles: dict[str, float],
-        tolerance_deg: dict[str, float] | None = None,
+        trajectory: list[dict[str, object]],
         gesture_id: str | None = None,
+        fps: int = 30,
     ) -> SavedGesture:
         resolved_gesture_id = gesture_id or self._make_gesture_id(name)
         gesture = SavedGesture(
@@ -168,11 +201,11 @@ class GestureStore:
             name=name,
             regions=regions,
             active_joints=active_joints,
-            target_angles=target_angles,
-            tolerance_deg=tolerance_deg or {},
+            trajectory=trajectory,
+            fps=fps,
         )
         self.save(gesture)
-        return gesture
+        return self.load(resolved_gesture_id)
 
     def load(self, gesture_id: str) -> SavedGesture:
         payload = json.loads(self._gesture_path(gesture_id).read_text(encoding="utf-8"))
