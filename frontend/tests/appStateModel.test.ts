@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bindingsForPatient,
+  clampPercentage,
   initialState,
   parseStoredState,
   readinessFor,
@@ -11,12 +12,51 @@ import {
 } from "@/state/appStateModel";
 
 describe("app state model", () => {
+  it("loads valid saved browser state", () => {
+    const saved = initialState();
+    saved.settings.poseModel = "heavy";
+    saved.selectedPatientId = "patient-a";
+
+    expect(parseStoredState(JSON.stringify(saved))).toEqual(saved);
+  });
+
+  it("fills optional fields in a partial saved browser state", () => {
+    const state = parseStoredState(
+      JSON.stringify({
+        gestures: [],
+        bindings: [],
+        settings: { poseModel: "full" },
+      }),
+    );
+
+    expect(state.presets).toEqual([]);
+    expect(state.selectedPatientId).toBeNull();
+    expect(state.activePresetId).toBeNull();
+    expect(state.patients.length).toBeGreaterThan(0);
+    expect(state.settings).toEqual(
+      expect.objectContaining({ poseModel: "full", matchThreshold: 75 }),
+    );
+  });
+
+  it("uses defaults for missing and structurally invalid browser state", () => {
+    expect(parseStoredState(null)).toEqual(initialState());
+    expect(parseStoredState(JSON.stringify({ gestures: "invalid" }))).toEqual(
+      initialState(),
+    );
+  });
+
   it("falls back to a valid initial state for corrupt browser data", () => {
     const state = parseStoredState("{not-json");
 
     expect(state.settings.poseModel).toBe("lite");
     expect(state.gestures.length).toBeGreaterThan(0);
     expect(state.bindings.length).toBeGreaterThan(0);
+  });
+
+  it("clamps gesture thresholds to their allowed range", () => {
+    expect(clampPercentage(-10, 75)).toBe(0);
+    expect(clampPercentage(140, 75)).toBe(100);
+    expect(clampPercentage("not-a-number", 75)).toBe(75);
   });
 
   it("returns isolated initial state objects", () => {

@@ -1,4 +1,8 @@
-import { getQtWebChannel } from "./qtWebChannel";
+import {
+  createBridgeResolver,
+  invokeWithResult,
+  isDesktopQtRuntime,
+} from "./qtBridgeUtils";
 import type {
   DesktopState,
   PoseModel,
@@ -42,51 +46,10 @@ type NavigatorWithMemory = Navigator & {
   deviceMemory?: number;
 };
 
-let bridgePromise: Promise<QtStateBridge> | null = null;
-
-const getBridge = () => {
-  bridgePromise ??= getQtWebChannel().then((channel) => {
-    const bridge = channel.objects.stateBridge as QtStateBridge | undefined;
-    if (!bridge) throw new Error("Desktop state bridge is unavailable.");
-    return bridge;
-  });
-  return bridgePromise;
-};
-
-const invokeWithResult = <T>(
-  invoke: (callback: (result: T) => void) => unknown,
-) =>
-  new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const settle = (result: T) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-    try {
-      const maybePromise = invoke(settle);
-      if (
-        maybePromise != null &&
-        typeof (maybePromise as PromiseLike<T>).then === "function"
-      ) {
-        void Promise.resolve(maybePromise as PromiseLike<T>).then(
-          settle,
-          (error: unknown) => {
-            if (settled) return;
-            settled = true;
-            reject(error);
-          },
-        );
-      } else if (maybePromise !== undefined) {
-        settle(maybePromise as T);
-      }
-    } catch (error) {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    }
-  });
+const stateBridgeResolver = createBridgeResolver<QtStateBridge>(
+  "stateBridge",
+  "Desktop state bridge is unavailable.",
+);
 
 const browserPoseModelRecommendation = (): PoseModelRecommendation => {
   const detectedLogicalCpus = navigator.hardwareConcurrency;
@@ -122,59 +85,61 @@ const browserPoseModelRecommendation = (): PoseModelRecommendation => {
   };
 };
 
-const isDesktopRuntime = () =>
-  Boolean(window.qt?.webChannelTransport && window.QWebChannel);
-
 export const desktopStateBridge = {
   async getState() {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.getState(callback),
     );
   },
   async recommendPoseModel() {
-    if (!isDesktopRuntime()) {
+    if (!isDesktopQtRuntime()) {
       return browserPoseModelRecommendation();
     }
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<PoseModelRecommendation>((callback) =>
       bridge.recommendPoseModel(callback),
     );
   },
   async saveState(state: DesktopState) {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.saveState(state, callback),
     );
   },
   async selectPatient(patientId: string) {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.selectPatient(patientId, callback),
     );
   },
   async createProfile(patientName: string, notes = "") {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.createProfile(patientName, notes, callback),
     );
   },
   async deleteProfile(patientId: string) {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.deleteProfile(patientId, callback),
     );
   },
   async clearPatientSelection() {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.clearPatientSelection(callback),
     );
   },
   async deleteGesture(gestureId: string) {
-    const bridge = await getBridge();
+    const bridge = await stateBridgeResolver.get();
     return invokeWithResult<DesktopState>((callback) =>
       bridge.deleteGesture(gestureId, callback),
     );
   },
+};
+
+/** @internal Reset cached bridge state between isolated tests. */
+export const resetDesktopStateBridgeForTests = () => {
+  stateBridgeResolver.reset();
 };

@@ -1,28 +1,34 @@
 import type { GestureSummary, PatientProfile } from "../types/profile";
-import { getQtWebChannel } from "./qtWebChannel";
+import {
+  createBridgeResolver,
+  invokeWithResult,
+  isDesktopQtRuntime,
+} from "./qtBridgeUtils";
 
 type BridgeCallback = (response: string) => void;
 
+type BridgeResult = string | Promise<string> | void;
+
 type QtProfileBridgeObject = {
-  listProfiles: (callback: BridgeCallback) => void;
-  listGestures: (callback: BridgeCallback) => void;
+  listProfiles: (callback?: BridgeCallback) => BridgeResult;
+  listGestures: (callback?: BridgeCallback) => BridgeResult;
   createProfile: (
     patientName: string,
     notes: string,
-    callback: BridgeCallback,
-  ) => void;
-  deleteProfile: (patientId: string, callback: BridgeCallback) => void;
+    callback?: BridgeCallback,
+  ) => BridgeResult;
+  deleteProfile: (patientId: string, callback?: BridgeCallback) => BridgeResult;
   setKeyBinding: (
     patientId: string,
     gestureId: string,
     key: string,
-    callback: BridgeCallback,
-  ) => void;
+    callback?: BridgeCallback,
+  ) => BridgeResult;
   removeKeyBinding: (
     patientId: string,
     gestureId: string,
-    callback: BridgeCallback,
-  ) => void;
+    callback?: BridgeCallback,
+  ) => BridgeResult;
 };
 
 type BridgeResponse<T> = {
@@ -31,26 +37,14 @@ type BridgeResponse<T> = {
   error?: string;
 };
 
-const BRIDGE_NAME = "profileBridge";
 const BRIDGE_ERROR = "Qt WebChannel profile bridge is unavailable.";
 
-let bridgePromise: Promise<QtProfileBridgeObject> | null = null;
+const profileBridgeResolver = createBridgeResolver<QtProfileBridgeObject>(
+  "profileBridge",
+  BRIDGE_ERROR,
+);
 
-export const isProfileDesktopRuntime = () =>
-  Boolean(window.qt?.webChannelTransport && window.QWebChannel);
-
-const getProfileBridgeOrThrow = () => {
-  bridgePromise ??= getQtWebChannel().then((channel) => {
-    const bridge = channel.objects[BRIDGE_NAME] as
-      | QtProfileBridgeObject
-      | undefined;
-    if (!bridge) {
-      throw new Error(BRIDGE_ERROR);
-    }
-    return bridge;
-  });
-  return bridgePromise;
-};
+export const isProfileDesktopRuntime = () => isDesktopQtRuntime();
 
 const parseResponse = <T>(response: string) => {
   const payload = JSON.parse(response) as BridgeResponse<T>;
@@ -61,22 +55,16 @@ const parseResponse = <T>(response: string) => {
 };
 
 const callBridge = async <T>(
-  invoke: (bridge: QtProfileBridgeObject, callback: BridgeCallback) => void,
+  invoke: (
+    bridge: QtProfileBridgeObject,
+    callback: BridgeCallback,
+  ) => BridgeResult,
 ) => {
-  const bridge = await getProfileBridgeOrThrow();
-  return new Promise<T>((resolve, reject) => {
-    try {
-      invoke(bridge, (response) => {
-        try {
-          resolve(parseResponse<T>(response));
-        } catch (error) {
-          reject(error);
-        }
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
+  const bridge = await profileBridgeResolver.get();
+  const response = await invokeWithResult<string>((callback) =>
+    invoke(bridge, callback),
+  );
+  return parseResponse<T>(response);
 };
 
 const profileBridge = {
@@ -112,3 +100,8 @@ const profileBridge = {
 };
 
 export default profileBridge;
+
+/** @internal Reset cached bridge state between isolated tests. */
+export const resetProfileBridgeForTests = () => {
+  profileBridgeResolver.reset();
+};
