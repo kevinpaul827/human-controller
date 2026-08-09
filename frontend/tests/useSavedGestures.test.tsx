@@ -101,7 +101,9 @@ describe("useSavedGestures", () => {
   it("loads gestures on mount and toggles loading state", async () => {
     const availableDeferred = deferred<SavedGestureSummary[]>();
     const loadedDeferred = deferred<SavedGestureSummary[]>();
-    bridgeMocks.listSavedGestures.mockReturnValueOnce(availableDeferred.promise);
+    bridgeMocks.listSavedGestures.mockReturnValueOnce(
+      availableDeferred.promise,
+    );
     bridgeMocks.getLoadedSessionGestures.mockReturnValueOnce(
       loadedDeferred.promise,
     );
@@ -204,7 +206,9 @@ describe("useSavedGestures", () => {
   it("ignores in-flight refresh completion after unmount", async () => {
     const availableDeferred = deferred<SavedGestureSummary[]>();
     const loadedDeferred = deferred<SavedGestureSummary[]>();
-    bridgeMocks.listSavedGestures.mockReturnValueOnce(availableDeferred.promise);
+    bridgeMocks.listSavedGestures.mockReturnValueOnce(
+      availableDeferred.promise,
+    );
     bridgeMocks.getLoadedSessionGestures.mockReturnValueOnce(
       loadedDeferred.promise,
     );
