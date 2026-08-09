@@ -20,7 +20,6 @@ POSE_TRACKER_BETA = 0.08
 MAX_POSE_PROJECTION_MS = 33
 POSE_TRACKER_RESET_GAP_MS = 250
 
-
 def landmarks_for_angle_joints(joint_names) -> set[PoseKeypoint]:
     landmarks: set[PoseKeypoint] = set()
     for joint_name in joint_names:
