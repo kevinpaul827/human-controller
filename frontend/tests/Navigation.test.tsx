@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 
-import { act } from "react"
+import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-;
+
 import Header from "@/components/Header";
 import { NAV_ITEMS } from "@/utils/constants";
 
 vi.mock("@/components/ProfileSwitcher", () => ({
-  default: () => null
+  default: () => null,
 }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -31,14 +31,14 @@ describe("Navigation", () => {
             <Route path="/calibrate" element={<div>Calibrate</div>} />
             <Route path="/settings" element={<div>Settings</div>} />
           </Routes>
-        </MemoryRouter>
+        </MemoryRouter>,
       );
     });
-  }
+  };
 
   const findNavLink = (label: string) =>
     Array.from(container.querySelectorAll("a")).find(
-      (link) => link.textContent?.trim() === label
+      (link) => link.textContent?.trim() === label,
     );
 
   beforeEach(async () => {
@@ -59,7 +59,7 @@ describe("Navigation", () => {
       expect(findNavLink(item.label)).toBeDefined();
     }
   });
-  
+
   it("start in session page", () => {
     const sessionLink = findNavLink("Session");
     expect(sessionLink).toBeDefined();
@@ -76,27 +76,27 @@ describe("Navigation", () => {
     await act(async () => {
       profilesLink?.click();
     });
-    expect(container.textContent).toContain("Profiles")
+    expect(container.textContent).toContain("Profiles");
 
     await act(async () => {
       libraryLink?.click();
     });
-    expect(container.textContent).toContain("Library")
+    expect(container.textContent).toContain("Library");
 
     await act(async () => {
       calibrationLink?.click();
     });
-    expect(container.textContent).toContain("Calibrate")
+    expect(container.textContent).toContain("Calibrate");
 
     await act(async () => {
       settingsLink?.click();
     });
-    expect(container.textContent).toContain("Settings")
+    expect(container.textContent).toContain("Settings");
 
     await act(async () => {
       sessionLink?.click();
     });
-    expect(container.textContent).toContain("Session")
+    expect(container.textContent).toContain("Session");
   });
 
   it("updates active tab when navigating", async () => {
@@ -113,4 +113,4 @@ describe("Navigation", () => {
     expect(profilesLink?.getAttribute("aria-current")).toBe("page");
     expect(sessionLink?.getAttribute("aria-current")).toBeNull();
   });
-})
+});
