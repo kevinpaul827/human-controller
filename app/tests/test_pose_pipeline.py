@@ -1,15 +1,15 @@
 import unittest
 
 from PySide6.QtGui import QImage
-from PySide6.QtWidgets import QApplication
 
 from app.core.pose_pipeline import PosePipeline
+from app.tests._bootstrap import ensure_qapplication
 
 
 class PosePipelineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def setUp(self):
         self.pipeline = PosePipeline()

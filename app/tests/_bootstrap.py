@@ -1,3 +1,4 @@
+import os
 import sys
 from types import ModuleType
 from unittest.mock import MagicMock
@@ -124,6 +125,13 @@ def ensure_qt_and_ui_stubs() -> None:
     install_pose_processor_stub()
     install_overlay_constants_stub()
     install_picture_in_picture_stub()
+
+
+def ensure_qapplication():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
 
 
 def import_main_modules_with_stubs():

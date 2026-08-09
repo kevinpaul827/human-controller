@@ -1,20 +1,17 @@
-import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
 
 import app.ui.picture_in_picture_window as picture_in_picture_module
+from app.tests._bootstrap import ensure_qapplication
 from app.ui.picture_in_picture_window import PictureInPictureWindow
 
 
 class PictureInPictureWindowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def tearDown(self) -> None:
         for window in QApplication.topLevelWidgets():

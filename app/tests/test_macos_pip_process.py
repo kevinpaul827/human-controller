@@ -18,6 +18,7 @@ from app.platforms.macos.pip_process import (
     build_pip_helper_command,
 )
 from app.platforms.macos.pip_protocol import MessageBuffer
+from app.tests._bootstrap import ensure_qapplication
 
 
 class FakeSignal:
@@ -129,7 +130,7 @@ class FakeProcess:
 class MacOSPictureInPictureProxyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def setUp(self):
         self.transport = FakeTransport()
@@ -255,7 +256,7 @@ class MacOSPictureInPictureProxyTests(unittest.TestCase):
 class MacOSPipProcessTransportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.application = QApplication.instance() or QApplication([])
+        cls.application = ensure_qapplication()
 
     def test_pending_frames_coalesce_to_latest_without_blocking_control(self):
         writer = FakeFrameWriter()

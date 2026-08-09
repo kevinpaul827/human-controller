@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app.tests.test_bootstrap import import_main_modules_with_stubs
+from app.tests._bootstrap import import_main_modules_with_stubs
 
 
 main, main_window = import_main_modules_with_stubs()
