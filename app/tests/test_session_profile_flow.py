@@ -5,7 +5,7 @@ from pathlib import Path
 from app.bridges.session_bridge import SessionBridge, SessionState
 from app.bridges.state_bridge import StateBridge
 from app.core.camera_manager import CameraManager
-from app.gestures.gesture_matcher import GestureMatcher
+from app.core.gesture_session import GestureSession
 from app.gestures.gesture_store import GestureStore
 from app.profile_manager import PatientProfile, ProfileManager
 
@@ -23,10 +23,6 @@ class FakeSignal:
 
 
 class FakeCamera:
-    _loaded_session_gestures = CameraManager._loaded_session_gestures
-    _refresh_gesture_matcher_templates = (
-        CameraManager._refresh_gesture_matcher_templates
-    )
     session_gesture_mappings = CameraManager.session_gesture_mappings
     configure_session_gestures = CameraManager.configure_session_gestures
     clear_session_gestures = CameraManager.clear_session_gestures
@@ -38,11 +34,8 @@ class FakeCamera:
         self.frameProcessed = FakeSignal()
         self.gestureMatchUpdated = FakeSignal()
         self.previewAspectRatioChanged = FakeSignal()
-        self.gesture_matcher = GestureMatcher(gestures_dir)
+        self.gesture_session = GestureSession(gestures_dir)
         self.active_bridge = None
-        self._loaded_session_gesture_ids = []
-        self._session_key_bindings = {}
-        self._use_session_gesture_subset = False
 
     def start(self, bridge: str) -> None:
         self.active_bridge = bridge
@@ -109,13 +102,13 @@ class SessionProfileFlowTests(unittest.TestCase):
         )
         self.assertEqual(result["data"]["missingGestureIds"], ["missing_gesture"])
         self.assertEqual(
-            self.camera.gesture_matcher.active_gesture_ids,
+            self.camera.gesture_session.matcher.active_gesture_ids,
             frozenset({"right_arm_raise", "missing_gesture"}),
         )
         self.assertEqual(
             [
                 template.gesture_id
-                for template in self.camera.gesture_matcher._state_templates
+                for template in self.camera.gesture_session.matcher._state_templates
             ],
             ["right_arm_raise"],
         )
@@ -155,8 +148,8 @@ class SessionProfileFlowTests(unittest.TestCase):
 
         self.assertEqual(self.bridge.state, SessionState.IDLE)
         self.assertIsNone(self.bridge.active_patient_id)
-        self.assertEqual(self.camera._loaded_session_gesture_ids, [])
-        self.assertFalse(self.camera._use_session_gesture_subset)
+        self.assertEqual(self.camera.gesture_session.gesture_mappings(), [])
+        self.assertIsNone(self.camera.gesture_session.matcher.active_gesture_ids)
 
     def test_missing_profile_returns_error_without_starting_session(self) -> None:
         result = self.bridge.loadProfile("missing")
