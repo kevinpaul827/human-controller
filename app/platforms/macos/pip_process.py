@@ -21,7 +21,7 @@ from .pip_protocol import (
     encode_message,
 )
 
-
+# Helper-process lifecycle policy. Durations are milliseconds.
 HELPER_APP_NAME = "Human Controller PiP.app"
 HELPER_EXECUTABLE_NAME = "Human Controller PiP"
 HELPER_READY_TIMEOUT_MS = 5000

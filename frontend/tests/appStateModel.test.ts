@@ -15,19 +15,27 @@ describe("app state model", () => {
     const state = parseStoredState("{not-json");
 
     expect(state.settings.poseModel).toBe("lite");
-    expect(state.gestures.length).toBeGreaterThan(0);
-    expect(state.bindings.length).toBeGreaterThan(0);
+    expect(state.gestures).toEqual([]);
+    expect(state.bindings).toEqual([]);
   });
 
   it("returns isolated initial state objects", () => {
     const first = initialState();
     const second = initialState();
 
-    first.bindings[0].key = "Changed";
-    first.patients[0].keyBindings.extra = "X";
+    first.bindings.push({ gestureId: "gesture", key: "Changed" });
+    first.patients.push({
+      schemaVersion: 2,
+      patientId: "patient",
+      patientName: "Patient",
+      notes: "",
+      updatedAt: "2026-08-08T00:00:00.000Z",
+      keyBindings: { extra: "X" },
+      matchThresholds: {},
+    });
 
-    expect(second.bindings[0].key).not.toBe("Changed");
-    expect(second.patients[0].keyBindings.extra).toBeUndefined();
+    expect(second.bindings).toEqual([]);
+    expect(second.patients).toEqual([]);
   });
 
   it("resolves missing gestures and replaces invalid thresholds", () => {
@@ -68,7 +76,16 @@ describe("app state model", () => {
 
   it("keeps selected patient bindings and thresholds in sync", () => {
     const state = initialState();
-    const selected = state.patients[0];
+    const selected = {
+      schemaVersion: 2,
+      patientId: "patient",
+      patientName: "Patient",
+      notes: "",
+      updatedAt: "2026-08-08T00:00:00.000Z",
+      keyBindings: {},
+      matchThresholds: {},
+    };
+    state.patients = [selected];
     state.selectedPatientId = selected.patientId;
     const bindings = [
       { gestureId: "elbow", key: "E", matchThreshold: 150 },

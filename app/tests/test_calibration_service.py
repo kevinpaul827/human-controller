@@ -32,7 +32,6 @@ class CalibrationServiceTests(unittest.TestCase):
         gesture = self.store.load("elbow_sweep")
 
         self.assertEqual(captured["repCount"], 1)
-        self.assertEqual(gesture.type, "motion")
         self.assertEqual(len(gesture.trajectory), 32)
 
     def test_cancel_discards_only_the_in_progress_recording(self) -> None:

@@ -1,9 +1,3 @@
-import {
-  SAMPLE_BINDINGS,
-  SAMPLE_GESTURES,
-  SAMPLE_PATIENTS,
-  SAMPLE_PRESETS,
-} from "@/data/sampleProfiles";
 import type { DesktopState, RuntimeSettings } from "@/types/desktopState";
 import type { Binding, Patient } from "@/types/profile";
 import type { Readiness, ResolvedBinding } from "./appStateContext";
@@ -17,23 +11,13 @@ export const DEFAULT_SETTINGS: RuntimeSettings = {
   poseModel: "lite",
 };
 
-const copyBindings = (bindings: Binding[]): Binding[] =>
-  bindings.map((binding) => ({ ...binding }));
-
 export const initialState = (): DesktopState => ({
-  gestures: SAMPLE_GESTURES.map((gesture) => ({ ...gesture })),
-  bindings: copyBindings(SAMPLE_BINDINGS),
-  presets: SAMPLE_PRESETS.map((preset) => ({
-    ...preset,
-    bindings: copyBindings(preset.bindings),
-  })),
+  gestures: [],
+  bindings: [],
+  presets: [],
   selectedPatientId: null,
   activePresetId: null,
-  patients: SAMPLE_PATIENTS.map((patient) => ({
-    ...patient,
-    keyBindings: { ...patient.keyBindings },
-    matchThresholds: { ...patient.matchThresholds },
-  })),
+  patients: [],
   settings: { ...DEFAULT_SETTINGS },
 });
 

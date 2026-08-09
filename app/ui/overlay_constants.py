@@ -9,6 +9,17 @@ POSE_CONNECTIONS = BODY_CONNECTIONS
 # Ignore landmarks below this confidence so weak detections do not clutter the overlay.
 MIN_VISIBILITY = 0.35
 
+# Alpha-beta tracker gains: alpha corrects position and beta corrects velocity.
+# Higher gains follow detections more closely but smooth less.
+# Reference: https://kalmanfilter.net/alphabeta.html
+POINT_RADIUS = 4
+LINE_WIDTH = 3
+POSE_TRACKER_ALPHA = 0.55
+POSE_TRACKER_BETA = 0.08
+# Durations in milliseconds. Cap extrapolation briefly; reset after a stale gap.
+MAX_POSE_PROJECTION_MS = 33
+POSE_TRACKER_RESET_GAP_MS = 250
+
 
 def landmarks_for_angle_joints(joint_names) -> set[PoseKeypoint]:
     landmarks: set[PoseKeypoint] = set()

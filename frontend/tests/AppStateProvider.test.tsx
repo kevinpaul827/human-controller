@@ -57,7 +57,26 @@ describe("AppStateProvider", () => {
     container?.remove();
   });
 
-  it("updates rendered readiness after a browser user binds a pending gesture", async () => {
+  it("updates rendered readiness after a browser user binds a recorded gesture", async () => {
+    storedValues.set(
+      "human-controller/app-state/v2",
+      JSON.stringify({
+        gestures: [
+          {
+            gestureId: "ges-jump",
+            name: "Jump",
+            calibratedAt: "2026-08-08T00:00:00.000Z",
+            matchScore: null,
+          },
+        ],
+        bindings: [],
+        presets: [],
+        patients: [],
+        selectedPatientId: null,
+        activePresetId: null,
+        settings: {},
+      }),
+    );
     await act(async () => {
       root.render(
         <AppStateProvider>
@@ -70,9 +89,9 @@ describe("AppStateProvider", () => {
 
     expect(
       container.querySelector('[data-testid="binding-count"]')?.textContent,
-    ).toBe("3");
+    ).toBe("0");
     expect(container.querySelector('[data-testid="ready"]')?.textContent).toBe(
-      "true",
+      "false",
     );
 
     const button = container.querySelector("button");
@@ -81,9 +100,9 @@ describe("AppStateProvider", () => {
 
     expect(
       container.querySelector('[data-testid="binding-count"]')?.textContent,
-    ).toBe("4");
+    ).toBe("1");
     expect(container.querySelector('[data-testid="ready"]')?.textContent).toBe(
-      "false",
+      "true",
     );
   });
 });

@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from app.bridges.state_bridge import StateBridge
 from app.gestures.gesture_store import GestureStore
-from app.profile_manager import ProfileManager
+from app.profile_manager import PatientProfile, ProfileManager
 
 
 class StateBridgeThresholdTests(unittest.TestCase):
@@ -17,6 +17,12 @@ class StateBridgeThresholdTests(unittest.TestCase):
         self.bridge = StateBridge(
             self.data_dir,
             GestureStore(self.data_dir / "gestures"),
+        )
+        self.bridge.profile_manager.create(
+            PatientProfile(patientId="patient-a", patientName="Patient A")
+        )
+        self.bridge.profile_manager.create(
+            PatientProfile(patientId="patient-b", patientName="Patient B")
         )
 
     def tearDown(self) -> None:
@@ -158,7 +164,7 @@ class StateBridgeThresholdTests(unittest.TestCase):
 
         self.assertIs(bridge.profile_manager, manager)
 
-    def test_fresh_state_starts_unassigned(self):
+    def test_state_starts_unassigned_despite_existing_profiles(self):
         snapshot = self.bridge.getState()
 
         self.assertIsNone(snapshot["selectedPatientId"])
@@ -189,7 +195,6 @@ class StateBridgeThresholdTests(unittest.TestCase):
         gesture_store.create_motion(
             gesture_id="delete_me",
             name="Delete Me",
-            regions=["right_arm"],
             active_joints=["R_ELBOW"],
             trajectory=[{"R_ELBOW": 45.0}, {"R_ELBOW": 90.0}],
         )

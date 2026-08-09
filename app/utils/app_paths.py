@@ -4,8 +4,8 @@ import os
 import sys
 from pathlib import Path
 
+from app.product import APPLICATION_NAME as APP_DIR_NAME
 
-APP_DIR_NAME = "Human Controller"
 DATA_DIR_ENV = "HUMAN_CONTROLLER_DATA_DIR"
 
 

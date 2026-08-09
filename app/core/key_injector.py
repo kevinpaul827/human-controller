@@ -5,23 +5,12 @@ import time
 from ..platforms import create_keyboard_backend
 from ..platforms.key_injection import KeyInjectionError
 
-
 DEFAULT_KEY_PRESS_SECONDS = 0.12
-
 _ALIASES = {
-    "arrowup": "up",
-    "arrowdown": "down",
-    "arrowleft": "left",
-    "arrowright": "right",
-    "control": "ctrl",
-    "option": "alt",
-    "return": "enter",
-    "escape": "esc",
-    "meta": "cmd",
-    "command": "cmd",
-    "pageup": "page_up",
-    "pagedown": "page_down",
-    "capslock": "caps_lock",
+    "arrowup": "up", "arrowdown": "down", "arrowleft": "left",
+    "arrowright": "right", "control": "ctrl", "option": "alt",
+    "return": "enter", "escape": "esc", "meta": "cmd", "command": "cmd",
+    "pageup": "page_up", "pagedown": "page_down", "capslock": "caps_lock",
 }
 
 

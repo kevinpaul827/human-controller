@@ -9,14 +9,14 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from uuid import uuid4
 
-from backend.matching_engine.core.types import MOTION_TYPE, GestureTemplate
+from backend.matching_engine.core.types import GestureTemplate
 
+from app.product import APPLICATION_NAME as APP_SUPPORT_DIR_NAME
+from .constants import (
+    GESTURES_DIR_ENV,
+    PROJECT_ROOT_ENV,
+)
 from ..utils.json_storage import json_path, write_json_atomic
-
-CURRENT_ACTION_SCHEMA_VERSION = 1
-GESTURES_DIR_ENV = "HUMAN_CONTROLLER_GESTURES_DIR"
-PROJECT_ROOT_ENV = "HUMAN_CONTROLLER_PROJECT_ROOT"
-APP_SUPPORT_DIR_NAME = "Human Controller"
 
 
 def _production_app_data_dir() -> Path:
@@ -56,11 +56,8 @@ DEFAULT_GESTURES_DIR = resolve_default_gestures_dir()
 
 @dataclass
 class SavedGesture:
-    schemaVersion: int = CURRENT_ACTION_SCHEMA_VERSION
     gesture_id: str = ""
     name: str = ""
-    type: str = MOTION_TYPE
-    regions: list[str] = field(default_factory=list)
     active_joints: list[str] = field(default_factory=list)
     trajectory: list[dict[str, object]] = field(default_factory=list)
     fps: int = 30
@@ -72,14 +69,8 @@ class SavedGesture:
         if not gesture_id or not name:
             raise ValueError("gesture_id and name are required")
 
-        gesture_type = str(payload.get("type", MOTION_TYPE) or "")
-        if gesture_type != MOTION_TYPE:
-            raise ValueError("Only motion gestures are supported.")
-        regions = payload.get("regions", [])
         active_joints = payload.get("active_joints", [])
         trajectory = payload.get("trajectory", [])
-        if not isinstance(regions, list):
-            raise ValueError("regions must be a list.")
         if not isinstance(active_joints, list):
             raise ValueError("active_joints must be a list.")
         if not isinstance(trajectory, list) or not trajectory:
@@ -93,11 +84,8 @@ class SavedGesture:
             fps=int(payload.get("fps", 30)),
         )
         return cls(
-            schemaVersion=int(payload.get("schemaVersion", CURRENT_ACTION_SCHEMA_VERSION)),
             gesture_id=template.gesture_id,
             name=template.name,
-            type=MOTION_TYPE,
-            regions=[str(region) for region in regions],
             active_joints=[joint.value for joint in template.active_joints],
             trajectory=[
                 {
@@ -123,14 +111,11 @@ class SavedGesture:
         cls,
         template: GestureTemplate,
         *,
-        regions: list[str],
         gesture_id: str | None = None,
     ) -> "SavedGesture":
         return cls(
             gesture_id=str(gesture_id or template.gesture_id),
             name=template.name,
-            type=MOTION_TYPE,
-            regions=list(regions),
             active_joints=[joint.value for joint in template.active_joints],
             trajectory=[
                 {
@@ -189,7 +174,6 @@ class GestureStore:
         self,
         *,
         name: str,
-        regions: list[str],
         active_joints: list[str],
         trajectory: list[dict[str, object]],
         gesture_id: str | None = None,
@@ -199,7 +183,6 @@ class GestureStore:
         gesture = SavedGesture(
             gesture_id=resolved_gesture_id,
             name=name,
-            regions=regions,
             active_joints=active_joints,
             trajectory=trajectory,
             fps=fps,

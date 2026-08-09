@@ -59,7 +59,6 @@ class SessionProfileFlowTests(unittest.TestCase):
         self.gesture_store = GestureStore(root / "gestures")
         self.gesture_store.create_motion(
             name="Right Arm Raise",
-            regions=["upper_body"],
             active_joints=["L_SHOULDER_ABD"],
             trajectory=[
                 {"L_SHOULDER_ABD": 30.0},
@@ -68,7 +67,6 @@ class SessionProfileFlowTests(unittest.TestCase):
         )
         self.gesture_store.create_motion(
             name="Left Arm Raise",
-            regions=["upper_body"],
             active_joints=["R_SHOULDER_ABD"],
             trajectory=[
                 {"R_SHOULDER_ABD": 30.0},
@@ -200,7 +198,6 @@ class StateDrivenSessionProfileFlowTests(unittest.TestCase):
         self.gesture_store.create_motion(
             gesture_id="right_arm_raise",
             name="Right Arm Raise",
-            regions=["upper_body"],
             active_joints=["L_SHOULDER_ABD"],
             trajectory=[
                 {"L_SHOULDER_ABD": 30.0},
@@ -212,12 +209,16 @@ class StateDrivenSessionProfileFlowTests(unittest.TestCase):
             self.gesture_store,
             self.profile_manager,
         )
-        profile = self.profile_manager.load("patient-a")
-        profile.key_bindings = {
-            "right_arm_raise": "ArrowUp",
-            "missing_gesture": "M",
-        }
-        self.profile_manager.save(profile)
+        self.profile_manager.create(
+            PatientProfile(
+                patient_id="patient-a",
+                patient_name="Patient A",
+                key_bindings={
+                    "right_arm_raise": "ArrowUp",
+                    "missing_gesture": "M",
+                },
+            )
+        )
         self.camera = StateDrivenFakeCamera()
         self.state_bridge.runtimeConfigurationChanged.connect(
             self.camera.configure_runtime
