@@ -1,33 +1,11 @@
 name: macOS App Build
 
 on:
-  pull_request:
-    paths:
-      - "app/**"
-      - "backend/**"
-      - "frontend/**"
-      - "run_app.py"
-      - "scripts/**"
-      - "Makefile"
-      - ".github/workflows/macos-app-build.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "app/**"
-      - "backend/**"
-      - "frontend/**"
-      - "run_app.py"
-      - "scripts/**"
-      - "Makefile"
-      - ".github/workflows/macos-app-build.yml"
+  workflow_call:
 
 jobs:
   macos-app-build:
     runs-on: macos-latest
-    
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
@@ -73,21 +51,11 @@ jobs:
         run: '"dist/Human Controller.app/Contents/MacOS/Human Controller" --smoke-imports'
 
       - name: Archive macOS app bundle
-        run: ditto -c -k --sequesterRsrc --keepParent "dist/Human Controller.app" "dist/Human Controller-macOS.zip"
+        run: ditto -c -k --sequesterRsrc --keepParent "dist/Human Controller.app" "dist/Human-Controller-macOS.zip"
 
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: human-controller-macos-app
-          path: dist/Human Controller-macOS.zip
+          name: human-controller-macos-release
+          path: dist/Human-Controller-macOS.zip
           if-no-files-found: error
-          
-      - name: Publish to GitHub Releases
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: Latest Main Build
-          body: "Automated build from the latest commit on the main branch."
-          files: "dist/Human Controller-macOS.zip"
-          prerelease: true
