@@ -58,3 +58,4 @@ jobs:
         with:
           name: human-controller-macos-release
           path: dist/Human-Controller-macOS.zip
+          if-no-files-found: error
