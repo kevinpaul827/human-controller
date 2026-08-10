@@ -16,12 +16,6 @@ from ..core.runtime_configuration import RuntimeConfiguration, bounded_number
 from ..utils.device_capabilities import device_pose_recommendation
 
 
-DEFAULT_PATIENTS = (
-    ("patient-a", "Patient A"),
-    ("patient-b", "Patient B"),
-)
-
-
 class StateBridge(QObject):
     runtimeConfigurationChanged = Signal(dict)
     stateChanged = Signal(dict)
@@ -40,17 +34,6 @@ class StateBridge(QObject):
             self.data_dir / "profiles"
         )
         self.gesture_store = gesture_store
-        self._ensure_profiles()
-
-    def _ensure_profiles(self) -> None:
-        if self.profile_manager.list_profiles():
-            return
-        if self.state_path.exists():
-            return
-        for patient_id, patient_name in DEFAULT_PATIENTS:
-            self.profile_manager.create(
-                PatientProfile(patientId=patient_id, patientName=patient_name)
-            )
 
     def _read_ui_state(self) -> dict:
         defaults = {

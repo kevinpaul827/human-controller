@@ -6,14 +6,14 @@ from typing import Callable
 
 from ..utils.validation import bounded_number
 
-
+# `smoothing` adds preceding scores to the current score, so the effective
+# moving-average window is `smoothing + 1` frames. Durations are seconds.
 DEFAULT_SETTINGS = {
     "matchThreshold": 75.0,
     "cooldown": 0.5,
     "smoothing": 2,
     "poseModel": "lite",
 }
-
 KEY_TAP_SECONDS = 0.05
 
 

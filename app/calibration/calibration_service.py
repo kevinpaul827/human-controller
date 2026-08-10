@@ -8,7 +8,6 @@ from backend.matching_engine import AngleKey, TemplateBuilder
 from backend.matching_engine.core.angles import reduce_joints
 
 from ..bridges.bridge_types import CalibrationUpdatePayload
-from ..gestures.gesture_regions import infer_gesture_regions
 from ..gestures.gesture_store import GestureStore, SavedGesture
 from ..utils.logging_utils import log_info
 from .calibration_capture import CalibrationCaptureController, CapturePhase
@@ -103,11 +102,9 @@ class CalibrationService:
             raise ValueError("Capture at least one rep before saving.")
 
         template = self._build_template(resolved_name)
-        active_joint_names = [joint.value for joint in template.active_joints]
         saved = SavedGesture.from_template(
             template,
             gesture_id=gesture_id,
-            regions=infer_gesture_regions(active_joint_names),
         )
         self._gesture_store.save(saved)
         self.start_calibration()

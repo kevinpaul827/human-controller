@@ -9,12 +9,9 @@ from ..core.types import GestureTemplate
 
 Rep = AngleWindow
 
+# A joint must move this far to be included; all saved reps use this frame count.
 MIN_ACTIVE_RANGE_DEG = 15.0
-
-# Number of frames every motion trajectory is resampled to, so reps performed at
-# different speeds/lengths can be averaged and later DTW-matched consistently.
 MOTION_TRAJECTORY_FRAMES = 32
-
 
 def _resample_joint(series: list[float | None], n_out: int) -> list[float | None]:
     """Linearly resample one joint's angle series to ``n_out`` frames.

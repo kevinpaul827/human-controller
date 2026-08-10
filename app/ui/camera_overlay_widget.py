@@ -4,19 +4,17 @@ from PySide6.QtWidgets import QWidget
 
 from ..utils.logging_utils import log_debug, log_verbose
 from .overlay_constants import (
+    LINE_WIDTH,
+    MAX_POSE_PROJECTION_MS,
     MIN_VISIBILITY,
+    POINT_RADIUS,
     POSE_CONNECTIONS,
+    POSE_TRACKER_ALPHA,
+    POSE_TRACKER_BETA,
+    POSE_TRACKER_RESET_GAP_MS,
     connections_for_angle_joints,
     landmarks_for_angle_joints,
 )
-
-POINT_RADIUS = 4
-LINE_WIDTH = 3
-POSE_TRACKER_ALPHA = 0.55
-POSE_TRACKER_BETA = 0.08
-MAX_POSE_PROJECTION_MS = 33
-POSE_TRACKER_RESET_GAP_MS = 250
-
 
 class PoseOverlayTracker:
     """Smooth overlay landmarks without changing the pose used for matching."""

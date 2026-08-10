@@ -89,7 +89,6 @@ class GestureSessionTests(unittest.TestCase):
             store = GestureStore(Path(temp_dir))
             store.create_motion(
                 name="Wave",
-                regions=[],
                 active_joints=["L_ELBOW"],
                 trajectory=[{"L_ELBOW": 45.0}, {"L_ELBOW": 90.0}],
             )

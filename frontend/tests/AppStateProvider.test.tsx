@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppStateProvider from "@/state/AppStateProvider";
 import { useAppState, type AppStateValue } from "@/state/appStateContext";
 import { initialState, STORAGE_KEY } from "@/state/appStateModel";
+import type { DesktopState } from "@/types/desktopState";
 
 const bridgeMocks = vi.hoisted(() => ({
   getState: vi.fn(),
@@ -34,6 +35,74 @@ const StateHarness = () => {
 const current = () => {
   if (!stateValue) throw new Error("State harness is not ready");
   return stateValue;
+};
+
+const seededState = (): DesktopState => {
+  const state = initialState();
+  const gestures = [
+    {
+      gestureId: "ges-right-arm-raise",
+      name: "Right Arm Raise",
+      calibratedAt: "2026-08-08T00:00:00.000Z",
+      matchScore: 87,
+    },
+    {
+      gestureId: "ges-squat",
+      name: "Squat",
+      calibratedAt: "2026-08-08T00:00:00.000Z",
+      matchScore: 82,
+    },
+    {
+      gestureId: "ges-jump",
+      name: "Jump",
+      calibratedAt: "2026-08-08T00:00:00.000Z",
+      matchScore: 80,
+    },
+  ];
+  const bindings = [
+    {
+      gestureId: "ges-right-arm-raise",
+      key: "ArrowUp",
+      matchThreshold: 75,
+    },
+    {
+      gestureId: "ges-squat",
+      key: "ArrowDown",
+      matchThreshold: 75,
+    },
+  ];
+
+  return {
+    ...state,
+    gestures,
+    bindings,
+    presets: [
+      {
+        presetId: "preset-default",
+        name: "Default",
+        bindings,
+      },
+    ],
+    activePresetId: "preset-default",
+    selectedPatientId: "patient-a",
+    patients: [
+      {
+        schemaVersion: 2,
+        patientId: "patient-a",
+        patientName: "Patient A",
+        notes: "",
+        updatedAt: "2026-08-08T00:00:00.000Z",
+        keyBindings: {
+          "ges-right-arm-raise": "ArrowUp",
+          "ges-squat": "ArrowDown",
+        },
+        matchThresholds: {
+          "ges-right-arm-raise": 75,
+          "ges-squat": 75,
+        },
+      },
+    ],
+  };
 };
 
 describe("AppStateProvider", () => {
@@ -69,6 +138,7 @@ describe("AppStateProvider", () => {
         setItem,
       },
     });
+    storedValues.set(STORAGE_KEY, JSON.stringify(seededState()));
     bridgeMocks.getState.mockRejectedValue(new Error("Browser preview"));
     bridgeMocks.saveState.mockResolvedValue(initialState());
     container = document.createElement("div");
@@ -83,8 +153,31 @@ describe("AppStateProvider", () => {
     vi.clearAllMocks();
   });
 
+  it("makes a recorded browser gesture ready when bound", async () => {
+    const state = initialState();
+    state.gestures = [
+      {
+        gestureId: "ges-jump",
+        name: "Jump",
+        calibratedAt: "2026-08-08T00:00:00.000Z",
+        matchScore: null,
+      },
+    ];
+    storedValues.set(STORAGE_KEY, JSON.stringify(state));
+
+    await renderProvider();
+
+    expect(current().bindings).toHaveLength(0);
+    expect(current().readiness.isReady).toBe(false);
+
+    act(() => current().bindGesture("ges-jump", "Space"));
+
+    expect(current().bindings).toHaveLength(1);
+    expect(current().readiness.isReady).toBe(true);
+  });
+
   it("loads browser state and tolerates local storage quota errors", async () => {
-    const saved = initialState();
+    const saved = seededState();
     saved.settings.poseModel = "full";
     storedValues.set(STORAGE_KEY, JSON.stringify(saved));
     setItem.mockImplementation(() => {
@@ -93,6 +186,7 @@ describe("AppStateProvider", () => {
 
     await renderProvider();
     expect(current().settings.poseModel).toBe("full");
+
     expect(() => {
       act(() => current().updateSetting("smoothing", 4));
     }).not.toThrow();
@@ -195,6 +289,7 @@ describe("AppStateProvider", () => {
         (item) => item.gesture.gestureId === "recorded-wave",
       ),
     ).toBe(false);
+
     act(() => current().undo());
     expect(
       current().bindings.some(
@@ -211,6 +306,7 @@ describe("AppStateProvider", () => {
       current().bindings.find((item) => item.gesture.gestureId === "ges-squat")
         ?.matchThreshold,
     ).toBe(0);
+
     act(() => current().setBindingThreshold("ges-squat", 101));
     expect(
       current().bindings.find((item) => item.gesture.gestureId === "ges-squat")
@@ -224,6 +320,7 @@ describe("AppStateProvider", () => {
     act(() => current().savePreset("Custom"));
     const presetId = current().activePreset?.presetId ?? "";
     const presetCount = current().presets.length;
+
     act(() => current().rebindKey("ges-squat", "S"));
     expect(current().hasUnsavedChanges).toBe(true);
 
@@ -241,6 +338,7 @@ describe("AppStateProvider", () => {
       current().bindings.find((item) => item.gesture.gestureId === "ges-squat")
         ?.key,
     ).toBe("S");
+
     act(() => current().undo());
     expect(
       current().bindings.find((item) => item.gesture.gestureId === "ges-squat")
@@ -251,6 +349,7 @@ describe("AppStateProvider", () => {
     expect(current().presets.some((item) => item.presetId === presetId)).toBe(
       false,
     );
+
     act(() => current().undo());
     expect(current().presets.some((item) => item.presetId === presetId)).toBe(
       true,
@@ -281,7 +380,7 @@ describe("AppStateProvider", () => {
 
   it("loads desktop state and debounces saves using the latest state", async () => {
     vi.useFakeTimers();
-    const desktopState = initialState();
+    const desktopState = seededState();
     desktopState.settings.poseModel = "heavy";
     bridgeMocks.getState.mockResolvedValue(desktopState);
 
@@ -294,6 +393,7 @@ describe("AppStateProvider", () => {
     act(() => current().updateSetting("smoothing", 5));
     act(() => vi.advanceTimersByTime(99));
     expect(bridgeMocks.saveState).not.toHaveBeenCalled();
+
     act(() => vi.advanceTimersByTime(1));
     expect(bridgeMocks.saveState).toHaveBeenCalledTimes(1);
     expect(bridgeMocks.saveState).toHaveBeenCalledWith(
@@ -304,7 +404,7 @@ describe("AppStateProvider", () => {
   });
 
   it("delegates desktop patient, refresh, and gesture operations", async () => {
-    const loaded = initialState();
+    const loaded = seededState();
     const selected = {
       ...loaded,
       selectedPatientId: "patient-a",
@@ -351,6 +451,7 @@ describe("AppStateProvider", () => {
         (binding) => binding.gestureId !== "ges-squat",
       ),
     };
+
     bridgeMocks.getState.mockResolvedValue(loaded);
     bridgeMocks.selectPatient.mockResolvedValue(selected);
     bridgeMocks.createProfile.mockResolvedValue(created);
@@ -405,6 +506,7 @@ describe("AppStateProvider", () => {
         resolveState = resolve;
       }),
     );
+
     await act(async () => {
       root.render(
         <AppStateProvider>
@@ -413,9 +515,10 @@ describe("AppStateProvider", () => {
       );
       await Promise.resolve();
     });
+
     act(() => root.render(null));
     await act(async () => {
-      resolveState?.(initialState());
+      resolveState?.(seededState());
       await Promise.resolve();
     });
     expect(bridgeMocks.saveState).not.toHaveBeenCalled();

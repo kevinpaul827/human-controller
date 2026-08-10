@@ -10,11 +10,12 @@ from backend.matching_engine.core.types import MatchResult
 from backend.matching_engine.matching.motion_matcher import MotionMatcher
 from backend.pose_types import PoseLandmarks
 
+from .constants import (
+    DEFAULT_MATCH_THRESHOLD,
+    MOTION_MIN_TEMPLATE_RANGE_DEG,
+    MOTION_WINDOW_FRAMES,
+)
 from .gesture_store import GestureStore
-
-DEFAULT_MATCH_THRESHOLD = 0.75
-MOTION_WINDOW_FRAMES = 150
-MOTION_MIN_TEMPLATE_RANGE_DEG = 15.0
 
 
 @dataclass

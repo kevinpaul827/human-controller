@@ -1,7 +1,8 @@
 import sys
 
-BACKEND_HELPER_FLAG = "--backend-helper"
-PIP_HELPER_FLAG = "--pip-helper"
+from app.dev.backend_process import BACKEND_HELPER_FLAG
+from app.pip_protocol import PIP_HELPER_FLAG
+
 SMOKE_IMPORTS_FLAG = "--smoke-imports"
 SMOKE_BROWSER_INPUT_FLAG = "--smoke-browser-input"
 

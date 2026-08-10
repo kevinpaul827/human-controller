@@ -17,7 +17,6 @@ from .strategy import best_of
 
 DEFAULT_MOTION_TOLERANCE_DEG = 30.0
 
-
 def _template_joints(template: GestureTemplate, ref: AngleWindow) -> list[AngleKey]:
     if template.active_joints:
         return list(template.active_joints)

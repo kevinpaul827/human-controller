@@ -14,8 +14,8 @@ from backend.pose_types import (
     PoseLandmarks,
 )
 
+# Landmark confidence required before an angle measurement is used.
 VIS_FLOOR = 0.5
-
 
 class AngleKey(str, Enum):
     L_ELBOW = "L_ELBOW"

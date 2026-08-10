@@ -19,10 +19,8 @@ __all__ = [
 ]
 
 SCHEMA_VERSION = 2
-
 DEFAULT_FPS = 30
 MOTION_TYPE = "motion"
-
 
 def _finite_float(value: object, field_name: str) -> float:
     resolved = float(value)

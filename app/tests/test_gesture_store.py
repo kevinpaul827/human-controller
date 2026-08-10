@@ -2,11 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.gestures.gesture_store import (
-    CURRENT_ACTION_SCHEMA_VERSION,
-    GestureStore,
-    SavedGesture,
-)
+from app.gestures.gesture_store import GestureStore, SavedGesture
 from backend.matching_engine.core.angles import AngleKey
 from backend.matching_engine.core.types import GestureTemplate
 
@@ -23,7 +19,6 @@ class GestureStoreTests(unittest.TestCase):
     def test_create_motion_saves_one_json_per_gesture(self) -> None:
         gesture = self.store.create_motion(
             name="Elbow Bend",
-            regions=["right_arm"],
             active_joints=["R_ELBOW"],
             trajectory=[{"R_ELBOW": 42.0}, {"R_ELBOW": 90.0}],
         )
@@ -32,9 +27,7 @@ class GestureStoreTests(unittest.TestCase):
         self.assertTrue(saved_path.exists())
 
         loaded = self.store.load(gesture.gesture_id)
-        self.assertEqual(loaded.schemaVersion, CURRENT_ACTION_SCHEMA_VERSION)
         self.assertEqual(loaded.name, "Elbow Bend")
-        self.assertEqual(loaded.regions, ["right_arm"])
         self.assertEqual(loaded.active_joints, ["R_ELBOW"])
         self.assertEqual(loaded.trajectory[0]["R_ELBOW"], 42.0)
 
@@ -42,7 +35,6 @@ class GestureStoreTests(unittest.TestCase):
         self.store.create_motion(
             gesture_id="squat",
             name="Squat",
-            regions=["legs"],
             active_joints=["L_KNEE", "R_KNEE"],
             trajectory=[
                 {"L_KNEE": 60.0, "R_KNEE": 60.0},
@@ -52,7 +44,6 @@ class GestureStoreTests(unittest.TestCase):
         self.store.create_motion(
             gesture_id="arm_raise",
             name="Arm Raise",
-            regions=["right_arm"],
             active_joints=["R_SHOULDER_ABD"],
             trajectory=[
                 {"R_SHOULDER_ABD": 60.0},
@@ -71,7 +62,7 @@ class GestureStoreTests(unittest.TestCase):
             trajectory=[{AngleKey.L_ELBOW: 45.0}],
         )
 
-        saved = SavedGesture.from_template(template, regions=["left_arm"])
+        saved = SavedGesture.from_template(template)
         restored = saved.to_template()
 
         self.assertEqual(saved.trajectory, [{"L_ELBOW": 45.0}])
@@ -81,7 +72,6 @@ class GestureStoreTests(unittest.TestCase):
         gesture = self.store.create_motion(
             gesture_id="arm_raise",
             name="Arm Raise",
-            regions=["right_arm"],
             active_joints=["R_SHOULDER_ABD"],
             trajectory=[
                 {"R_SHOULDER_ABD": 60.0},
@@ -95,7 +85,6 @@ class GestureStoreTests(unittest.TestCase):
         replacement = self.store.create_motion(
             gesture_id=gesture.gesture_id,
             name="Arm Raise Re-recorded",
-            regions=["right_arm"],
             active_joints=["R_SHOULDER_ABD"],
             trajectory=[
                 {"R_SHOULDER_ABD": 60.0},

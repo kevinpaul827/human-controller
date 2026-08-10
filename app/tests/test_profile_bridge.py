@@ -17,7 +17,6 @@ class ProfileBridgeTests(unittest.TestCase):
         self.gesture_store = GestureStore(root / "gestures")
         self.gesture_store.create_motion(
             name="Right Arm Raise",
-            regions=["upper_body"],
             active_joints=["L_SHOULDER_ABD"],
             trajectory=[
                 {"L_SHOULDER_ABD": 30.0},

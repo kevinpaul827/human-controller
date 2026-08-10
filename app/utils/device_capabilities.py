@@ -4,8 +4,7 @@ import math
 
 import psutil
 
-
-GIBIBYTE = 1024 ** 3
+GIBIBYTE = 1024**3
 
 
 def _positive_number(value):
