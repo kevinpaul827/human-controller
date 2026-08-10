@@ -32,7 +32,7 @@ describe("app state model", () => {
     expect(state.presets).toEqual([]);
     expect(state.selectedPatientId).toBeNull();
     expect(state.activePresetId).toBeNull();
-    expect(state.patients.length).toBeGreaterThan(0);
+    expect(state.patients).toEqual([]);
     expect(state.settings).toEqual(
       expect.objectContaining({ poseModel: "full", matchThreshold: 75 }),
     );
