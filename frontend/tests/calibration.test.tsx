@@ -22,14 +22,12 @@ const bridgeListeners = vi.hoisted(() => {
     | ((event: { state: string; message?: string }) => void)
     | null = null;
   let updateListener:
-    | ((
-        event: {
-          repCount: number;
-          capturing: boolean;
-          phase: "idle" | "countdown" | "waiting" | "recording" | "captured";
-          countdownRemaining: number;
-        },
-      ) => void)
+    | ((event: {
+        repCount: number;
+        capturing: boolean;
+        phase: "idle" | "countdown" | "waiting" | "recording" | "captured";
+        countdownRemaining: number;
+      }) => void)
     | null = null;
 
   return {
@@ -319,7 +317,9 @@ describe("Calibration flow", () => {
     await flushAsync();
 
     expect(bridgeMocks.saveRep).toHaveBeenCalledWith("Wave", "ges-wave");
-    expect(document.body.textContent).toContain("Unable to save this movement.");
+    expect(document.body.textContent).toContain(
+      "Unable to save this movement.",
+    );
     expect(routerMocks.navigate).not.toHaveBeenCalled();
     expect(appStateMocks.completeRecording).not.toHaveBeenCalled();
   });
