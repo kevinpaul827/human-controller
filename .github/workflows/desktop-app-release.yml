@@ -1,0 +1,83 @@
+name: Desktop App Releases
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "backend/**"
+      - "frontend/**"
+      - "run_app.py"
+      - "run_app.spec"
+      - "scripts/**"
+      - "Makefile"
+      - ".github/workflows/macos-app-build.yml"
+      - ".github/workflows/windows-app-build.yml"
+      - ".github/workflows/desktop-app-release.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "backend/**"
+      - "frontend/**"
+      - "run_app.py"
+      - "run_app.spec"
+      - "scripts/**"
+      - "Makefile"
+      - ".github/workflows/macos-app-build.yml"
+      - ".github/workflows/windows-app-build.yml"
+      - ".github/workflows/desktop-app-release.yml"
+
+jobs:
+  macos-app-build:
+    uses: ./.github/workflows/macos-app-build.yml
+
+  windows-app-build:
+    uses: ./.github/workflows/windows-app-build.yml
+
+  publish-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - macos-app-build
+      - windows-app-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Advance the rolling release tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --force latest "${{ github.sha }}"
+          git push origin "refs/tags/latest" --force
+
+      - name: Download desktop app artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: human-controller-*-release
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish desktop downloads
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Human Controller — Desktop Downloads
+          body: |
+            ## Download Human Controller
+
+            Choose the ZIP for your computer, extract it, then launch the app:
+
+            - [**macOS download**](https://github.com/${{ github.repository }}/releases/download/latest/Human-Controller-macOS.zip)
+            - [**Windows download**](https://github.com/${{ github.repository }}/releases/download/latest/Human-Controller-Windows.zip)
+
+            This rolling release is automatically built from the latest commit on `main`.
+          files: release-assets/*
+          make_latest: true
+          prerelease: false

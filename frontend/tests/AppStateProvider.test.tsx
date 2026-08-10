@@ -43,7 +43,6 @@ const current = () => {
   return stateValue;
 };
 
-/** Test-only data. Production initialState() intentionally remains empty. */
 const seededState = (): DesktopState => {
   const state = initialState();
   const gestures = [
@@ -526,6 +525,170 @@ describe("AppStateProvider", () => {
     act(() => root.render(null));
     await act(async () => {
       resolveState?.(seededState());
+      await Promise.resolve();
+    });
+    expect(bridgeMocks.saveState).not.toHaveBeenCalled();
+  });
+
+  it("removes deleted gestures from bindings, patients, and presets", async () => {
+    await renderProvider();
+    act(() => current().deleteGesture("ges-squat"));
+
+    expect(
+      current().gestures.some((item) => item.gestureId === "ges-squat"),
+    ).toBe(false);
+    expect(
+      current().bindings.some((item) => item.gesture.gestureId === "ges-squat"),
+    ).toBe(false);
+    expect(
+      current().patients.every(
+        (patient) => patient.keyBindings["ges-squat"] === undefined,
+      ),
+    ).toBe(true);
+    expect(
+      current().presets.every((preset) =>
+        preset.bindings.every((binding) => binding.gestureId !== "ges-squat"),
+      ),
+    ).toBe(true);
+  });
+
+  it("loads desktop state and debounces saves using the latest state", async () => {
+    vi.useFakeTimers();
+    const desktopState = initialState();
+    desktopState.settings.poseModel = "heavy";
+    bridgeMocks.getState.mockResolvedValue(desktopState);
+
+    await renderProvider();
+    expect(current().settings.poseModel).toBe("heavy");
+    bridgeMocks.saveState.mockClear();
+
+    act(() => current().updateSetting("smoothing", 3));
+    act(() => vi.advanceTimersByTime(50));
+    act(() => current().updateSetting("smoothing", 5));
+    act(() => vi.advanceTimersByTime(99));
+    expect(bridgeMocks.saveState).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(bridgeMocks.saveState).toHaveBeenCalledTimes(1);
+    expect(bridgeMocks.saveState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ smoothing: 5 }),
+      }),
+    );
+  });
+
+  it("delegates desktop patient, refresh, and gesture operations", async () => {
+    const loaded = initialState();
+    const selected = {
+      ...loaded,
+      selectedPatientId: "patient-a",
+      bindings: [
+        { gestureId: "ges-right-arm-raise", key: "W", matchThreshold: 80 },
+      ],
+    };
+    const createdPatient = {
+      schemaVersion: 2 as const,
+      patientId: "patient-new",
+      patientName: "Taylor",
+      notes: "notes",
+      updatedAt: "2026-08-09T00:00:00.000Z",
+      keyBindings: {},
+      matchThresholds: {},
+    };
+    const created = {
+      ...selected,
+      patients: [...selected.patients, createdPatient],
+      selectedPatientId: createdPatient.patientId,
+      bindings: [],
+    };
+    const cleared = {
+      ...created,
+      selectedPatientId: null,
+      bindings: [],
+    };
+    const deleted = {
+      ...cleared,
+      patients: cleared.patients.filter(
+        (patient) => patient.patientId !== createdPatient.patientId,
+      ),
+    };
+    const refreshed = {
+      ...deleted,
+      settings: { ...deleted.settings, poseModel: "full" as const },
+    };
+    const withoutSquat = {
+      ...refreshed,
+      gestures: refreshed.gestures.filter(
+        (gesture) => gesture.gestureId !== "ges-squat",
+      ),
+      bindings: refreshed.bindings.filter(
+        (binding) => binding.gestureId !== "ges-squat",
+      ),
+    };
+    bridgeMocks.getState.mockResolvedValue(loaded);
+    bridgeMocks.selectPatient.mockResolvedValue(selected);
+    bridgeMocks.createProfile.mockResolvedValue(created);
+    bridgeMocks.clearPatientSelection.mockResolvedValue(cleared);
+    bridgeMocks.deleteProfile.mockResolvedValue(deleted);
+    bridgeMocks.deleteGesture.mockResolvedValue(withoutSquat);
+
+    await renderProvider();
+
+    await act(async () => current().selectPatient("patient-a"));
+    expect(bridgeMocks.selectPatient).toHaveBeenCalledWith("patient-a");
+    expect(current().selectedPatient?.patientId).toBe("patient-a");
+
+    let returnedPatientId = "";
+    await act(async () => {
+      returnedPatientId =
+        (await current().createPatient(" Taylor ", "notes"))?.patientId ?? "";
+    });
+    expect(bridgeMocks.createProfile).toHaveBeenCalledWith("Taylor", "notes");
+    expect(returnedPatientId).toBe("patient-new");
+
+    await act(async () => current().clearPatientSelection());
+    expect(bridgeMocks.clearPatientSelection).toHaveBeenCalledOnce();
+    expect(current().selectedPatient).toBeNull();
+
+    await act(async () => current().deletePatient("patient-new"));
+    expect(bridgeMocks.deleteProfile).toHaveBeenCalledWith("patient-new");
+    expect(
+      current().patients.some((patient) => patient.patientId === "patient-new"),
+    ).toBe(false);
+
+    bridgeMocks.getState.mockResolvedValue(refreshed);
+    await act(async () => current().refreshState());
+    expect(current().settings.poseModel).toBe("full");
+
+    await act(async () => {
+      current().deleteGesture("ges-squat");
+      await Promise.resolve();
+    });
+    expect(bridgeMocks.deleteGesture).toHaveBeenCalledWith("ges-squat");
+    expect(
+      current().gestures.some((gesture) => gesture.gestureId === "ges-squat"),
+    ).toBe(false);
+  });
+
+  it("ignores a delayed desktop load after the provider unmounts", async () => {
+    let resolveState:
+      | ((state: ReturnType<typeof initialState>) => void)
+      | null = null;
+    bridgeMocks.getState.mockReturnValue(
+      new Promise((resolve) => {
+        resolveState = resolve;
+      }),
+    );
+    await act(async () => {
+      root.render(
+        <AppStateProvider>
+          <StateHarness />
+        </AppStateProvider>,
+      );
+      await Promise.resolve();
+    });
+    act(() => root.render(null));
+    await act(async () => {
+      resolveState?.(initialState());
       await Promise.resolve();
     });
     expect(bridgeMocks.saveState).not.toHaveBeenCalled();

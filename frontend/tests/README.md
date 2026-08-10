@@ -1,5 +1,10 @@
-Frontend tests should live in this directory.
+Frontend tests live in this directory and run with Vitest.
 
-CI is already set up to look here for real test files. Once the team adds a frontend
-test runner and a `test:coverage` script in `frontend/package.json`, the workflow will
-run coverage automatically and upload the `frontend/coverage` artifact.
+- `appStateModel.test.ts` covers browser-state parsing and pure state helpers.
+- `AppStateProvider.test.tsx` covers saving, profiles, gestures, bindings,
+  thresholds, presets, unsaved changes, and undo.
+- The bridge suites mock Qt WebChannel and cover callback, Promise, synchronous,
+  missing, failing, delayed, and signal-based behavior.
+
+Run `npm test` for the suite or `npm run test:coverage` for the HTML and LCOV
+coverage reports.
