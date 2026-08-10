@@ -12,6 +12,7 @@ from .gesture_session import GestureSession
 from .pose_pipeline import PosePipeline
 from .runtime_configuration import RuntimeConfiguration
 
+
 class CameraManager(QObject):
     cameraStarted = Signal(str)
     cameraStopped = Signal(str)
@@ -64,7 +65,9 @@ class CameraManager(QObject):
     def configure_runtime(self, configuration):
         runtime = RuntimeConfiguration.from_payload(configuration)
         settings = runtime.settings
-        self.pose_pipeline.configure_model(normalize_pose_model(settings.get("poseModel")))
+        self.pose_pipeline.configure_model(
+            normalize_pose_model(settings.get("poseModel"))
+        )
         self._emit_runtime_reset_match()
         self.gesture_session.configure_runtime(
             runtime.bindings,
@@ -73,25 +76,32 @@ class CameraManager(QObject):
         )
 
     def handle_camera_stopped(self, bridge):
-        self.gesture_session.stop()
-        self.calibration.cancel()
-        self.pose_pipeline.clear_pending()
+        CameraManager._reset_processing(self)
         self.cameraStopped.emit(bridge)
 
     def handle_camera_error(self, message, bridge):
+        CameraManager._reset_processing(self)
+        self.errorOccurred.emit(message, bridge)
+
+    def _reset_processing(self):
         self.gesture_session.stop()
         self.calibration.cancel()
         self.pose_pipeline.clear_pending()
-        self.errorOccurred.emit(message, bridge)
 
     def handle_video_frame(self, image, timestamp_ms):
-
-        aspect_ratio = image.width() / image.height() if image.height() > 0 else self._preview_aspect_ratio
+        aspect_ratio = (
+            image.width() / image.height()
+            if image.height() > 0
+            else self._preview_aspect_ratio
+        )
         if abs(aspect_ratio - self._preview_aspect_ratio) > 0.001:
             self._preview_aspect_ratio = aspect_ratio
-            log_debug(f"[camera_manager] preview aspect ratio updated to {aspect_ratio:.4f}")
+            log_debug(
+                "[camera_manager] preview aspect ratio updated to "
+                f"{aspect_ratio:.4f}"
+            )
             self.previewAspectRatioChanged.emit(aspect_ratio)
-        
+
         self.previewFrameReady.emit(image.copy(), int(timestamp_ms))
 
         if not self.pose_pipeline.submit(image, timestamp_ms):

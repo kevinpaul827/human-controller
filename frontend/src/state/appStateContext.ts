@@ -17,7 +17,7 @@ export type Readiness = {
   isReady: boolean;
 };
 
-export type AppStateValue = {
+export type AppStateSnapshot = {
   gestures: Gesture[];
   bindings: ResolvedBinding[];
 
@@ -31,7 +31,9 @@ export type AppStateValue = {
   readiness: Readiness;
   undoLabel: string | null;
   settings: RuntimeSettings;
+};
 
+export type AppStateActions = {
   addGesture: (name: string) => string;
   renameGesture: (gestureId: string, name: string) => void;
   deleteGesture: (gestureId: string) => void;
@@ -70,6 +72,8 @@ export type AppStateValue = {
   undo: () => void;
   dismissUndo: () => void;
 };
+
+export type AppStateValue = AppStateSnapshot & AppStateActions;
 
 export const AppStateContext = createContext<AppStateValue | null>(null);
 
