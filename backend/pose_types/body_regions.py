@@ -1,3 +1,11 @@
+"""
+Body region labels and groupings for calibration UI and angle selection.
+
+Regions describe part of the body including shoulder, elbow, hand and so on. we only measure the
+regions are used when extracting joint angles for matching.
+
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

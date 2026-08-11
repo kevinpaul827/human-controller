@@ -1,3 +1,5 @@
+"""Compare two angle sequences with DTW (Dynamic Time Warping)."""
+
 from __future__ import annotations
 
 import math

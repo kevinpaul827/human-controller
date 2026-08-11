@@ -1,3 +1,5 @@
+"""Health check server for the local backend helper."""
+
 from __future__ import annotations
 
 import json

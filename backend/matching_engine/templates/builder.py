@@ -1,3 +1,7 @@
+"""Build a gesture template from recorded movement reps.
+
+Combines mutiple angle recordings into one saved gesture.
+"""
 from __future__ import annotations
 
 import math

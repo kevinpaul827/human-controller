@@ -1,3 +1,5 @@
+"""Smooth joint angles over time to reduce jitter."""
+
 from __future__ import annotations
 
 from typing import Dict, Optional

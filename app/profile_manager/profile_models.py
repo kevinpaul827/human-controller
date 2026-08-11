@@ -1,3 +1,7 @@
+"""Patient profile data model and schema version.
+
+Define the version JSON schema for patient profiles.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timezone

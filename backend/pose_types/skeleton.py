@@ -1,3 +1,8 @@
+"""Skeleton edge maps from body regions to keypoint pairs
+
+Used to draw pose overlays, which means that each body region maps to the bone segments where they belong to it.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping

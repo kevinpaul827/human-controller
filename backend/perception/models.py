@@ -1,3 +1,5 @@
+"""Pose-landmarker model variants and on-disk .task paths."""
+
 from __future__ import annotations
 
 from pathlib import Path
