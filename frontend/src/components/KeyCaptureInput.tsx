@@ -8,6 +8,7 @@ type KeyCaptureInputProps = {
   disabled?: boolean;
 };
 
+// Read-only input that listens for one key press and stores it in a normalised format.
 const KeyCaptureInput = ({
   value,
   onChange,

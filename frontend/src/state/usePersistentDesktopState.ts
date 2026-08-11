@@ -22,10 +22,8 @@ const loadBrowserState = (): DesktopState => {
   }
 };
 
-/**
- * Owns the desktop-bridge/browser-storage fallback and its save lifecycle.
- * Consumers can work with DesktopState without knowing where it is persisted.
- */
+// Loads and saves desktop state with a simple fallback strategy.
+// We try the desktop bridge first, then fall back to browser storage in preview mode if thats all we have.
 export const usePersistentDesktopState = (): PersistentDesktopState => {
   const [state, setState] = useState<DesktopState>(loadBrowserState);
   const [persistenceReady, setPersistenceReady] = useState(false);

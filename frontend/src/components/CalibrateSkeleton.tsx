@@ -2,6 +2,7 @@ type CalibrateSkeletonProps = {
   className?: string;
 };
 
+// Simple SVG body guide used on the calibration screen so the pose area looks a bit clearer.
 const CalibrateSkeleton = ({ className }: CalibrateSkeletonProps) => (
   <svg
     className={className}

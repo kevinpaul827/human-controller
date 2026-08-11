@@ -17,7 +17,8 @@ type UndoableState = {
   dismissUndo: () => void;
 };
 
-/** Adds a single-level, time-limited undo operation to DesktopState updates. */
+// Adds one level of undo for DesktopState updates.
+// The undo stays available for a short time, then clears itself which is probly enough for this screen.
 export const useUndoableState = (
   setState: Dispatch<SetStateAction<DesktopState>>,
 ): UndoableState => {

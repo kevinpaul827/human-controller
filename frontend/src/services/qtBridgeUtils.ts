@@ -1,15 +1,13 @@
 import { getQtWebChannel } from "./qtWebChannel";
 
-/** Qt-style signal exposed by QWebChannel objects. */
+// Qt-style signal exposed by QWebChannel objects.
 export type QtSignal<T> = {
   connect(callback: (payload: T) => void): void;
   disconnect?(callback: (payload: T) => void): void;
 };
 
-/**
- * Normalize callback, Promise, and synchronous Qt return styles.
- * The first result wins when a bridge uses more than one style.
- */
+// Wraps different Qt bridge return styles into one Promise.
+// Some bridge methods use callbacks, some return values, and some return Promises, so this keeps it a bit less messy.
 export const invokeWithResult = <T>(
   invoke: (callback: (result: T) => void) => unknown,
 ) =>
@@ -46,7 +44,7 @@ export const invokeWithResult = <T>(
     }
   });
 
-/** Lazily resolve and cache a named Qt WebChannel bridge object. */
+// Finds a named Qt bridge object once and reuses it on later calls, so we dont have to look it up every time.
 export const createBridgeResolver = <T>(
   bridgeName: string,
   missingMessage: string,
