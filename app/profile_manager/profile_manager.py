@@ -1,8 +1,3 @@
-"""profile_manager.py
-
-Persist versioned patient profiles and calibrated gesture bindings.
-"""
-
 from __future__ import annotations
 
 import json
@@ -23,6 +18,8 @@ from .profile_models import CURRENT_SCHEMA_VERSION, PatientProfile
 
 
 class ProfileManager:
+    """Persist versioned patient profiles and calibrated gesture bindings."""
+
     def __init__(self, profiles_dir: str | Path) -> None:
         self.profiles_dir = Path(profiles_dir)
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
