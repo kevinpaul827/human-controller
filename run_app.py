@@ -7,7 +7,6 @@ app. It supports the following command-line modes:
 - BACKEND_HELPER_FLAG: starts backend health-server helper.
 - SMOKE_IMPORTS_FLAG: verifies MediaPipe and its native runtime load.
 - SMOKE_BROWSER_INPUT_FLAG: runs browser-input smoke test.
-
 """
 
 import sys
@@ -21,8 +20,7 @@ SMOKE_BROWSER_INPUT_FLAG = "--smoke-browser-input"
 
 
 def _load_current_mediapipe_native_runtime():
-    """Load native runtime used by current MediaPipe installations"""
-
+    """Load native runtime used by current MediaPipe installations."""
     import mediapipe.tasks.c
     from mediapipe.tasks.python.core import mediapipe_c_bindings
 
@@ -30,8 +28,7 @@ def _load_current_mediapipe_native_runtime():
 
 
 def _load_legacy_mediapipe_native_runtime():
-    """Load and validate native runtime used by legacy MediaPipe versions"""
-
+    """Load and validate native runtime used by legacy MediaPipe versions."""
     import mediapipe.python._framework_bindings as framework_bindings
 
     if not getattr(framework_bindings, "__file__", None):
@@ -39,7 +36,7 @@ def _load_legacy_mediapipe_native_runtime():
 
 
 def _load_mediapipe_native_runtime():
-    """Load available MediaPipe native runtime"""
+    """Load available MediaPipe native runtime."""
 
     try:
         _load_current_mediapipe_native_runtime()
@@ -50,7 +47,7 @@ def _load_mediapipe_native_runtime():
 
 
 def smoke_imports():
-    """Verify required MediaPipe Python and native components can load"""
+    """Verify required MediaPipe Python and native components can load."""
 
     from mediapipe.tasks.python.vision import (
         PoseLandmarker,
@@ -62,7 +59,7 @@ def smoke_imports():
 
 
 def main():
-    """Execute with command line modes or start main application"""
+    """Execute with command line modes or start main application."""
 
     if PIP_HELPER_FLAG in sys.argv[1:]:
         from app.platforms.macos.pip_helper import run_pip_helper_from_argv
