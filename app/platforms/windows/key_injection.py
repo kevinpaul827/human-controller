@@ -1,3 +1,8 @@
+"""windows/key_injection.py
+
+Resolve Windows keybinds and send keyboard events.
+"""
+
 import ctypes
 
 from app.platforms.key_injection import KeyInjectionError

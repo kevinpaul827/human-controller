@@ -1,3 +1,8 @@
+"""keyboard.py
+
+Creates platform-specific keyboard backend for
+macOS and Windows.
+"""
 import sys
 
 from .key_injection import KeyInjectionError
