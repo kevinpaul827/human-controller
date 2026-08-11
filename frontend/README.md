@@ -109,6 +109,13 @@ window, camera preview, or OS-level key injection.
 The tests live in `frontend/e2e/` and use the app's existing browser fallback
 storage instead of the desktop bridge.
 
+Install the bundled Chromium browser once after installing the frontend
+dependencies:
+
+```bash
+npx playwright install chromium
+```
+
 Useful commands:
 
 ```bash

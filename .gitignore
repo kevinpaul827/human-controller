@@ -4,6 +4,10 @@ dist/
 .env
 .env.*
 coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 *.log
 .vscode/
 *.tsbuildinfo
