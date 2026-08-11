@@ -3,9 +3,7 @@
 This file creates the Qt application, opens the main window 
 of the Human Controller app, then runs the app. It is
 also responsible for checking app startup prerequisites.
-
 """
-
 import sys
 
 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -18,12 +16,7 @@ from .ui.main_window import (
 
 
 def main():
-    """Initialize and run the Human Controller desktop application.
-    
-    Returns:
-        int: Exit code returned by QApplication.
-    """
-
+    """Initialize and run the Human Controller desktop application."""
     app = QApplication(sys.argv)
 
     # Desktop app only supports macOS and Windows.
