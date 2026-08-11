@@ -8,6 +8,7 @@ type ActiveProfileProviderProps = {
   children: ReactNode;
 };
 
+// Connects the active profile context to the shared app state.
 const ActiveProfileProvider = ({ children }: ActiveProfileProviderProps) => {
   const { selectedPatient, selectPatient, clearPatientSelection } =
     useAppState();

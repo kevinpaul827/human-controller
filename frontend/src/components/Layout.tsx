@@ -5,6 +5,7 @@ import sessionBridge from "@/services/sessionBridge";
 import Header from "./Header";
 import UndoBar from "./UndoBar";
 
+// Shared app shell for pages that sit under the main header.
 const Layout = () => {
   const { activeProfile } = useActiveProfile();
   const profileId = activeProfile?.patientId ?? null;
@@ -13,6 +14,7 @@ const Layout = () => {
   useEffect(() => {
     if (previousProfileId.current === profileId) return;
     previousProfileId.current = profileId;
+    // Stop any running session if the user switches to a different profile.
     void sessionBridge.stopSession().catch(() => {});
   }, [profileId]);
 

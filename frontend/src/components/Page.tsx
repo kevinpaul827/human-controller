@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 
 type PageProps = {
   children: ReactNode;
-
   variant?: "scroll" | "fixed";
   width?: "default" | "wide";
   className?: string;
