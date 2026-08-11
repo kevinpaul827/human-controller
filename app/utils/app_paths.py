@@ -1,3 +1,8 @@
+"""app_paths.py
+
+Creates platform-specific persistent data directory.
+"""
+
 from __future__ import annotations
 
 import os
