@@ -105,6 +105,22 @@ describe("session bridge", () => {
     );
   });
 
+  it("keeps browser status subscriptions quiet while explicit actions reject", async () => {
+    const listener = vi.fn();
+
+    const unsubscribe = sessionBridge.onSessionStatus(listener);
+    await Promise.resolve();
+
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
+    await expect(sessionBridge.loadProfile("patient-1")).rejects.toThrow(
+      "Qt WebChannel is unavailable.",
+    );
+    await expect(sessionBridge.startSession()).rejects.toThrow(
+      "Qt WebChannel is unavailable.",
+    );
+  });
+
   it("reports missing optional methods, error payloads, and failures", async () => {
     installChannel({ sessionBridge: baseBridge() });
     await expect(sessionBridge.loadProfile("patient-1")).rejects.toThrow(

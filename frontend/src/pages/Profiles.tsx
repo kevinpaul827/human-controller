@@ -97,7 +97,9 @@ const Profiles = () => {
         ? await profileBridge.createProfile(patientName, notes)
         : await createPatient(patientName, notes);
       if (!createdProfile) return "The profile could not be created.";
-      setProfiles((current) => [...current, createdProfile]);
+      if (desktopRuntime) {
+        setProfiles((current) => [...current, createdProfile]);
+      }
       setExpandedPatientId(createdProfile.patientId);
       setShowNewDialog(false);
       setPageError(null);

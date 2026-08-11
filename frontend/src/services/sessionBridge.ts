@@ -11,6 +11,7 @@ import type {
 
 import {
   createBridgeResolver,
+  isDesktopQtRuntime,
   invokeWithResult,
   type QtSignal,
 } from "./qtBridgeUtils";
@@ -136,6 +137,10 @@ const sessionBridge: SessionBridge = {
   },
 
   onSessionStatus(listener) {
+    if (!isDesktopQtRuntime()) {
+      return () => {};
+    }
+
     let active = true;
     let unsubscribe = () => {};
 
