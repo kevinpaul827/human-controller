@@ -11,7 +11,7 @@ import urllib.request
 from collections import deque
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 # Preview-helper process contract; these are not application-wide settings.
 BACKEND_HELPER_FLAG = "--backend-helper"
 BACKEND_RELOAD_FLAG = "HUMAN_CONTROLLER_BACKEND_RELOAD"
@@ -22,6 +22,7 @@ BACKEND_RELOADER_PATH = Path("scripts") / "run_backend_dev.py"
 # This module is the desktop app's small process manager for the preview/backend
 # helper. Its job is to start the helper, wait until `/health` responds, and
 # stop the helper cleanly when the app closes.
+
 
 def build_backend_command(env: dict[str, str] | None = None):
     env = env or os.environ
@@ -34,7 +35,7 @@ def build_backend_command(env: dict[str, str] | None = None):
     if getattr(sys, "frozen", False):
         return [sys.executable, BACKEND_HELPER_FLAG]
 
-    return [sys.executable, "-m", "backend.dev_server"]
+    return [sys.executable, "-m", "devtools.backend_health_server"]
 
 
 class BackendProcessManager:

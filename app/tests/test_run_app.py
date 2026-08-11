@@ -85,7 +85,7 @@ class RunAppTests(unittest.TestCase):
 
         smoke.assert_called_once_with()
 
-    @patch("app.dev.browser_input_smoke.run_browser_input_smoke", return_value=0)
+    @patch("devtools.browser_input_smoke.run_browser_input_smoke", return_value=0)
     def test_browser_smoke_flag_routes_to_browser_check(self, browser_smoke):
         with patch.object(
             run_app.sys,

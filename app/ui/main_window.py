@@ -11,13 +11,13 @@ from ..bridges.calibration_bridge import CalibrateBridge
 from ..bridges.profile_bridge import ProfileBridge
 from ..bridges.session_bridge import SessionBridge
 from ..bridges.state_bridge import StateBridge
-from ..dev.backend_process import BackendProcessManager
 from ..core.camera_manager import CameraManager
 from ..gestures.gesture_store import GestureStore
 from ..platforms.picture_in_picture import create_picture_in_picture
 from ..profile_manager import ProfileManager
 from ..utils.app_paths import user_data_dir
 from .camera_overlay_widget import CameraOverlayWidget
+from devtools.backend_process import BackendProcessManager
 
 
 def resolve_frontend_path():

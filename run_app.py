@@ -1,6 +1,6 @@
 import sys
 
-from app.dev.backend_process import BACKEND_HELPER_FLAG
+from devtools.backend_process import BACKEND_HELPER_FLAG
 from app.pip_protocol import PIP_HELPER_FLAG
 
 SMOKE_IMPORTS_FLAG = "--smoke-imports"
@@ -50,7 +50,7 @@ def main():
         )
 
     if BACKEND_HELPER_FLAG in sys.argv[1:]:
-        from backend.dev_server import main as backend_main
+        from devtools.backend_health_server import main as backend_main
 
         backend_main()
         return
@@ -60,7 +60,7 @@ def main():
         return
 
     if SMOKE_BROWSER_INPUT_FLAG in sys.argv[1:]:
-        from app.dev.browser_input_smoke import run_browser_input_smoke
+        from devtools.browser_input_smoke import run_browser_input_smoke
 
         flag_index = sys.argv.index(SMOKE_BROWSER_INPUT_FLAG)
         try:

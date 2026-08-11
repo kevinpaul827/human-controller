@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from ..core.key_injector import KeyInjector
+from app.core.key_injector import KeyInjector
 
 
 HTML = """

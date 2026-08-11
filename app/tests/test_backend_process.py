@@ -2,7 +2,7 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-from app.dev.backend_process import (
+from devtools.backend_process import (
     BACKEND_HELPER_FLAG,
     BACKEND_RELOAD_FLAG,
     BACKEND_RUNNER_ENV,
@@ -16,7 +16,10 @@ class BackendProcessCommandTests(unittest.TestCase):
     def test_dev_backend_command_uses_python_module(self):
         command = build_backend_command({})
 
-        self.assertEqual(command, [sys.executable, "-m", "backend.dev_server"])
+        self.assertEqual(
+            command,
+            [sys.executable, "-m", "devtools.backend_health_server"],
+        )
 
     def test_frozen_backend_command_uses_bundled_executable(self):
         with patch.object(sys, "frozen", True, create=True):
@@ -39,14 +42,14 @@ class BackendProcessCommandTests(unittest.TestCase):
             ["/tmp/dev-python", "/tmp/human-controller/scripts/run_backend_dev.py"],
         )
 
-    @patch("app.dev.backend_process.subprocess.run")
+    @patch("devtools.backend_process.subprocess.run")
     def test_windows_stop_terminates_the_backend_process_tree(self, run):
         manager = BackendProcessManager()
         process = Mock(pid=1234)
         process.poll.return_value = None
         manager.process = process
 
-        with patch("app.dev.backend_process.os.name", "nt"):
+        with patch("devtools.backend_process.os.name", "nt"):
             manager.stop()
 
         run.assert_called_once_with(
