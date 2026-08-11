@@ -47,12 +47,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pip install -r app/requirements.txt
 pip install -r backend/requirements.txt
-pip install -r backend/matching_engine/requirements.txt
 cd frontend
 npm ci
 npm run build
 cd ..
-python3 -m app.main
 ```
 
 Windows PowerShell:
@@ -63,15 +61,11 @@ python3 -m venv .venv
 pip install -r requirements.txt
 pip install -r app/requirements.txt
 pip install -r backend/requirements.txt
-pip install -r backend/matching_engine/requirements.txt
 cd frontend
 npm ci
 npm run build
 cd ..
-python3 -m app.main
 ```
-
-`backend/matching_engine/requirements.txt` is required for backend tests because it installs `pytest`.
 
 ## Build the App
 
