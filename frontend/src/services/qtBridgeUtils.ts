@@ -1,13 +1,12 @@
 import { getQtWebChannel } from "./qtWebChannel";
 
-// Qt-style signal exposed by QWebChannel objects.
+/** Small type for the Qt-style signals exposed by QWebChannel objects. */
 export type QtSignal<T> = {
   connect(callback: (payload: T) => void): void;
   disconnect?(callback: (payload: T) => void): void;
 };
 
-// Wraps different Qt bridge return styles into one Promise.
-// Some bridge methods use callbacks, some return values, and some return Promises, so this keeps it a bit less messy.
+/** Wraps callback, return-value, and Promise bridge calls into one Promise form. */
 export const invokeWithResult = <T>(
   invoke: (callback: (result: T) => void) => unknown,
 ) =>
@@ -44,7 +43,7 @@ export const invokeWithResult = <T>(
     }
   });
 
-// Finds a named Qt bridge object once and reuses it on later calls, so we dont have to look it up every time.
+/** Finds a named Qt bridge once and reuses it until tests reset the cache. */
 export const createBridgeResolver = <T>(
   bridgeName: string,
   missingMessage: string,
@@ -67,6 +66,7 @@ export const createBridgeResolver = <T>(
   return { get, reset };
 };
 
+/** Checks whether the frontend is running inside the Qt desktop shell. */
 export const isDesktopQtRuntime = () =>
   typeof window !== "undefined" &&
   Boolean(window.qt?.webChannelTransport && window.QWebChannel);

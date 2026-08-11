@@ -65,6 +65,7 @@ const parseProfileResult = (result: SessionProfileResult) => {
   return result.data;
 };
 
+/** Promise-based wrapper around the session bridge and its live events. */
 const sessionBridge: SessionBridge = {
   async loadProfile(patientId) {
     const bridge = await sessionBridgeResolver.get();

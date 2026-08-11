@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: RuntimeSettings = {
   poseModel: "lite",
 };
 
+/** Makes a fresh empty state using the current default settings. */
 export const initialState = (): DesktopState => ({
   gestures: [],
   bindings: [],
@@ -170,6 +171,7 @@ const parseSettings = (value: unknown): RuntimeSettings => {
   };
 };
 
+/** Loads saved state and skips broken bits instead of crashing the whole load. */
 export const parseStoredState = (raw: string | null): DesktopState => {
   if (!raw) {
     return initialState();
@@ -224,6 +226,7 @@ export const clampPercentage = (value: unknown, fallback: number): number => {
     : fallback;
 };
 
+/** Checks if two binding lists mean the same thing, even if the order changed. */
 export const sameBindings = (
   leftBindings: Binding[],
   rightBindings: Binding[],
@@ -239,6 +242,7 @@ export const sameBindings = (
   return left.every((value, index) => value === right[index]);
 };
 
+/** Turns a patient's saved maps back into normal binding objects. */
 export const bindingsForPatient = (
   patient: Patient | null | undefined,
   defaultThreshold: number,
@@ -254,6 +258,7 @@ export const bindingsForPatient = (
       }))
     : [];
 
+/** Keeps the selected patient's saved bindings in sync with the active ones. */
 export const withSelectedPatientBindings = (
   current: DesktopState,
   bindings: Binding[],
@@ -288,6 +293,7 @@ export const withSelectedPatientBindings = (
   };
 };
 
+/** Matches bindings to gestures and fills in a placeholder if one is missing. */
 export const resolveBindings = (state: DesktopState): ResolvedBinding[] => {
   const gestureById = new Map(
     state.gestures.map((gesture) => [gesture.gestureId, gesture]),
@@ -307,6 +313,7 @@ export const resolveBindings = (state: DesktopState): ResolvedBinding[] => {
   }));
 };
 
+/** Works out how many bound gestures are recorded and ready to use. */
 export const readinessFor = (bindings: ResolvedBinding[]): Readiness => {
   const pending = bindings
     .filter((binding) => !binding.gesture.calibratedAt)
