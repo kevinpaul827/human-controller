@@ -1,3 +1,7 @@
+"""calibration_service.py
+
+Service for calibration capture and template creation.
+"""
 from __future__ import annotations
 
 import time

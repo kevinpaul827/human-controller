@@ -1,3 +1,9 @@
+"""trigger_controller.py
+
+Applies smoothing, thresholds, cooldowns, and
+key trigger rules to gesture matches.
+"""
+
 from __future__ import annotations
 
 import time

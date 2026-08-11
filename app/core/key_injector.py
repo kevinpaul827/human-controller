@@ -1,3 +1,8 @@
+""""key_injector.py
+
+Normalize key names and inject keyboard input.
+"""
+
 from __future__ import annotations
 
 import time

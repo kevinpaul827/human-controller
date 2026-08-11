@@ -1,4 +1,4 @@
-"""app/bridges/bridge_common.py
+"""bridge_common.py
 
 Shared helper for CalibrateBridge and SessionBridge
 preview/state handling."

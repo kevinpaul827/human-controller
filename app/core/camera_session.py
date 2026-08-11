@@ -1,3 +1,9 @@
+"""camera_session.py
+
+Manages camera permissions, lifecycle of device,
+and video frame delivery."
+"""
+
 import sys
 
 from PySide6.QtCore import (

@@ -1,3 +1,9 @@
+"""pose_processor.py
+
+Converts Qt video frames and runs pose
+estimation using the selected model. 
+"""
+
 import numpy as np
 
 from PySide6.QtCore import QObject, Signal, Slot

@@ -1,3 +1,9 @@
+"""runtime_configuration.py
+
+Validates and normalizes runtime settings,
+gesture bindings, and match thresholds.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

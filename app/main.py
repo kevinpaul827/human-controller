@@ -1,4 +1,4 @@
-"""app/main.py
+"""main.py
 
 Creates the Qt application, opens the main window 
 of the Human Controller app, then runs the app. It is
