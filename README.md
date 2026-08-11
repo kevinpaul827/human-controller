@@ -19,8 +19,11 @@ To resolve this, follow these instructions:
 
 <img width="631" height="287" alt="Screenshot 2026-08-11 at 10 04 45 pm" src="https://github.com/user-attachments/assets/2f4b2a3c-610f-4c48-9b5e-ec8f90d09191" />
 
+
 And click "Open Anyway"
+
 <img width="464" height="108" alt="Screenshot 2026-08-11 at 10 05 06 pm" src="https://github.com/user-attachments/assets/67aafe21-decc-4bca-9a53-3f47bd048019" />
+
 
 
 # Developer Instructions
