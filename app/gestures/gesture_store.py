@@ -1,3 +1,9 @@
+"""gesture_store.py
+
+Validates, persists, loads, and manages saved
+gesture templates to persistence directory.
+"""
+
 from __future__ import annotations
 
 import json

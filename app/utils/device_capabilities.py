@@ -1,3 +1,9 @@
+"""device_capabilities.py
+
+Recommends best pose estimation model for current
+device by inspecting the specs.
+"""
+
 from __future__ import annotations
 
 import math

@@ -1,3 +1,7 @@
+"""json_storage.py
+
+Validates JSON file identifiers and then persists the JSON data.
+"""
 from __future__ import annotations
 
 import json

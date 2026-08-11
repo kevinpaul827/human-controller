@@ -1,3 +1,8 @@
+"""pip_protocol.py
+
+This module is the source of truth for the parent/helper IPC contract.
+"""
+
 import json
 import mmap
 import os
@@ -8,7 +13,6 @@ from PySide6.QtGui import QImage
 
 from app.pip_protocol import PIP_HELPER_FLAG
 
-# This module is the source of truth for the parent/helper IPC contract.
 PROTOCOL_VERSION = 1
 MESSAGE_PREFIX = b"HC_PIP:"
 MAX_MESSAGE_BYTES = 512 * 1024

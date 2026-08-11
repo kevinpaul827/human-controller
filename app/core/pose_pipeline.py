@@ -1,3 +1,9 @@
+"""pose_pipeline.py
+
+Runs pose estimation on a worker thread and
+forwards those processed results.
+"""
+
 from PySide6.QtCore import QObject, QThread, Qt, Signal
 from PySide6.QtGui import QImage
 

@@ -1,3 +1,8 @@
+"""picture_in_picture.py
+
+Creates picture-in-picture window for specific
+platform.
+"""
 import sys
 
 

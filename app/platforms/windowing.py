@@ -1,3 +1,9 @@
+"""windowing.py
+
+Configures picture-in-picture overlay window for
+macos.
+"""
+
 import sys
 
 

@@ -1,3 +1,8 @@
+"""macos/pip_process.py
+
+Manages macOS picture-in-picture helper process.
+"""
+
 import os
 import sys
 from pathlib import Path

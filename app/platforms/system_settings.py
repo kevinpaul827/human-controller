@@ -1,3 +1,8 @@
+"""system_settings.py
+
+Open platform privacy and accessibility settings.
+"""
+
 from __future__ import annotations
 
 import sys

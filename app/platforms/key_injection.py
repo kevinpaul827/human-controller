@@ -1,3 +1,9 @@
+"""platforms/key_injection.py
+
+Interface to define keyboard backend functions
+and key injection error.
+"""
+
 from typing import Protocol
 
 

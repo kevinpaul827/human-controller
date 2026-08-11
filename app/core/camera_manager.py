@@ -1,3 +1,9 @@
+"""camera_manager.py
+
+Coordinate camera capture, pose processing,
+gesture matching, and calibration."
+"""
+
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtGui import QImage
 

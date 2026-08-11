@@ -1,3 +1,8 @@
+"""picture_in_picture_window.py
+
+Displays picture-in-picture camera overlay and gesture
+match feedback.
+"""
 import sys
 
 from PySide6.QtCore import QPoint, QSettings, Qt, QTimer

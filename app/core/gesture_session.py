@@ -1,3 +1,9 @@
+"""gesture_session.py
+
+Manages gesture matching, runtime bindings,
+trigger handling, and key injection.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

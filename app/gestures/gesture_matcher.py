@@ -1,3 +1,9 @@
+"""gesture_matcher.py
+
+Matches live pose motion against saved gesture templates
+and returns best matched results.
+"""
+
 from __future__ import annotations
 
 from collections import deque

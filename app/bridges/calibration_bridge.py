@@ -1,3 +1,9 @@
+"""calibration_bridge.py
+
+Qt bridge for the Calibration module of the app which will
+communicate to the frontend.
+"""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -13,6 +19,7 @@ if TYPE_CHECKING:
 
 
 class CalibrateState(str, Enum):
+    """States of calibration camera."""
     IDLE = "idle"
     LIVE = "live"
     ERROR = "error"
@@ -24,6 +31,7 @@ class CalibrateBridge(CameraBridgeBase, QObject):
     LIVE_STATE = CalibrateState.LIVE
     ERROR_STATE = CalibrateState.ERROR
 
+    # Signals for frontend communication.
     calibrateStatusChanged = Signal(dict)
     calibrationUpdated = Signal(dict)
     previewBoundsChanged = Signal(int, int, int, int)
@@ -36,6 +44,7 @@ class CalibrateBridge(CameraBridgeBase, QObject):
         self.camera: CameraManager = camera_manager
         self.gesture_store = gesture_store
 
+        # Connect camera manager events.
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
         self.camera.errorOccurred.connect(self.handle_camera_error)
@@ -45,22 +54,27 @@ class CalibrateBridge(CameraBridgeBase, QObject):
 
     @Slot()
     def startCalibrate(self):
+        """Request camera ownership for calibration bridge."""
         self.camera.start(self.BRIDGE)
 
     @Slot()
     def stopCalibrate(self):
+        """Stops camera session owned by calibration bridge."""
         self.camera.stop(self.BRIDGE)
 
     @Slot(result=str)
     def getCalibrateState(self):
+        """Return current calibration state."""
         return self.state.value
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
+        """Update preview bounds of camera."""
         self.update_preview_bounds(left, top, width, height)
 
     @Slot()
     def openCameraSettings(self):
+        """Open camera settings interface."""
         self.camera.openCameraSettings()
 
     @Slot()
@@ -70,6 +84,7 @@ class CalibrateBridge(CameraBridgeBase, QObject):
 
     @Slot(float, result="QVariantMap")
     def startRep(self, recording_seconds):
+        """Start recording a rep for calibration."""
         try:
             self.camera.start_rep(recording_seconds)
             return {"ok": True}
@@ -78,6 +93,7 @@ class CalibrateBridge(CameraBridgeBase, QObject):
 
     @Slot(result="QVariantMap")
     def stopRep(self):
+        """Stop current rep recording and return saved rep."""
         try:
             return self.camera.stop_rep()
         except ValueError as error:
@@ -85,6 +101,7 @@ class CalibrateBridge(CameraBridgeBase, QObject):
 
     @Slot()
     def cancelRep(self):
+        """Cancel current rep recording."""
         self.camera.cancel_rep()
 
     @Slot()
@@ -103,16 +120,19 @@ class CalibrateBridge(CameraBridgeBase, QObject):
 
     @Slot(result="QVariantList")
     def listSavedGestures(self):
+        """Return all saved gestures."""
         if self.gesture_store is not None:
             return self.gesture_store.list_gestures()
         return self.camera.list_saved_gestures()
 
     @Slot(result="QVariantList")
     def getLoadedSessionGestures(self):
+        """Return gestures loaded in current session."""
         return self.camera.loaded_session_gestures()
 
     @Slot(str, result="QVariantMap")
     def loadSavedGesture(self, gesture_id):
+        """Load a saved gesture."""
         try:
             return self.camera.load_saved_gesture(gesture_id)
         except ValueError as error:
@@ -121,10 +141,12 @@ class CalibrateBridge(CameraBridgeBase, QObject):
             return {"error": "Selected gesture could not be found."}
 
     def handle_calibration_updated(self, payload: CalibrationUpdatePayload):
+        """Forward calibration progress payload."""
         if not self.check_camera_ownership():
             return
 
         self.calibrationUpdated.emit(payload)
 
     def _emit_status_payload(self, payload: CalibrateStatusPayload) -> None:
+        """Forward calibration status payload."""
         self.calibrateStatusChanged.emit(payload)

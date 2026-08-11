@@ -1,3 +1,8 @@
+"""logging_utils.py
+
+Logging functions for diagnostic purposes.
+"""
+
 import os
 
 _LEVELS = {

@@ -1,3 +1,10 @@
+"""validation.py
+
+Validates a value and makes sure it's
+between two bounds. Otherwise, return
+a default value.
+"""
+
 from __future__ import annotations
 
 import math

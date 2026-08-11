@@ -1,3 +1,7 @@
+"""macos/key_injection.py
+
+Resolve macOS keybinds and post keyboard events.
+"""
 from app.platforms.key_injection import KeyInjectionError
 
 

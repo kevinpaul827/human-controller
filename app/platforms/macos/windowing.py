@@ -1,3 +1,9 @@
+"""macos/windowing.py
+
+Configures macOS window behaviour so that
+picture-in-picture overlays always show.
+"""
+
 from __future__ import annotations
 
 import sys

@@ -1,3 +1,8 @@
+"""pip_helper.py
+
+Runs macOS picture-in-picture helper process. 
+"""
+
 import argparse
 import os
 import sys
