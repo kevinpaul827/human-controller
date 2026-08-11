@@ -1,3 +1,9 @@
+"""calibration_capture.py
+
+Controller for capturing gesture calibration motion
+sequences.
+"""
+
 from collections import deque
 from enum import Enum
 import math
@@ -13,6 +19,7 @@ class CapturePhase(str, Enum):
 
 
 def _valid_angles(angles):
+    """Returns finite joint-angle values."""
     return {
         key: float(value)
         for key, value in (angles or {}).items()
@@ -21,10 +28,14 @@ def _valid_angles(angles):
 
 
 def _wrapped_delta(a, b):
+    """Returns the shortest signed angular difference
+    from a to b.
+    """
     return (a - b + 180.0) % 360.0 - 180.0
 
 
 def _median_frame(frames):
+    """Builds a frame using median angle for each joint."""
     keys = {key for frame in frames for key in frame}
     out = {}
     for key in keys:
@@ -36,6 +47,7 @@ def _median_frame(frames):
 
 
 def _largest_delta(current, reference):
+    """Returns maximum joint-angle change between two frames."""
     deltas = [
         abs(_wrapped_delta(current[key], reference[key]))
         for key in current.keys() & reference.keys()
@@ -45,17 +57,24 @@ def _largest_delta(current, reference):
 
 class CalibrationCaptureController:
 
-
+    # Preparation time to collect base pose samples.
     PREP_SECONDS = 3.0
+
+    # Capture-duration limits.
     DEFAULT_RECORDING_SECONDS = 10.0
     MIN_RECORDING_SECONDS = 1.0
     MAX_RECORDING_SECONDS = 60.0
 
+    # Minimum movement from base required to detect gesture start.
     START_DELTA_DEG = 8.0
     START_CONFIRM_FRAMES = 2
+
+    # Minimum values required to complete full gesture.
     MIN_TOTAL_MOVEMENT_DEG = 15.0
     END_HOLD_SECONDS = 1.0
     END_STABLE_RANGE_DEG = 5.0
+
+    # Frames retained before movement confirmation.
     PRE_ROLL_FRAMES = 8
 
     def __init__(self):
@@ -71,6 +90,7 @@ class CalibrationCaptureController:
 
     @property
     def active(self):
+        """Return true if calibration in progress."""
         return self.phase in {
             CapturePhase.COUNTDOWN,
             CapturePhase.WAITING,
@@ -78,6 +98,7 @@ class CalibrationCaptureController:
         }
 
     def start(self, now, recording_seconds=DEFAULT_RECORDING_SECONDS):
+        """Start the calibration process."""
         duration = float(recording_seconds)
         if not math.isfinite(duration):
             raise ValueError("Recording duration must be a number.")
@@ -97,6 +118,7 @@ class CalibrationCaptureController:
         self._stability_window.clear()
 
     def cancel(self):
+        """Cancel the current calibration process and clear collected data."""
         self.phase = CapturePhase.IDLE
         self.phase_started_at = 0.0
         self.frames = []
@@ -107,9 +129,11 @@ class CalibrationCaptureController:
         self._stability_window.clear()
 
     def reset(self):
+        """Reset controller to idle state."""
         self.cancel()
 
     def remaining_seconds(self, now):
+        """Return remaining time of countdown phase."""
         if self.phase == CapturePhase.COUNTDOWN:
             duration = self.PREP_SECONDS
         elif self.phase == CapturePhase.RECORDING:
@@ -120,11 +144,12 @@ class CalibrationCaptureController:
         return max(0, math.ceil(remaining))
 
     def update(self, angles, now):
-
+        """Update calibration capture using latest pose angles."""
         now = float(now)
         valid_angles = _valid_angles(angles)
 
         if self.phase == CapturePhase.COUNTDOWN:
+            # Build a neutral pose baseline from all valid angles
             if valid_angles:
                 self._baseline_frames.append(valid_angles)
             if now - self.phase_started_at < self.PREP_SECONDS - 1e-6:
@@ -143,6 +168,9 @@ class CalibrationCaptureController:
                 return False
 
             self._pre_roll.append(valid_angles)
+
+            # Require movement above threshold to reduce false
+            # starts from jitter.
             if _largest_delta(valid_angles, self._baseline) >= self.START_DELTA_DEG:
                 self._start_confirmed_frames += 1
             else:
@@ -168,6 +196,8 @@ class CalibrationCaptureController:
             while self._stability_window and self._stability_window[0][0] < cutoff:
                 self._stability_window.popleft()
 
+        # Recording may finish earlier than duration if movement
+        # is followed by stable final pose.
         reached_limit = now - self.phase_started_at >= self.recording_seconds - 1e-6
         if reached_limit or self._has_stable_final_pose(now):
             self.phase = CapturePhase.CAPTURED
@@ -176,6 +206,7 @@ class CalibrationCaptureController:
         return False
 
     def _has_stable_final_pose(self, now):
+        """Checks if gesture appears complete and held steady."""
         if not self.frames or not self._baseline or len(self._stability_window) < 2:
             return False
         if self._largest_range(self.frames) < self.MIN_TOTAL_MOVEMENT_DEG:
@@ -190,6 +221,7 @@ class CalibrationCaptureController:
 
     @staticmethod
     def _largest_range(frames):
+        """Returns largest angular range observed for any joint."""
         keys = {key for frame in frames for key in frame}
         ranges = []
         for key in keys:
