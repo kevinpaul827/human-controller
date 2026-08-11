@@ -99,6 +99,7 @@ const unwrapBridgeResult = <T extends object>(
   return result;
 };
 
+/** Promise-based wrapper around the calibration bridge and its live events. */
 const calibrateBridge: CalibrateBridge = {
   async startCalibrate() {
     const bridge = await calibrateBridgeResolver.get();

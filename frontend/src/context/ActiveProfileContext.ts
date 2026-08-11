@@ -9,6 +9,7 @@ export type ActiveProfileContextValue = {
   clearActiveProfile: () => Promise<void>;
 };
 
+// Keeps the currently selected profile available across pages.
 const ActiveProfileContext = createContext<
   ActiveProfileContextValue | undefined
 >(undefined);

@@ -85,6 +85,7 @@ const browserPoseModelRecommendation = (): PoseModelRecommendation => {
   };
 };
 
+/** Promise-based wrapper around the desktop state bridge. */
 export const desktopStateBridge = {
   async getState() {
     const bridge = await stateBridgeResolver.get();

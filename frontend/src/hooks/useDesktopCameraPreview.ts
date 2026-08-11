@@ -22,6 +22,8 @@ type UseDesktopCameraPreviewOptions = {
 
 const DEFAULT_ASPECT_RATIO = 4 / 3;
 
+// Keeps the desktop camera preview in sync with the DOM element on the page.
+// It also tracks simple session time while the preview is live, which makes the UI a bit easier to read.
 const useDesktopCameraPreview = ({
   bridge,
   isLive,

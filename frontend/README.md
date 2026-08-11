@@ -20,6 +20,7 @@ frontend/
 │   ├── components/
 │   ├── context/
 │   ├── hooks/
+│   ├── lib/
 │   ├── pages/
 │   ├── services/
 │   ├── state/
@@ -30,15 +31,21 @@ frontend/
 └── vite.config.ts
 ```
 
-Plain English:
+Frontend Structure:
 
 - `pages/` contains route-level screens such as Profiles, Library, Calibrate,
   Session, and Settings.
 - `components/` contains reusable UI pieces, including session controls and
   gesture mapping.
+- `lib/` contains small shared helpers such as class name merging and keyboard
+  display helpers.
+- `utils/` contains app-level constants and helper functions shared across
+  features.
 - `services/` talks to the desktop bridge objects exposed over Qt WebChannel.
 - `state/` coordinates profiles, movements, bindings, presets, and settings.
-- `styles/` contains the global theme and Tailwind CSS configuration.
+- `context/` stores React context used across pages, such as the selected
+  profile.
+- `styles/` contains the global stylesheet and theme tokens used by the app.
 
 ## Desktop Integration
 
@@ -55,6 +62,23 @@ session opens a separate native picture-in-picture window. Calibration still
 reserves and measures a viewport that the desktop app overlays with the native
 Qt preview widget.
 
+## Browser vs Desktop Mode
+
+When running with Vite in the browser, the frontend uses browser-friendly
+fallbacks where possible so pages can still be developed without the desktop
+shell.
+
+When running inside the desktop app, the frontend uses Qt WebChannel bridge
+objects to:
+
+- load and save persistent state
+- control calibration and live session flows
+- open native settings screens
+- report preview bounds for native camera overlays
+
+If something works in the browser preview but breaks in the packaged app, the
+problem is often in the bridge integration rather than the React UI itself.
+
 ## Scripts
 
 ```bash
@@ -63,9 +87,18 @@ npm run dev
 npm run build
 npm run lint
 npm run prettier
+npm run test
 npm run typecheck
 npm run test:e2e
 ```
+
+Script guide:
+
+- `npm run dev` starts the browser-only Vite frontend.
+- `npm run build` runs TypeScript build checks and creates the production
+  frontend bundle.
+- `npm run test` runs the Vitest unit tests in `jsdom`.
+- `npm run test:e2e` runs the Playwright browser E2E suite.
 
 ## Playwright E2E
 
@@ -120,5 +153,6 @@ Please run the following checks locally before creating a pull request:
 ```bash
 npm run lint
 npm run prettier
+npm run test
 npm run typecheck
 ```

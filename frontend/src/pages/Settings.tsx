@@ -15,40 +15,36 @@ import { cn } from "@/lib/utils";
 import { desktopStateBridge } from "@/services/desktopStateBridge";
 import { useAppState } from "@/state/appStateContext";
 import type { PoseModel, PoseModelRecommendation } from "@/types/desktopState";
-
-const EFFORT_LABELS = [
-  "Very gentle",
-  "Gentle",
-  "Balanced",
-  "Precise",
-  "Strict",
-];
-
-const TRACKING_MODES: {
-  value: PoseModel;
-  label: string;
-  detail: string;
-  ram: string;
-}[] = [
-  {
-    value: "lite",
-    label: "Fast",
-    detail: "Prioritises smooth frame rate",
-    ram: "4 GB+ RAM, 2+ CPU cores",
-  },
-  {
-    value: "full",
-    label: "Balanced",
-    detail: "Good speed and tracking accuracy",
-    ram: "8 GB+ RAM, 4+ CPU cores",
-  },
-  {
-    value: "heavy",
-    label: "High accuracy",
-    detail: "Prioritises tracking detail",
-    ram: "16 GB+ RAM, 8+ CPU cores",
-  },
-];
+import {
+  AUTO_MODE_DESCRIPTION,
+  AUTO_MODE_TITLE,
+  CALIBRATE_TRACKING_LABEL,
+  CALIBRATING_TRACKING_LABEL,
+  CAMERA_TRACKING_TITLE,
+  COOLDOWN_LABEL,
+  COOLDOWN_MAX,
+  COOLDOWN_MIN,
+  COOLDOWN_STEP,
+  DEFAULT_EFFORT_LABEL,
+  DEFAULT_THRESHOLD_LABEL,
+  EFFORT_LABELS,
+  MANUAL_MODE_SUMMARY_PREFIX,
+  MOVEMENT_RESPONSE_TITLE,
+  PAGE_DESCRIPTION,
+  PAGE_EYEBROW,
+  PAGE_TITLE,
+  RECOMMENDATION_ERROR_MESSAGE,
+  RESPONSE_HELPER_TEXT,
+  SMOOTHING_MAX,
+  SMOOTHING_MIN,
+  SMOOTHING_STEP,
+  STEADINESS_LABEL,
+  THRESHOLD_MAX,
+  THRESHOLD_MIN,
+  THRESHOLD_STEP,
+  TRACKING_MODE_LEGEND,
+  TRACKING_MODES,
+} from "./Settings.constant";
 
 const Settings = () => {
   const { settings, updateSetting } = useAppState();
@@ -102,24 +98,23 @@ const Settings = () => {
   return (
     <Page>
       <PageHeader
-        eyebrow="Settings"
-        title="Tracking preferences"
-        description="Changes save automatically."
+        eyebrow={PAGE_EYEBROW}
+        title={PAGE_TITLE}
+        description={PAGE_DESCRIPTION}
       />
 
       <BrutalCard className="max-w-3xl">
         <BrutalCardHeader>
-          <BrutalCardTitle>Camera tracking</BrutalCardTitle>
+          <BrutalCardTitle>{CAMERA_TRACKING_TITLE}</BrutalCardTitle>
           <BrutalBadge tone="primary">{currentMode.label}</BrutalBadge>
         </BrutalCardHeader>
 
         <BrutalCardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <p className="font-bold">Optimise for this device</p>
+              <p className="font-bold">{AUTO_MODE_TITLE}</p>
               <p className="text-sm font-medium text-muted-foreground">
-                Checks memory and processor capacity, then picks a tracking
-                mode.
+                {AUTO_MODE_DESCRIPTION}
               </p>
             </div>
             <BrutalButton
@@ -130,7 +125,9 @@ const Settings = () => {
               onClick={() => void calibrateTracking()}
             >
               <Gauge aria-hidden="true" />
-              {checkingDevice ? "Calibrating…" : "Calibrate tracking"}
+              {checkingDevice
+                ? CALIBRATING_TRACKING_LABEL
+                : CALIBRATE_TRACKING_LABEL}
             </BrutalButton>
           </div>
 
@@ -151,7 +148,7 @@ const Settings = () => {
               role="alert"
               className="rounded-sm bg-surface-muted px-3 py-2 text-sm font-bold text-destructive"
             >
-              Couldn’t check this device. Choose a mode manually.
+              {RECOMMENDATION_ERROR_MESSAGE}
             </p>
           ) : null}
 
@@ -160,14 +157,14 @@ const Settings = () => {
             className="group rounded-sm border border-hairline bg-surface-muted"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-bold focus-visible:outline-3 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
-              Choose manually · Current: {currentMode.label}
+              {MANUAL_MODE_SUMMARY_PREFIX} {currentMode.label}
               <ChevronDown
                 className="transition-transform group-open:rotate-180"
                 aria-hidden="true"
               />
             </summary>
             <fieldset className="flex flex-col gap-2 border-t border-hairline p-3">
-              <legend className="sr-only">Tracking mode</legend>
+              <legend className="sr-only">{TRACKING_MODE_LEGEND}</legend>
               {TRACKING_MODES.map((mode) => {
                 const selected = settings.poseModel === mode.value;
                 return (
@@ -207,38 +204,39 @@ const Settings = () => {
 
       <BrutalCard className="max-w-3xl">
         <BrutalCardHeader>
-          <BrutalCardTitle>Movement response</BrutalCardTitle>
+          <BrutalCardTitle>{MOVEMENT_RESPONSE_TITLE}</BrutalCardTitle>
         </BrutalCardHeader>
         <BrutalCardContent className="flex flex-col gap-6">
           <BrutalSlider
-            label="Default match threshold"
+            label={DEFAULT_THRESHOLD_LABEL}
             value={settings.matchThreshold}
-            min={0}
-            max={100}
-            step={1}
+            min={THRESHOLD_MIN}
+            max={THRESHOLD_MAX}
+            step={THRESHOLD_STEP}
             formatValue={(value) => `${value}%`}
             onChange={(value) => updateSetting("matchThreshold", value)}
           />
           <p className="-mt-4 text-sm font-medium text-muted-foreground">
-            Applied to new bindings. Existing movements can be adjusted from the
-            Session page.
+            {RESPONSE_HELPER_TEXT}
           </p>
           <BrutalSlider
-            label="Cooldown"
+            label={COOLDOWN_LABEL}
             value={settings.cooldown}
-            min={0}
-            max={2}
-            step={0.1}
+            min={COOLDOWN_MIN}
+            max={COOLDOWN_MAX}
+            step={COOLDOWN_STEP}
             formatValue={(value) => `${value.toFixed(1)}s`}
             onChange={(value) => updateSetting("cooldown", value)}
           />
           <BrutalSlider
-            label="Steadiness"
+            label={STEADINESS_LABEL}
             value={settings.smoothing}
-            min={0}
-            max={4}
-            step={1}
-            formatValue={(value) => EFFORT_LABELS[value] ?? "Balanced"}
+            min={SMOOTHING_MIN}
+            max={SMOOTHING_MAX}
+            step={SMOOTHING_STEP}
+            formatValue={(value) =>
+              EFFORT_LABELS[value] ?? DEFAULT_EFFORT_LABEL
+            }
             onChange={(value) => updateSetting("smoothing", value)}
           />
         </BrutalCardContent>

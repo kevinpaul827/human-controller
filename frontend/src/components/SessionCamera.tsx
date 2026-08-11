@@ -22,6 +22,8 @@ import type {
 } from "../types/session";
 import { ROUTES } from "@/utils/constants";
 
+// Main session control card for starting the desktop overlay and showing
+// simple live feedback about the latest recognised movement.
 const SessionCamera = () => {
   const navigate = useNavigate();
   const { activeProfile } = useActiveProfile();

@@ -14,6 +14,8 @@ type AddBindingDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+// Small dialog for linking one unbound movement to a keyboard key.
+// It resets its local selection each time the dialog opens.
 const AddBindingDialog = ({ open, onOpenChange }: AddBindingDialogProps) => {
   const navigate = useNavigate();
   const { unboundGestures, bindings, bindGesture } = useAppState();
@@ -31,6 +33,7 @@ const AddBindingDialog = ({ open, onOpenChange }: AddBindingDialogProps) => {
   const takenKeys = bindings.map((binding) => binding.key);
   const keyIsTaken = key !== null && takenKeys.includes(key);
 
+  // Saves the next pressed key, except for a couple navigation keys we still want working.
   const captureKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
     event.preventDefault();
     if (event.key === "Tab" || event.key === "Escape") {
