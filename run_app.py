@@ -1,6 +1,6 @@
 """run_app.py
 
-This file is the executable entry point for the Human Controller
+This is the executable entry point for the Human Controller
 app. It supports the following command-line modes:
 
 - PIP_HELPER_FLAG: starts macOS picture-in-picture helper.

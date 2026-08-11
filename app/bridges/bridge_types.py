@@ -1,24 +1,36 @@
+"""bridge_types.py
+
+Typed payload definitions used by bridges.
+"""
+
 from __future__ import annotations
 
 from typing import Any, Literal, NotRequired, TypedDict
 
-
+# Bridge states based on camera.
 BridgeStateValue = Literal["idle", "live", "error"]
+
+# Keyboard actions associated with matched gestures.
 KeyActionValue = Literal["press", "release", "reset"]
+
+# Stages used during gesture calibration.
 CapturePhaseValue = Literal["idle", "countdown", "waiting", "recording", "captured"]
 
 
 class SessionStatusPayload(TypedDict):
+    """Status update emitted by session bridge."""
     state: BridgeStateValue
     message: NotRequired[str]
 
 
 class CalibrateStatusPayload(TypedDict):
+    """Status update emitted by calibration bridge."""
     state: BridgeStateValue
     message: NotRequired[str]
 
 
 class GestureMatchPayload(TypedDict):
+    """Result from comparing current gesture against gesture template."""
     gestureId: str | None
     name: str | None
     score: float
@@ -33,6 +45,7 @@ class GestureMatchPayload(TypedDict):
 
 
 class CalibrationUpdatePayload(TypedDict):
+    """Progress update of gesture calibration."""
     repCount: int
     capturing: bool
     phase: CapturePhaseValue
@@ -40,6 +53,7 @@ class CalibrationUpdatePayload(TypedDict):
 
 
 class PosePayload(TypedDict):
+    """Result of pose estimation from processed camera frame."""
     detected: bool
     landmarks: Any
     visibility: Any

@@ -1,6 +1,6 @@
 """app/main.py
 
-This file creates the Qt application, opens the main window 
+Creates the Qt application, opens the main window 
 of the Human Controller app, then runs the app. It is
 also responsible for checking app startup prerequisites.
 """
