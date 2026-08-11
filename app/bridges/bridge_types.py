@@ -1,6 +1,7 @@
 """bridge_types.py
 
-Typed payload definitions used by bridges.
+Typed payload definitions used by bridges to be exposed
+to frontend.
 """
 
 from __future__ import annotations
