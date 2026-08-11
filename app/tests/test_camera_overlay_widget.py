@@ -59,6 +59,30 @@ class PoseOverlayTrackerTests(unittest.TestCase):
 
         self.assertEqual(tracker.sample(100)[0][:2], [0.0, 1.0])
 
+    def test_low_visibility_outlier_does_not_displace_reappearing_landmark(
+        self,
+    ) -> None:
+        tracker = PoseOverlayTracker()
+        tracker.update([[0.50, 0.5]], 100, [0.99])
+        tracker.update([[0.51, 0.5]], 133, [0.97])
+
+        # A hidden wrist can be estimated far from its real position. The
+        # painter omits it, so the tracker must omit it as a measurement too.
+        tracker.update([[0.95, 0.5]], 166, [0.08])
+        tracker.update([[0.52, 0.5]], 199, [0.96])
+
+        self.assertEqual(tracker.sample(232)[0][:2], [0.52, 0.5])
+
+    def test_low_visibility_landmark_resets_independently(self) -> None:
+        tracker = PoseOverlayTracker()
+        tracker.update([[0.4, 0.5], [0.6, 0.5]], 100, [1.0, 1.0])
+        tracker.update([[0.9, 0.5], [0.7, 0.5]], 133, [0.1, 1.0])
+        tracker.update([[0.42, 0.5], [0.8, 0.5]], 166, [1.0, 1.0])
+
+        sampled = tracker.sample(166)
+        self.assertEqual(sampled[0][:2], [0.42, 0.5])
+        self.assertGreater(sampled[1][0], 0.7)
+
 
 if __name__ == "__main__":
     unittest.main()
