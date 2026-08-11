@@ -11,13 +11,13 @@ import Session from "@/pages/Session";
 const sessionBridgeMock = vi.hoisted(() => ({
   state: "idle" as "idle" | "live" | "error",
   statusListener: null as
-    | ((event: { 
+    | ((event: {
         state: "idle" | "live" | "error";
         message?: string;
-        settingsTarget?: "camera" | "accessibility"; 
+        settingsTarget?: "camera" | "accessibility";
       }) => void)
     | null,
-  
+
   gestureListener: null as
     | ((event: {
         gestureId: string | null;
@@ -29,7 +29,7 @@ const sessionBridgeMock = vi.hoisted(() => ({
         key?: string;
         injectionError?: string;
         keyAction?: "press" | "release" | "reset";
-    }) => void)
+      }) => void)
     | null,
 
   loadProfile: vi.fn(),
@@ -54,12 +54,12 @@ const activeProfileMock = vi.hoisted(() => ({
   } as {
     patientId: string;
     patientName: string;
-  } | null
+  } | null,
 }));
 
 vi.mock("@/hooks/useActiveProfile", () => ({
   default: () => ({
-    activeProfile: activeProfileMock.activeProfile
+    activeProfile: activeProfileMock.activeProfile,
   }),
 }));
 
@@ -68,13 +68,13 @@ const appStateMock = vi.hoisted(() => ({
     {
       gesture: {
         calibratedAt: "2026",
-      }
-    }
+      },
+    },
   ] as Array<{
     gesture: {
-      calibratedAt: string | null
+      calibratedAt: string | null;
     };
-  }>
+  }>,
 }));
 
 vi.mock("@/state/appStateContext", () => ({
@@ -83,7 +83,7 @@ vi.mock("@/state/appStateContext", () => ({
     readiness: {
       pending: [],
     },
-    bindings: appStateMock.bindings
+    bindings: appStateMock.bindings,
   }),
 }));
 
@@ -176,15 +176,15 @@ describe("Session Camera", () => {
 
     activeProfileMock.activeProfile = {
       patientId: "patient-1",
-      patientName: "Patient 1"
+      patientName: "Patient 1",
     };
 
     appStateMock.bindings = [
       {
         gesture: {
-          calibratedAt: "2026"
-        }
-      }
+          calibratedAt: "2026",
+        },
+      },
     ];
 
     container = document.createElement("div");
@@ -203,7 +203,7 @@ describe("Session Camera", () => {
     activeProfileMock.activeProfile = null;
     await renderNavigation();
     expect(container.textContent).toContain(
-      "No patient selected. Add a binding, go to calibration, or choose a profile."
+      "No patient selected. Add a binding, go to calibration, or choose a profile.",
     );
 
     const startButton = findButton("Start session");
@@ -214,7 +214,7 @@ describe("Session Camera", () => {
     appStateMock.bindings = [];
     await renderNavigation();
     expect(container.textContent).toContain(
-      "This profile has no usable movement key bindings. Please add key bindings or calibrate new gestures."
+      "This profile has no usable movement key bindings. Please add key bindings or calibrate new gestures.",
     );
 
     const startButton = findButton("Start session");
@@ -222,7 +222,9 @@ describe("Session Camera", () => {
   });
 
   it("show camera error", async () => {
-    sessionBridgeMock.startSession.mockRejectedValue(new Error("Camera unavailable"));
+    sessionBridgeMock.startSession.mockRejectedValue(
+      new Error("Camera unavailable"),
+    );
     const startButton = findButton("Start session");
     await act(async () => {
       startButton?.click();
@@ -242,7 +244,7 @@ describe("Session Camera", () => {
     });
     expect(sessionBridgeMock.openCameraSettings).toHaveBeenCalledOnce();
 
-    await act(async() => {
+    await act(async () => {
       dismissButton?.click();
     });
     expect(sessionBridgeMock.stopSession).toHaveBeenCalledOnce();
@@ -253,7 +255,7 @@ describe("Session Camera", () => {
       sessionBridgeMock.statusListener?.({
         state: "error",
         message: "Accessibility error",
-        settingsTarget: "accessibility"
+        settingsTarget: "accessibility",
       });
     });
 
@@ -271,7 +273,7 @@ describe("Session Camera", () => {
     });
     expect(sessionBridgeMock.openAccessibilitySettings).toHaveBeenCalledOnce();
 
-    await act(async() => {
+    await act(async () => {
       dismissButton?.click();
     });
     expect(sessionBridgeMock.stopSession).toHaveBeenCalledOnce();
@@ -280,9 +282,9 @@ describe("Session Camera", () => {
   it("check camera idle and live", async () => {
     expect(sessionBridgeMock.state).toBe("idle");
     expect(container.textContent).toContain(
-      "Starting the session opens the separate camera overlay."
-    )
-    expect(container.textContent).toContain("Idle")
+      "Starting the session opens the separate camera overlay.",
+    );
+    expect(container.textContent).toContain("Idle");
 
     let startButton = findButton("Start session");
     expect(startButton).toBeDefined();
@@ -295,10 +297,10 @@ describe("Session Camera", () => {
     });
     expect(sessionBridgeMock.state).toBe("live");
     expect(container.textContent).toContain(
-      "Switch to your game; the separate camera window stays on top."
+      "Switch to your game; the separate camera window stays on top.",
     );
-    expect(container.textContent).toContain("REC")
-    expect(container.textContent).toContain("Waiting for a movement")
+    expect(container.textContent).toContain("REC");
+    expect(container.textContent).toContain("Waiting for a movement");
 
     startButton = findButton("Start session");
     stopButton = findButton("Stop session");
@@ -341,7 +343,7 @@ describe("Session Camera", () => {
     await act(async () => {
       sessionLink?.click();
     });
-    
+
     startButton = findButton("Start session");
     const stopButton = findButton("Stop session");
 
@@ -400,7 +402,7 @@ describe("Session Camera", () => {
       matched: true,
       hasTemplates: true,
       key: "Space",
-      keyAction: "press" as const
+      keyAction: "press" as const,
     };
 
     await act(async () => sessionBridgeMock.gestureListener?.(gestureEvent));
@@ -417,7 +419,7 @@ describe("Session Camera", () => {
         matched: false,
         hasTemplates: true,
         key: "Space",
-        keyAction: "release"
+        keyAction: "release",
       });
     });
 
