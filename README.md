@@ -2,6 +2,15 @@
 
 Human Controller is a desktop middleware application that enables patients to control existing games using rehabilitation exercises through gesture-to-keyboard mapping.
 
+# GUI Installation
+
+Choose the appropriate download, unzip it, then launch the app:
+
+- [**macOS download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-macOS.zip)
+- [**Windows download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-Windows.zip)
+
+# Developer Instructions
+
 This repo combines:
 
 - a React frontend in `frontend/`
