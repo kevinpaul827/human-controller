@@ -13,12 +13,23 @@ import { BrutalField, BrutalInput } from "@/components/ui/brutal-input";
 import { useAppState } from "@/state/appStateContext";
 import { ROUTES } from "@/utils/constants";
 
+const EMPTY_NAME = "";
+const NO_MOVEMENTS_MESSAGE = "No movements yet";
+const MOVEMENT_NAME_PLACEHOLDER = "e.g. Right Arm Raise";
+const ADD_MOVEMENT_TITLE = "Add movement";
+const MOVEMENTS_TITLE = "Movements";
+
 const Library = () => {
   const navigate = useNavigate();
   const { gestures, addGesture, deleteGesture } = useAppState();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(EMPTY_NAME);
+
+  const openAddDialog = () => setShowAddDialog(true);
+  const closeAddDialog = () => setShowAddDialog(false);
+  const getCalibrateRoute = (gestureId: string) =>
+    `${ROUTES.calibrate}?gesture=${gestureId}`;
 
   const handleAdd = () => {
     const trimmed = name.trim();
@@ -26,17 +37,17 @@ const Library = () => {
       return;
     }
     const gestureId = addGesture(trimmed);
-    setShowAddDialog(false);
-    setName("");
+    closeAddDialog();
+    setName(EMPTY_NAME);
 
-    navigate(`${ROUTES.calibrate}?gesture=${gestureId}`);
+    navigate(getCalibrateRoute(gestureId));
   };
 
   return (
     <Page>
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl sm:text-3xl">Movement library</h1>
-        <BrutalButton size="lg" onClick={() => setShowAddDialog(true)}>
+        <BrutalButton size="lg" onClick={openAddDialog}>
           <Video aria-hidden="true" />
           Record new movement
         </BrutalButton>
@@ -44,7 +55,7 @@ const Library = () => {
 
       <BrutalCard>
         <BrutalCardHeader>
-          <BrutalCardTitle>Movements</BrutalCardTitle>
+          <BrutalCardTitle>{MOVEMENTS_TITLE}</BrutalCardTitle>
           <span className="text-sm font-semibold text-muted-foreground">
             {gestures.length} {gestures.length === 1 ? "movement" : "movements"}
           </span>
@@ -53,7 +64,7 @@ const Library = () => {
         {gestures.length === 0 ? (
           <div className="p-10 text-center">
             <p className="text-sm font-semibold text-muted-foreground">
-              No movements yet
+              {NO_MOVEMENTS_MESSAGE}
             </p>
           </div>
         ) : (
@@ -73,11 +84,7 @@ const Library = () => {
                   <BrutalButton
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      navigate(
-                        `${ROUTES.calibrate}?gesture=${gesture.gestureId}`,
-                      )
-                    }
+                    onClick={() => navigate(getCalibrateRoute(gesture.gestureId))}
                   >
                     {recorded ? (
                       <RotateCcw aria-hidden="true" />
@@ -105,13 +112,10 @@ const Library = () => {
       <BrutalDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
-        title="Add movement"
+        title={ADD_MOVEMENT_TITLE}
         footer={
           <>
-            <BrutalButton
-              variant="outline"
-              onClick={() => setShowAddDialog(false)}
-            >
+            <BrutalButton variant="outline" onClick={closeAddDialog}>
               Cancel
             </BrutalButton>
             <BrutalButton
@@ -128,7 +132,7 @@ const Library = () => {
             id="new-gesture-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="e.g. Right Arm Raise"
+            placeholder={MOVEMENT_NAME_PLACEHOLDER}
             autoFocus
           />
         </BrutalField>

@@ -26,8 +26,24 @@ import useDesktopCameraPreview from "@/hooks/useDesktopCameraPreview";
 import calibrateBridge from "@/services/calibrateBridge";
 import type { CapturePhase } from "@/types/calibrate";
 import { ROUTES } from "@/utils/constants";
-
-const STEP_LABELS = ["Name it", "Record it", "Save it"] as const;
+import {
+  CALIBRATION_INSTRUCTIONS,
+  DEFAULT_MOVEMENT_NAME,
+  DEFAULT_RECORDING_DURATION,
+  EMPTY_REP_COUNT,
+  MAX_RECORDING_DURATION_SECONDS,
+  MIN_RECORDING_DURATION_SECONDS,
+  NAME_STEP,
+  NO_PROFILE_SELECTED,
+  RECORD_STEP,
+  RESET_RECORDING_ERROR,
+  SAVE_MOVEMENT_ERROR,
+  SAVE_STEP,
+  START_CALIBRATION_ERROR,
+  START_CAMERA_ERROR,
+  STEP_LABELS,
+  TOGGLE_RECORDING_ERROR,
+} from "./Calibrate.constant";
 
 const Calibrate = () => {
   const navigate = useNavigate();
@@ -43,33 +59,35 @@ const Calibrate = () => {
     requestedId ?? null,
   );
   const [name, setName] = useState(existing?.name ?? "");
-  const [step, setStep] = useState(existing ? 2 : 1);
+  const [step, setStep] = useState(existing ? RECORD_STEP : NAME_STEP);
   const [cameraLive, setCameraLive] = useState(false);
   const [recording, setRecording] = useState(false);
   const [capturePhase, setCapturePhase] = useState<CapturePhase>("idle");
   const [countdownRemaining, setCountdownRemaining] = useState(0);
-  const [recordingDuration, setRecordingDuration] = useState("10");
-  const [repCount, setRepCount] = useState(0);
+  const [recordingDuration, setRecordingDuration] = useState(
+    DEFAULT_RECORDING_DURATION,
+  );
+  const [repCount, setRepCount] = useState(EMPTY_REP_COUNT);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { previewAspectRatio, previewViewportRef: previewRef } =
     useDesktopCameraPreview({
       bridge: calibrateBridge,
-      isLive: step === 2,
+      isLive: step === RECORD_STEP,
       trackElapsed: false,
     });
-  const displayName = name.trim() || existing?.name || "New movement";
+  const displayName = name.trim() || existing?.name || DEFAULT_MOVEMENT_NAME;
   const recordingSeconds = Number(recordingDuration);
   const recordingDurationValid =
     Number.isFinite(recordingSeconds) &&
-    recordingSeconds >= 1 &&
-    recordingSeconds <= 60;
+    recordingSeconds >= MIN_RECORDING_DURATION_SECONDS &&
+    recordingSeconds <= MAX_RECORDING_DURATION_SECONDS;
 
   useEffect(() => {
     const offStatus = calibrateBridge.onCalibrateStatus((event) => {
       setCameraLive(event.state === "live");
       if (event.state === "error")
-        setError(event.message ?? "Unable to start the camera.");
+        setError(event.message ?? START_CAMERA_ERROR);
     });
     const offUpdate = calibrateBridge.onCalibrationUpdated((event) => {
       setRepCount(event.repCount);
@@ -84,7 +102,7 @@ const Calibrate = () => {
   }, []);
 
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== RECORD_STEP) return;
     let active = true;
     setError(null);
     void calibrateBridge
@@ -95,7 +113,7 @@ const Calibrate = () => {
           setError(
             cause instanceof Error
               ? cause.message
-              : "Unable to start calibration.",
+              : START_CALIBRATION_ERROR,
           );
       });
     return () => {
@@ -110,7 +128,7 @@ const Calibrate = () => {
       id = addGesture(name.trim());
       setGestureId(id);
     }
-    setStep(2);
+    setStep(RECORD_STEP);
   };
 
   const toggleRecording = async () => {
@@ -125,7 +143,7 @@ const Calibrate = () => {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Unable to change the recording state.",
+          : TOGGLE_RECORDING_ERROR,
       );
     }
   };
@@ -134,16 +152,16 @@ const Calibrate = () => {
     setError(null);
     try {
       await calibrateBridge.resetRep();
-      setRepCount(0);
+      setRepCount(EMPTY_REP_COUNT);
       setRecording(false);
       setCapturePhase("idle");
       setCountdownRemaining(0);
-      setStep(2);
+      setStep(RECORD_STEP);
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Unable to reset this recording.",
+          : RESET_RECORDING_ERROR,
       );
     }
   };
@@ -160,7 +178,7 @@ const Calibrate = () => {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Unable to save this movement.",
+          : SAVE_MOVEMENT_ERROR,
       );
     } finally {
       setSaving(false);
@@ -210,7 +228,7 @@ const Calibrate = () => {
           <p className="mt-1 text-sm font-semibold text-muted-foreground">
             {activeProfile
               ? `Calibrating for ${activeProfile.patientName}`
-              : "No profile selected"}
+              : NO_PROFILE_SELECTED}
           </p>
         </div>
         <StepProgress steps={STEP_LABELS} currentStep={step} />
@@ -222,7 +240,7 @@ const Calibrate = () => {
         </p>
       ) : null}
 
-      {step === 1 ? (
+      {step === NAME_STEP ? (
         <BrutalCard className="max-w-xl">
           <BrutalCardHeader>
             <BrutalCardTitle>What is this movement called?</BrutalCardTitle>
@@ -254,7 +272,7 @@ const Calibrate = () => {
         </BrutalCard>
       ) : null}
 
-      {step === 2 ? (
+      {step === RECORD_STEP ? (
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
           <BrutalCard className="overflow-hidden">
             <BrutalCardHeader>
@@ -306,9 +324,9 @@ const Calibrate = () => {
                   <BrutalInput
                     id="recording-duration"
                     type="number"
-                    min={1}
-                    max={60}
-                    step={1}
+                    min={MIN_RECORDING_DURATION_SECONDS}
+                    max={MAX_RECORDING_DURATION_SECONDS}
+                    step={NAME_STEP}
                     value={recordingDuration}
                     disabled={recording}
                     onChange={(event) =>
@@ -322,15 +340,11 @@ const Calibrate = () => {
                 </BrutalField>
               </div>
               <ol className="flex flex-col gap-3 text-sm font-semibold">
-                <li>1. Keep your whole body visible.</li>
-                <li>
-                  2. Press Start recording and hold the starting pose through
-                  the 3-second countdown.
-                </li>
-                <li>
-                  3. Move when “Ready — move now” appears, then hold the final
-                  pose. Start and finish are detected automatically.
-                </li>
+                {CALIBRATION_INSTRUCTIONS.map((instruction, index) => (
+                  <li key={instruction}>
+                    {index + 1}. {instruction}
+                  </li>
+                ))}
               </ol>
             </BrutalCardContent>
             <BrutalCardFooter className="justify-between">
@@ -345,8 +359,8 @@ const Calibrate = () => {
                 {recording ? "Cancel recording" : "Start recording"}
               </BrutalButton>
               <BrutalButton
-                onClick={() => setStep(3)}
-                disabled={repCount === 0 || recording}
+                onClick={() => setStep(SAVE_STEP)}
+                disabled={repCount === EMPTY_REP_COUNT || recording}
               >
                 Review
                 <ArrowRight />
@@ -356,7 +370,7 @@ const Calibrate = () => {
         </div>
       ) : null}
 
-      {step === 3 ? (
+      {step === SAVE_STEP ? (
         <BrutalCard className="max-w-xl">
           <BrutalCardHeader>
             <BrutalCardTitle>Ready to save</BrutalCardTitle>
