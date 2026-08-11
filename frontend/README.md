@@ -64,6 +64,24 @@ npm run build
 npm run lint
 npm run prettier
 npm run typecheck
+npm run test:e2e
+```
+
+## Playwright E2E
+
+Playwright in this project is set up for the browser version of the frontend
+only. It tests the React shell loaded by Vite and does not cover the native Qt
+window, camera preview, or OS-level key injection.
+
+The tests live in `frontend/e2e/` and use the app's existing browser fallback
+storage instead of the desktop bridge.
+
+Useful commands:
+
+```bash
+npm run test:e2e
+npm run test:e2e:headed
+npm run test:e2e:ui
 ```
 
 ## Typical Workflows
