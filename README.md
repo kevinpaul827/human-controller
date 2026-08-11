@@ -2,12 +2,26 @@
 
 Human Controller is a desktop middleware application that enables patients to control existing games using rehabilitation exercises through gesture-to-keyboard mapping.
 
-# GUI Installation
+# GUI Installation (Windows)
 
-Choose the appropriate download, unzip it, then launch the app:
-
-- [**macOS download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-macOS.zip)
 - [**Windows download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-Windows.zip)
+  
+# GUI Installation (macOS)
+
+You can download the macOS app here:
+[**macOS download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-macOS.zip)
+
+when you try to open the macOS app, you might get a pop up that looks like this:
+
+<img width="260" height="248" alt="Screenshot 2026-08-11 at 10 03 37 pm" src="https://github.com/user-attachments/assets/349e51ff-8080-45b9-8b20-8c2eedddfd80" />
+
+To resolve this, follow these instructions:
+
+<img width="631" height="287" alt="Screenshot 2026-08-11 at 10 04 45 pm" src="https://github.com/user-attachments/assets/2f4b2a3c-610f-4c48-9b5e-ec8f90d09191" />
+
+And click "Open Anyway"
+<img width="464" height="108" alt="Screenshot 2026-08-11 at 10 05 06 pm" src="https://github.com/user-attachments/assets/67aafe21-decc-4bca-9a53-3f47bd048019" />
+
 
 # Developer Instructions
 
