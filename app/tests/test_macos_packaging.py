@@ -151,26 +151,31 @@ class MacOSHelperPackagingTests(unittest.TestCase):
             ],
         )
 
+    @patch.object(build_macos_app, "print")
     @patch.object(build_macos_app.subprocess, "run")
-    def test_missing_main_executable_fails_before_signing(self, run):
+    def test_missing_main_executable_fails_before_signing(self, run, mock_print):
         self.source_executable.unlink()
 
         created = build_macos_app.create_pip_helper_bundle()
 
         self.assertFalse(created)
         run.assert_not_called()
+        mock_print.assert_called_once()
 
+    @patch.object(build_macos_app, "print")
     @patch.object(build_macos_app.subprocess, "run")
-    def test_signing_failure_stops_packaging(self, run):
+    def test_signing_failure_stops_packaging(self, run, mock_print):
         run.return_value = SimpleNamespace(returncode=1)
 
         created = build_macos_app.create_pip_helper_bundle()
 
         self.assertFalse(created)
         self.assertEqual(run.call_count, 1)
+        mock_print.assert_called_once()
 
+    @patch.object(build_macos_app, "print")
     @patch.object(build_macos_app.subprocess, "run")
-    def test_strict_verification_failure_stops_packaging(self, run):
+    def test_strict_verification_failure_stops_packaging(self, run, mock_print):
         run.side_effect = (
             SimpleNamespace(returncode=0),
             SimpleNamespace(returncode=0),
@@ -181,6 +186,7 @@ class MacOSHelperPackagingTests(unittest.TestCase):
 
         self.assertFalse(created)
         self.assertEqual(run.call_count, 3)
+        mock_print.assert_called_once()
 
     def test_main_bundle_remains_a_regular_application(self):
         self.assertNotIn("LSUIElement", build_macos_app.SPEC_TEMPLATE)
