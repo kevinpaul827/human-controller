@@ -40,7 +40,7 @@ jobs:
         run: |
           pip install -r backend/requirements-dev.txt
 
-      - name: Run backend coverage
+      - name: Run backend tests and generate coverage report
         run: make backend-coverage
 
       - name: Upload backend coverage artifact

@@ -37,7 +37,7 @@ jobs:
           pip install -r app/requirements.txt
           pip install coverage
 
-      - name: Run app coverage
+      - name: Run app tests and generate coverage report
         run: make app-coverage
 
       - name: Upload app coverage artifact
