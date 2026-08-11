@@ -7,15 +7,17 @@ This repo combines:
 - a React frontend in `frontend/`
 - a PySide6 desktop shell in `app/`
 - Python backend and pose/matching code in `backend/`
+- development helpers in `devtools/`
 
 ## Repo Layout
 
 ```text
 .
 ├── app/        # Desktop app, Qt bridges, camera/session logic, tests
-├── backend/    # Dev backend helper, pose estimation, matching engine
+├── backend/    # Pose estimation and matching engine code
+├── devtools/   # Preview helpers and development-only Python modules
 ├── frontend/   # React + TypeScript UI
-├── scripts/    # Local preview and macOS packaging helpers
+├── scripts/    # Runnable wrappers for preview and packaging workflows
 └── Makefile    # Common commands
 ```
 
@@ -25,7 +27,8 @@ At runtime, the React app is loaded inside a Qt `QWebEngineView`.
 
 - `frontend/` renders the UI and calls Python bridge objects through Qt WebChannel.
 - `app/` owns the native window, camera lifecycle, overlays, profile loading, and bridge objects such as `sessionBridge`, `calibrateBridge`, and `profileBridge`.
-- `backend/` contains the backend helper plus matching/perception code used by the desktop flow.
+- `backend/` contains the pose and matching code used by the desktop flow.
+- `devtools/` contains preview-only helpers such as the local health-check server and backend process manager.
 
 In local preview mode:
 

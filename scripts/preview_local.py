@@ -26,7 +26,7 @@ MACOS_APP_BINARY = ROOT / "dist" / "Human Controller.app" / "Contents" / "MacOS"
 PROCESS_PATTERNS = [
     "Human Controller",
     "app.main",
-    "backend.dev_server",
+    "devtools.backend_health_server",
     "vite --host 127.0.0.1 --port 5173",
     "preview_local.py",
     "run_app.py",

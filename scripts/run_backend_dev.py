@@ -17,7 +17,7 @@ POLL_INTERVAL_SECONDS = 0.75
 # desktop app can pick up the change without rerunning the full preview flow.
 
 def backend_command():
-    return [sys.executable, "-m", "backend.dev_server"]
+    return [sys.executable, "-m", "devtools.backend_health_server"]
 
 
 def snapshot_backend_files():

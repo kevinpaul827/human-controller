@@ -22,11 +22,13 @@ For full-project setup, use the root [README](../README.md). This file is the ap
 - `profile_manager/` — Profile persistence, schema, and validation
 - `platforms/` — OS-specific adapters for keyboard, windowing, and PiP behavior
 - `calibration/` — Calibration capture flow
-- `dev/` — Preview-only and development helpers
-- `tools/` — Manual demos and utility entry points
 - `utils/` — Shared app utilities
-- `data/` — Saved profiles and gestures
 - `tests/` — Desktop app tests
+
+Developer-only helpers live outside `app/`:
+
+- `devtools/` — Importable development helpers used by preview flows and smoke checks
+- `scripts/` — Thin command-line entrypoints and local workflow wrappers
 
 ## How the Desktop App Fits In
 
@@ -36,7 +38,7 @@ The app sits between the React frontend and the Python backend code.
 - `ui/main_window.py` registers `stateBridge`, `sessionBridge`, `calibrateBridge`, and `profileBridge` on a Qt `QWebChannel`.
 - the frontend calls those bridge objects from TypeScript services
 - the app manages the native calibration preview and Session picture-in-picture overlay
-- in preview mode, `dev/backend_process.py` can start the local backend helper and wait for its `/health` endpoint
+- in preview mode, `devtools/backend_process.py` can start the local health-check helper and wait for its `/health` endpoint
 
 Important detail: camera pixels are not drawn by React. Calibration reports an
 in-page viewport for the native Qt preview, while Session uses a separate
@@ -113,10 +115,10 @@ Run a single test module if needed:
 python -m unittest app.tests.test_profile_manager -v
 ```
 
-## Demo
+## Boundaries
 
-To run the profile demo:
+Use this rule of thumb when placing code:
 
-```bash
-python -m app.tools.profile_demo
-```
+- `app/` is runtime and product code for the desktop application
+- `devtools/` is reusable development-only Python logic
+- `scripts/` is for runnable wrappers and local commands
