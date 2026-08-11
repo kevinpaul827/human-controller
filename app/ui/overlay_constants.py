@@ -1,5 +1,7 @@
-"""Constants for drawing the live session pose overlay."""
+"""overlay_constants.py
 
+Constants for drawing the live session pose overlay.
+"""
 from backend.matching_engine.core.angles import ANGLE_TRIPLETS, AngleKey
 from backend.pose_types import BODY_CONNECTIONS, PoseKeypoint
 

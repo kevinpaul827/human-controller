@@ -1,3 +1,9 @@
+"""main_window.py
+
+Main application window to connect frontend, bridges,
+and runtime services.
+"""
+
 import os
 import sys
 from pathlib import Path

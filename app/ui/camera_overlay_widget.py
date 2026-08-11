@@ -1,3 +1,8 @@
+"""camera_overlay_widget.py
+
+Renders camera frames and pose landmarks.
+"""
+
 from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPen
 from PySide6.QtWidgets import QWidget
