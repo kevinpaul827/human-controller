@@ -7,9 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Header from "@/components/Header";
 import Session from "@/pages/Session";
-import { start } from "node:repl";
-import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
-import { access } from "node:fs";
 
 const sessionBridgeMock = vi.hoisted(() => ({
   state: "idle" as "idle" | "live" | "error",
