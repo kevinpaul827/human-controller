@@ -31,20 +31,23 @@ class PoseOverlayTracker:
         beta=POSE_TRACKER_BETA,
         max_projection_ms=MAX_POSE_PROJECTION_MS,
         reset_gap_ms=POSE_TRACKER_RESET_GAP_MS,
+        min_visibility=MIN_VISIBILITY,
     ):
         self.alpha = float(alpha)
         self.beta = float(beta)
         self.max_projection_ms = int(max_projection_ms)
         self.reset_gap_ms = int(reset_gap_ms)
+        self.min_visibility = float(min_visibility)
         self.reset()
 
     def reset(self):
         self._landmarks = []
         self._positions = []
         self._velocities = []
+        self._tracked = []
         self._timestamp_ms = -1
 
-    def update(self, landmarks, timestamp_ms):
+    def update(self, landmarks, timestamp_ms, visibility=None):
         target = [
             [float(coordinate) for coordinate in landmark]
             for landmark in (landmarks or [])
@@ -52,6 +55,19 @@ class PoseOverlayTracker:
         if not target:
             self.reset()
             return False
+
+        target_visibility = (
+            None
+            if visibility is None
+            else [float(value) for value in visibility]
+        )
+
+        def is_visible(index):
+            return (
+                target_visibility is None
+                or index >= len(target_visibility)
+                or target_visibility[index] >= self.min_visibility
+            )
 
         timestamp_ms = int(timestamp_ms)
         should_reset = (
@@ -65,6 +81,10 @@ class PoseOverlayTracker:
             self._landmarks = target
             self._positions = [landmark[:2] for landmark in target]
             self._velocities = [[0.0, 0.0] for _ in target]
+            self._tracked = [
+                len(landmark) >= 2 and is_visible(index)
+                for index, landmark in enumerate(target)
+            ]
             self._timestamp_ms = timestamp_ms
             return True
 
@@ -75,10 +95,18 @@ class PoseOverlayTracker:
         elapsed_seconds = elapsed_ms / 1000.0
         positions = []
         velocities = []
+        tracked = []
         for index, landmark in enumerate(target):
-            if len(landmark) < 2 or len(self._positions[index]) < 2:
+            if len(landmark) < 2 or not is_visible(index):
+                positions.append(self._positions[index])
+                velocities.append([0.0, 0.0])
+                tracked.append(False)
+                continue
+
+            if not self._tracked[index] or len(self._positions[index]) < 2:
                 positions.append(landmark[:2])
                 velocities.append([0.0, 0.0])
+                tracked.append(True)
                 continue
 
             landmark_position = []
@@ -96,10 +124,12 @@ class PoseOverlayTracker:
                 )
             positions.append(landmark_position)
             velocities.append(landmark_velocity)
+            tracked.append(True)
 
         self._landmarks = target
         self._positions = positions
         self._velocities = velocities
+        self._tracked = tracked
         self._timestamp_ms = timestamp_ms
         return True
 
@@ -189,7 +219,11 @@ class CameraOverlayWidget(QWidget):
         )
         timestamp_ms = int(payload.get("timestampMs", -1))
         if self._smooth_pose:
-            self._pose_tracker.update(target_landmarks, timestamp_ms)
+            self._pose_tracker.update(
+                target_landmarks,
+                timestamp_ms,
+                target_visibility,
+            )
             self._landmarks = self._pose_tracker.sample(
                 self._preview_timestamp_ms
                 if self._preview_timestamp_ms >= 0
