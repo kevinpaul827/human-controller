@@ -234,7 +234,9 @@ const Settings = () => {
             min={SMOOTHING_MIN}
             max={SMOOTHING_MAX}
             step={SMOOTHING_STEP}
-            formatValue={(value) => EFFORT_LABELS[value] ?? DEFAULT_EFFORT_LABEL}
+            formatValue={(value) =>
+              EFFORT_LABELS[value] ?? DEFAULT_EFFORT_LABEL
+            }
             onChange={(value) => updateSetting("smoothing", value)}
           />
         </BrutalCardContent>

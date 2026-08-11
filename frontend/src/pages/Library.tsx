@@ -84,7 +84,9 @@ const Library = () => {
                   <BrutalButton
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(getCalibrateRoute(gesture.gestureId))}
+                    onClick={() =>
+                      navigate(getCalibrateRoute(gesture.gestureId))
+                    }
                   >
                     {recorded ? (
                       <RotateCcw aria-hidden="true" />

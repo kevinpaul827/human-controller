@@ -111,9 +111,7 @@ const Calibrate = () => {
       .catch((cause: unknown) => {
         if (active)
           setError(
-            cause instanceof Error
-              ? cause.message
-              : START_CALIBRATION_ERROR,
+            cause instanceof Error ? cause.message : START_CALIBRATION_ERROR,
           );
       });
     return () => {
@@ -140,11 +138,7 @@ const Calibrate = () => {
         await calibrateBridge.startRep(recordingSeconds);
       }
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : TOGGLE_RECORDING_ERROR,
-      );
+      setError(cause instanceof Error ? cause.message : TOGGLE_RECORDING_ERROR);
     }
   };
 
@@ -158,11 +152,7 @@ const Calibrate = () => {
       setCountdownRemaining(0);
       setStep(RECORD_STEP);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : RESET_RECORDING_ERROR,
-      );
+      setError(cause instanceof Error ? cause.message : RESET_RECORDING_ERROR);
     }
   };
 
@@ -175,11 +165,7 @@ const Calibrate = () => {
       completeRecording(gestureId, result);
       navigate(ROUTES.library);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : SAVE_MOVEMENT_ERROR,
-      );
+      setError(cause instanceof Error ? cause.message : SAVE_MOVEMENT_ERROR);
     } finally {
       setSaving(false);
     }
