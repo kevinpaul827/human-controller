@@ -1,3 +1,5 @@
+"""Match live movement against saved gesture templates."""
+
 from __future__ import annotations
 
 import math

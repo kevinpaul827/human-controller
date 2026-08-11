@@ -1,3 +1,5 @@
+"""Shared matching helpers and the matcher interface."""
+
 from __future__ import annotations
 
 import time

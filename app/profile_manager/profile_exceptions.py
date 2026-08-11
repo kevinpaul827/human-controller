@@ -1,3 +1,5 @@
+"""Exceptions for profile management."""
+
 class ProfileError(Exception):
     """Base error for profile storage operations."""
 

@@ -1,3 +1,5 @@
+"""Start and stop the local backend helper process."""
+
 from __future__ import annotations
 
 import http.client

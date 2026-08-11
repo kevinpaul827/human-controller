@@ -1,3 +1,7 @@
+"""Pose estimator using MediaPipe Pose Landmarker.
+
+Takes a video frame, runs the pose model, and returns compact landmarks
+"""
 import cv2
 import mediapipe as mp
 import numpy as np

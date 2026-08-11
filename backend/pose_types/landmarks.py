@@ -1,4 +1,8 @@
-"""Application pose-keypoint data structures."""
+"""Compact pose-keypoint data structures used by gesture matching.
+
+MediaPipe returns 33 landmarks, this module keeps only the 16 landmarks for angle and matching.
+"""
+
 
 from __future__ import annotations
 
@@ -57,6 +61,7 @@ MEDIAPIPE_POSE_INDICES: tuple[int, ...] = (
 
 @dataclass
 class PoseLandmarks:
+    """One pose frame in compact format: XYZ coordinates and visibility."""
     xyz: np.ndarray  # (16, 3)
     visibility: np.ndarray  # (16,) in [0, 1]
 
@@ -82,6 +87,7 @@ class PoseLandmarks:
     # Allows for frames with no data.
     @classmethod
     def empty(cls) -> "PoseLandmarks":
+        """Return a PoseLandmarks object with all values set to zero."""
         return cls(
             xyz=np.zeros((NUM_LANDMARKS, 3), dtype=np.float64),
             visibility=np.zeros(NUM_LANDMARKS, dtype=np.float64),

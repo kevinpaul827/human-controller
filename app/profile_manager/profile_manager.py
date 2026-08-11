@@ -1,3 +1,8 @@
+"""Manage patient profiles including creating, updating, viewing, 
+
+and deleting profile JSON files for each patient. Load and save patient profiles on disk
+"""
+
 from __future__ import annotations
 
 import json
