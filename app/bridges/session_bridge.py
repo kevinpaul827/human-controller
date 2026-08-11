@@ -1,3 +1,9 @@
+"""session_bridge.py
+
+Qt bridge for the Session module of the app which will
+communicate to the frontend.
+"""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -26,6 +32,7 @@ class SessionBridge(CameraBridgeBase, QObject):
     LIVE_STATE = SessionState.LIVE
     ERROR_STATE = SessionState.ERROR
 
+    # Signals for frontend communication.
     sessionStatusChanged = Signal(dict)
     previewBoundsChanged = Signal(int, int, int, int)
     previewAspectRatioChanged = Signal(float)
@@ -53,6 +60,7 @@ class SessionBridge(CameraBridgeBase, QObject):
         self.active_patient_id = None
         self.active_key_bindings = {}
 
+        # Connect camera manager events.
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
         self.camera.errorOccurred.connect(self.handle_camera_error)
@@ -64,18 +72,24 @@ class SessionBridge(CameraBridgeBase, QObject):
         self.camera.previewAspectRatioChanged.connect(self.handle_preview_aspect_ratio_changed)
 
     def attach_picture_in_picture(self, window):
+        """Attach the window overlay for the session camera."""
         self.picture_in_picture = window
 
     @Slot(str, result="QVariantMap")
     def loadProfile(self, patient_id):
+        """Loads profile and its gestures."""
         return self._profile_result(patient_id)
 
     @Slot()
     def startSession(self):
+        """Request camera ownership for session bridge."""
         self.camera.start(self.BRIDGE)
 
     @Slot()
     def stopSession(self):
+        """Stops camera session owned by session bridge.
+        and clears active profile and its gestures.
+        """
         self.camera.stop(self.BRIDGE)
         if self.state_bridge is None:
             self._clear_profile()
@@ -86,10 +100,12 @@ class SessionBridge(CameraBridgeBase, QObject):
 
     @Slot(result=str)
     def getSessionState(self):
+        """Return current session state."""
         return self.state.value
     
     @Slot(result="QVariantList")
     def getLoadedSessionGestures(self):
+        """Returns configured gestures for sesesion."""
         if hasattr(self.camera, "session_gesture_mappings"):
             return self.camera.session_gesture_mappings()
         if self.state_bridge is None:
@@ -113,23 +129,28 @@ class SessionBridge(CameraBridgeBase, QObject):
 
     @Slot(float, float, float, float, float)
     def updatePreviewBounds(self, left, top, width, height, device_pixel_ratio):
+        """Update preview bounds of camera."""
         self.update_preview_bounds(left, top, width, height)
 
     @Slot()
     def openCameraSettings(self):
+        """Open camera settings interface."""
         self.camera.openCameraSettings()
 
     @Slot()
     def openAccessibilitySettings(self):
+        """Open accessibility settings interface for input injection."""
         self.camera.openAccessibilitySettings()
 
     def handle_preview_frame(self, frame, timestamp_ms):
+        """Forwards preview frame to window overlay."""
         if not self.check_camera_ownership() or self.state != SessionState.LIVE:
             return
         if self.picture_in_picture is not None:
             self.picture_in_picture.set_frame(frame, timestamp_ms)
 
     def handle_gesture_match_updated(self, payload: GestureMatchPayload):
+        """Forward a gesture match update."""
         if not self.check_camera_ownership():
             return
 
@@ -145,6 +166,9 @@ class SessionBridge(CameraBridgeBase, QObject):
         self.gestureMatchUpdated.emit(enriched_payload)
 
     def apply_overlay_visibility(self):
+        """Update overlay visiblity depending on state and 
+        camera ownership.
+        """
         if self.picture_in_picture is None:
             return
 
@@ -158,20 +182,25 @@ class SessionBridge(CameraBridgeBase, QObject):
             self.picture_in_picture.hide_overlay()
 
     def _emit_status_payload(self, payload: SessionStatusPayload) -> None:
+        """Forward session status payload."""
         self.sessionStatusChanged.emit(payload)
 
     def _after_state_change(self) -> None:
+        """Update overlay visibility after state change."""
         self.apply_overlay_visibility()
 
     def _clear_extra_preview(self) -> None:
+        """Clear overlay window."""
         if self.picture_in_picture is not None:
             self.picture_in_picture.clear()
 
     def _handle_live_pose(self, pose: PosePayload) -> None:
+        """Forward live pose data to overlay."""
         if self.picture_in_picture is not None:
             self.picture_in_picture.set_pose(pose)
 
     def _load_profile(self, patient_id):
+        """Load a profile and its configured gestures."""
         if self.profile_manager is None:
             raise ProfileError("Profile state is unavailable.")
         snapshot = (
@@ -215,6 +244,7 @@ class SessionBridge(CameraBridgeBase, QObject):
         }
 
     def _clear_profile(self):
+        """Clear the active profile and their configured gestures."""
         if (
             self.state_bridge is None
             and hasattr(self.camera, "clear_session_gestures")
@@ -224,6 +254,7 @@ class SessionBridge(CameraBridgeBase, QObject):
         self.active_key_bindings = {}
 
     def _profile_result(self, patient_id):
+        """Wrap loading profile in a payload for the frontend."""
         try:
             return {"ok": True, "data": self._load_profile(patient_id)}
         except (OSError, ProfileError, ValueError) as error:

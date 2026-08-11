@@ -31,6 +31,7 @@ class CalibrateBridge(CameraBridgeBase, QObject):
     LIVE_STATE = CalibrateState.LIVE
     ERROR_STATE = CalibrateState.ERROR
 
+    # Signals for frontend communication.
     calibrateStatusChanged = Signal(dict)
     calibrationUpdated = Signal(dict)
     previewBoundsChanged = Signal(int, int, int, int)
