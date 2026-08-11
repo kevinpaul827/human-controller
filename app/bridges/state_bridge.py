@@ -1,3 +1,8 @@
+"""state_bridge.py
+
+Qt bridge for components relating to persistence
+(settings, patients, gestures).
+"""
 from __future__ import annotations
 
 import json
@@ -43,6 +48,7 @@ class StateBridge(QObject):
             "pendingGestures": [],
             "settings": dict(DEFAULT_SETTINGS),
         }
+        """Read UI-specific state and normalize it."""
         try:
             payload = json.loads(self.state_path.read_text(encoding="utf-8"))
             if isinstance(payload, dict):
@@ -68,13 +74,16 @@ class StateBridge(QObject):
         return defaults
 
     def _write_ui_state(self, payload: dict) -> None:
+        """Atomically persist UI-specific state"""
         write_json_atomic(self.state_path, payload)
 
     @staticmethod
     def _profile_payload(profile: PatientProfile) -> dict:
+        """Serialize patient profile for frontend use."""
         return profile.model_dump(mode="json", by_alias=True)
 
     def _selected_profile(self, state: dict):
+        """Resolve currently selected patient profile."""
         profiles = self.profile_manager.list_profiles()
         selected_id = state.get("selectedPatientId")
         if selected_id is None:
@@ -89,12 +98,14 @@ class StateBridge(QObject):
         )
 
     def _emit_updates(self) -> dict:
+        """Emit synchronized runtime and frontend state updates."""
         snapshot = self._snapshot()
         self.runtimeConfigurationChanged.emit(self.runtime_configuration())
         self.stateChanged.emit(snapshot)
         return snapshot
 
     def _snapshot(self) -> dict:
+        """Build frontend-facing application state snapshot."""
         ui = self._read_ui_state()
         profiles = self.profile_manager.list_profiles()
         selected = self._selected_profile(ui)
@@ -146,6 +157,7 @@ class StateBridge(QObject):
         }
 
     def runtime_configuration(self) -> dict:
+        """Returns runtime bindings, gesture match thresholds, and settings."""
         snapshot = self._snapshot()
         return {
             "bindings": {
@@ -160,14 +172,17 @@ class StateBridge(QObject):
 
     @Slot(result="QVariantMap")
     def getState(self):
+        """Return current application state snapshot."""
         return self._snapshot()
 
     @Slot(result="QVariantMap")
     def recommendPoseModel(self):
+        """Return pose-model recommendation for current device."""
         return device_pose_recommendation()
 
     @Slot("QVariantMap", result="QVariantMap")
     def saveState(self, payload):
+        """Persist frontend state changes and update selected profile."""
         payload = payload if isinstance(payload, dict) else {}
         current = self._read_ui_state()
         selected_id = payload.get("selectedPatientId", current["selectedPatientId"])
@@ -226,6 +241,7 @@ class StateBridge(QObject):
 
     @Slot(str, result="QVariantMap")
     def selectPatient(self, patient_id):
+        """Select existing profile and clear active preset."""
         ui = self._read_ui_state()
         self.profile_manager.load(patient_id)
         ui["selectedPatientId"] = patient_id
@@ -236,6 +252,7 @@ class StateBridge(QObject):
     @Slot(str, result="QVariantMap")
     @Slot(str, str, result="QVariantMap")
     def createProfile(self, patient_name, notes=""):
+        """Create and select new profile."""
         profile = self.profile_manager.create_new(
             str(patient_name).strip(),
             str(notes).strip(),
@@ -248,6 +265,7 @@ class StateBridge(QObject):
 
     @Slot(str, result="QVariantMap")
     def deleteProfile(self, patient_id):
+        """Delete profile and clear profile selection (if selected)."""
         self.profile_manager.delete(str(patient_id))
         ui = self._read_ui_state()
         if ui.get("selectedPatientId") == patient_id:
@@ -258,6 +276,7 @@ class StateBridge(QObject):
 
     @Slot(result="QVariantMap")
     def clearPatientSelection(self):
+        """Clear active profile and active preset."""
         ui = self._read_ui_state()
         ui["selectedPatientId"] = None
         ui["activePresetId"] = None
@@ -266,6 +285,7 @@ class StateBridge(QObject):
 
     @Slot(result="QVariantMap")
     def refreshProfiles(self):
+        """Refresh profile state and clear profile selection (if selected)."""
         ui = self._read_ui_state()
         selected_id = ui.get("selectedPatientId")
         if selected_id and not self.profile_manager.exists(str(selected_id)):
@@ -276,6 +296,7 @@ class StateBridge(QObject):
 
     @Slot(str, result="QVariantMap")
     def deleteGesture(self, gesture_id):
+        """Delete gesture and remove related persisted references."""
         resolved_gesture_id = str(gesture_id)
         self.gesture_store.delete(resolved_gesture_id)
 
