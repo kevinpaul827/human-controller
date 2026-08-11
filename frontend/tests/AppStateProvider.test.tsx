@@ -203,6 +203,23 @@ describe("AppStateProvider", () => {
     }).not.toThrow();
   });
 
+  it("starts with safe defaults when local storage cannot be read", async () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: () => {
+          throw new DOMException("Storage denied", "SecurityError");
+        },
+        setItem,
+      },
+    });
+
+    await renderProvider();
+
+    expect(current().gestures).toEqual([]);
+    expect(current().settings.poseModel).toBe("lite");
+  });
+
   it("creates, selects, clears, and deletes browser patient profiles", async () => {
     await renderProvider();
 
@@ -468,7 +485,7 @@ describe("AppStateProvider", () => {
     let returnedPatientId = "";
     await act(async () => {
       returnedPatientId =
-        (await current().createPatient(" Taylor ", "notes"))?.patientId ?? "";
+        (await current().createPatient(" Taylor ", " notes "))?.patientId ?? "";
     });
     expect(bridgeMocks.createProfile).toHaveBeenCalledWith("Taylor", "notes");
     expect(returnedPatientId).toBe("patient-new");
@@ -495,6 +512,25 @@ describe("AppStateProvider", () => {
     expect(
       current().gestures.some((gesture) => gesture.gestureId === "ges-squat"),
     ).toBe(false);
+  });
+
+  it("cancels an undo timer when the operation is resolved", async () => {
+    vi.useFakeTimers();
+    await renderProvider();
+
+    act(() => current().unbindGesture("ges-squat"));
+    expect(vi.getTimerCount()).toBe(1);
+
+    act(() => current().undo());
+    expect(current().undoLabel).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+
+    act(() => current().unbindGesture("ges-squat"));
+    expect(vi.getTimerCount()).toBe(1);
+
+    act(() => current().dismissUndo());
+    expect(current().undoLabel).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("ignores a delayed desktop load after the provider unmounts", async () => {

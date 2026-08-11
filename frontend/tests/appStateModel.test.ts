@@ -45,6 +45,81 @@ describe("app state model", () => {
     );
   });
 
+  it("normalizes malformed nested browser state at the storage boundary", () => {
+    const state = parseStoredState(
+      JSON.stringify({
+        gestures: [
+          {
+            gestureId: "wave",
+            name: "Wave",
+            calibratedAt: 42,
+            matchScore: "high",
+          },
+          { gestureId: "", name: "Invalid" },
+          null,
+        ],
+        bindings: [
+          { gestureId: "wave", key: "W", matchThreshold: 140 },
+          { gestureId: "wave", key: null },
+        ],
+        presets: [
+          {
+            presetId: "default",
+            name: "Default",
+            bindings: [{ gestureId: "wave", key: "W" }, null],
+          },
+          { presetId: "broken", name: "Broken", bindings: null },
+        ],
+        patients: [
+          {
+            schemaVersion: 2,
+            patientId: "patient-a",
+            patientName: "Patient A",
+            notes: "",
+            updatedAt: "2026-08-08T00:00:00.000Z",
+            keyBindings: { wave: "W", broken: null },
+            matchThresholds: { wave: -10, broken: "high" },
+          },
+          { schemaVersion: 1, patientId: "legacy" },
+        ],
+        settings: {
+          matchThreshold: 150,
+          cooldown: -2,
+          smoothing: 3.8,
+          poseModel: "unsupported",
+        },
+      }),
+    );
+
+    expect(state.gestures).toEqual([
+      {
+        gestureId: "wave",
+        name: "Wave",
+        calibratedAt: null,
+        matchScore: null,
+      },
+    ]);
+    expect(state.bindings).toEqual([
+      { gestureId: "wave", key: "W", matchThreshold: 100 },
+    ]);
+    expect(state.presets).toEqual([
+      {
+        presetId: "default",
+        name: "Default",
+        bindings: [{ gestureId: "wave", key: "W" }],
+      },
+    ]);
+    expect(state.patients).toHaveLength(1);
+    expect(state.patients[0].keyBindings).toEqual({ wave: "W" });
+    expect(state.patients[0].matchThresholds).toEqual({ wave: 0 });
+    expect(state.settings).toEqual({
+      matchThreshold: 100,
+      cooldown: 0,
+      smoothing: 3,
+      poseModel: "lite",
+    });
+  });
+
   it("falls back to a valid initial state for corrupt browser data", () => {
     const state = parseStoredState("{not-json");
 
