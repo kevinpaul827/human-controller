@@ -66,8 +66,6 @@ class PoseOverlayTrackerTests(unittest.TestCase):
         tracker.update([[0.50, 0.5]], 100, [0.99])
         tracker.update([[0.51, 0.5]], 133, [0.97])
 
-        # A hidden wrist can be estimated far from its real position. The
-        # painter omits it, so the tracker must omit it as a measurement too.
         tracker.update([[0.95, 0.5]], 166, [0.08])
         tracker.update([[0.52, 0.5]], 199, [0.96])
 
