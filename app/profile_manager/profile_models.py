@@ -1,3 +1,8 @@
+"""profile_models.py
+
+Patient configuration that maps calibrated gestures to keyboard keys.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -9,8 +14,6 @@ CURRENT_SCHEMA_VERSION = 2
 
 
 class PatientProfile(BaseModel):
-    """Patient configuration that maps calibrated gestures to keyboard keys."""
-
     schema_version: Literal[2] = Field(
         default=CURRENT_SCHEMA_VERSION,
         alias="schemaVersion",
