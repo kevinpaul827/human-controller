@@ -11,7 +11,6 @@ from .bridge_types import PosePayload
 
 class CameraBridgeBase:
     def _init_camera_preview_bridge(self, camera_manager, initial_state) -> None:
-        """Initialize camera preview bridge"""
         self.state = initial_state
         self.preview_widget = None
         self.preview_bounds = (0, 0, 0, 0)

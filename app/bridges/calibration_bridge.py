@@ -38,12 +38,12 @@ class CalibrateBridge(CameraBridgeBase, QObject):
     poseEstimated = Signal(dict)
 
     def __init__(self, camera_manager, gesture_store=None):
-        """Initilization of calibration bridge and connect camera manager events."""
         super().__init__()
         self._init_camera_preview_bridge(camera_manager, CalibrateState.IDLE)
         self.camera: CameraManager = camera_manager
         self.gesture_store = gesture_store
 
+        # Connect camera manager events.
         self.camera.cameraStarted.connect(self.handle_camera_started)
         self.camera.cameraStopped.connect(self.handle_camera_stopped)
         self.camera.errorOccurred.connect(self.handle_camera_error)
