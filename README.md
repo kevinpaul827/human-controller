@@ -10,11 +10,11 @@ Built as a 6-person UNSW COMP3900 capstone project (26T2) for a clinical client.
 | :---: | :---: | :---: |
 | **93%** (target >90%) | **78 ms** (target <100 ms) | **0 crashes** in 20 sessions |
 
-## My Contributions (Kevin Paul)
+## My Contributions
 
-- **Designed the gesture-matching algorithm.** I wrote our own Dynamic Time Warping matcher instead of using a library, because existing libraries couldn't handle joints that drop out of view. It uses an open-begin `symmetric2` step pattern, so a movement can start anywhere in a 150-frame live window. It normalises cost by path weight, so slow and fast repetitions score the same and one threshold works for every gesture and patient. It also runs four cheap pre-filters (template range, amplitude, end pose and in-order coverage) that reject holding still, reversed movements and half-finished attempts before any DTW work is done.
-- **Designed the smoothing strategy.** Each noisy signal gets its own filter. Match scores use a rolling mean that resets when the candidate gesture changes, which stops repeated key presses. The on-screen skeleton uses an alpha-beta tracker that extrapolates up to 33 ms, so it keeps up with the video. The angles fed to the matcher are deliberately left unsmoothed, so the turning points the matcher relies on are kept.
-- **Major frontend contributions.** I worked on the React + TypeScript UI (profiles, calibration and session pages) and on how it talks to the Python app through Qt WebChannel.
+- **Designed the gesture-matching algorithm.** I wrote a custom Dynamic Time Warping matcher instead of directly using a library, because existing libraries couldn't handle joints that dropped out of view. It uses an open-begin `symmetric2` step pattern, so a movement can start anywhere in a 150-frame live window. It normalises cost by path weight, so slow and fast repetitions score the same and one threshold works for every gesture and patient. It also runs four simple pre-filters (template range, amplitude, end pose and in-order coverage) that reject holding still, reversed movements and half-finished attempts before any DTW work is done.
+- **Designed the smoothing strategy.** Each noisy signal gets its own filter. Match scores use a rolling mean that resets when the candidate gesture changes, which handles repeated key presses. The on-screen skeleton uses an alpha-beta smoother so the skeleton rendering is not jittery.
+- **Major frontend contributions.** I also worked on the React + TypeScript UI (profiles, calibration and session pages).
 
 ## Screenshots
 
