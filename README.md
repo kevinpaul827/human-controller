@@ -1,12 +1,46 @@
 # Human Controller
 
-Human Controller is a desktop middleware application that enables patients to control existing games using rehabilitation exercises through gesture-to-keyboard mapping.
+**Play any keyboard game using your rehab exercises.** Human Controller is a desktop app that watches a patient through an ordinary webcam, recognises the movements their clinician has recorded, and turns each one into a key press in whatever game is running. No special hardware is needed.
 
-# GUI Installation (Windows)
+Built as a 6-person UNSW COMP3900 capstone project (26T2) for a clinical client.
+
+**Stack:** Python · PySide6 (Qt) · React + TypeScript · MediaPipe BlazePose · custom Dynamic Time Warping · native keyboard injection (macOS Quartz / Windows `SendInput`)
+
+| Matching accuracy | Gesture → key latency | Stability |
+| :---: | :---: | :---: |
+| **93%** (target >90%) | **78 ms** (target <100 ms) | **0 crashes** in 20 sessions |
+
+## My Contributions (Kevin Paul)
+
+- **Designed the gesture-matching algorithm.** I wrote our own Dynamic Time Warping matcher instead of using a library, because existing libraries couldn't handle joints that drop out of view. It uses an open-begin `symmetric2` step pattern, so a movement can start anywhere in a 150-frame live window. It normalises cost by path weight, so slow and fast repetitions score the same and one threshold works for every gesture and patient. It also runs four cheap pre-filters (template range, amplitude, end pose and in-order coverage) that reject holding still, reversed movements and half-finished attempts before any DTW work is done.
+- **Designed the smoothing strategy.** Each noisy signal gets its own filter. Match scores use a rolling mean that resets when the candidate gesture changes, which stops repeated key presses. The on-screen skeleton uses an alpha-beta tracker that extrapolates up to 33 ms, so it keeps up with the video. The angles fed to the matcher are deliberately left unsmoothed, so the turning points the matcher relies on are kept.
+- **Major frontend contributions.** I worked on the React + TypeScript UI (profiles, calibration and session pages) and on how it talks to the Python app through Qt WebChannel.
+
+## Screenshots
+
+| Patient profiles | Recording a movement | Live session |
+| :---: | :---: | :---: |
+| ![Profiles](docs/images/profiles.png) | ![Calibration](docs/images/calibration.png) | ![Session](docs/images/session.png) |
+
+**How it works:**
+1. The clinician creates a patient profile.
+2. They record an exercise, such as "Right Arm Raise", with live skeleton tracking.
+3. They bind that exercise to a key.
+4. They start a session. A small always-on-top camera window sits over the game and presses the key each time the patient completes the movement.
+
+## System Architecture
+
+![System architecture](docs/images/architecture.png)
+
+Camera frames go through a dedicated pose thread that processes one frame at a time and drops new frames while busy, which keeps latency bounded. MediaPipe BlazePose's 33 landmarks are reduced to 16, which are turned into 10 joint angles. These are matched against the stored 32-frame templates using DTW. A trigger controller then applies the threshold, smoothing and cooldown before a native key event is sent to the game. The React UI runs inside a Qt WebEngine view and talks to Python through WebChannel bridges. Profiles and gestures are stored as versioned JSON files that are written atomically.
+
+# Download
+
+## Windows
 
 - [**Windows download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-Windows.zip)
   
-# GUI Installation (macOS)
+## macOS
 
 You can download the macOS app here:
 [**macOS download**](https://github.com/unsw-cse-comp99-3900/capstone-project-26t2-3900-w18b-date/releases/download/latest/Human-Controller-macOS.zip)
